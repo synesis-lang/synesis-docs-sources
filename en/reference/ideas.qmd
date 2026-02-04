@@ -1,0 +1,321 @@
+# Synesis: Ideas
+
+**Ideas:** Language Extension Specification Proposals
+
+
+---
+
+## Introduction to Extensions
+This specification details the new features planned for version 1.2 of the Synesis language. The focus of this update is to evolve the language from a linear annotation system to a **qualitative inference engine** and knowledge management (Zettelkasten), as well as introduce native support for canonical loci (sacred texts).
+
+---
+
+## Output Artifact Configuration (RENDER)
+
+The `RENDER` command allows explicitly declaring, within the project file, which file formats should be generated and where they should be saved. This ensures compilation reproducibility without relying on command-line parameters.
+
+### Syntax
+
+```synesis
+RENDER AS [JSON | CSV | EXCEL] INTO "path/to/filename"
+```
+
+#### Semantics
+
+* **RENDER**: Command verb that initiates compilation target definition. Indicates creation of a structured representation (artifact) from interpreted data.
+* **AS**: Clause that specifies serialization format.
+* `JSON`: Generates complete abstract syntax tree with traceability metadata.
+* `CSV`: Generates flat relational tables (separated by block type).
+* `EXCEL`: Generates `.xlsx` file with tabs corresponding to CSV tables.
+
+
+* **INTO**: Clause that defines destination path.
+* Must be a string in double quotes.
+* **Relative paths** to the project root are recommended to ensure portability across different machines.
+* If destination directory doesn't exist, compiler will attempt to create it.
+
+#### Example in Context (.synp)
+
+```synesis
+PROJECT "Phenomenological Study 2026"
+
+TEMPLATE "templates/research_v1.synt"
+INCLUDE BIBLIOGRAPHY "data/references.bib"
+INCLUDE ANNOTATIONS "data/interviews/*.syn"
+INCLUDE ONTOLOGY "ontology/main.syno"
+
+# Declarative Output Configuration
+# Generates multiple formats simultaneously in organized directories
+
+RENDER AS JSON  INTO "dist/full_data.json"
+RENDER AS EXCEL INTO "reports/human_readable/matrix.xlsx"
+RENDER AS CSV   INTO "reports/raw_data/export.csv"
+
+END
+```
+
+#### Validation Rules
+
+1. **Multiplicity**: Multiple `RENDER` commands are allowed in the same project. The compiler will process all sequentially.
+2. **Write Permission**: Compiler must have write permission to target directory. If destination file is locked (e.g., open in Excel), compilation will fail with I/O error.
+3. **Absolute Paths**: Using absolute paths (e.g., `C:/Users/...`) will emit a *Warning*, as it breaks project portability.
+
+---
+
+## Advanced Semantic Analysis
+The compiler now acts as a methodological assistant, not just a syntactic validator.
+
+### Ontological Redundancy Detection (Fuzzy Matching)
+The compiler will analyze the ontology for concepts with similar spelling (Lexical Similarity), preventing knowledge graph fragmentation.
+
+* **Algorithm:** Levenshtein / Jaro-Winkler distance.
+* **Behavior:** Warning during compilation.
+* **Detection Example:** `SocialInteraction` vs `Social_Interaction`.
+
+### Hierarchical Cycle Validation
+Prevents creation of logical loops in taxonomic definitions.
+* **Rule:** A concept cannot be an ancestor of itself.
+* **Fatal Error:** Compilation is aborted if a cycle is detected (e.g., A > B > C > A).
+
+### Dead Code Elimination (Ghost Concepts)
+Identifies concepts defined in ontology that were never applied to any `ITEM` or `ZETTEL`.
+* **Behavior:** Warning (Codebook cleanup report).
+
+---
+
+## New Structural Commands
+
+### TAXONOMY (Rigid Hierarchy)
+Replaces loose use of `TOPIC` for strict "is-a" relationship definitions. Allows property inheritance.
+
+**Syntax:**
+```synesis
+TAXONOMY
+    Emotions
+        > Negative
+            > Anger
+            > Fear
+        > Positive
+            > Joy
+END
+
+```
+
+### CONSTRAINT (Business Rules)
+
+Defines logical invariants to ensure methodological consistency of annotations.
+
+**Syntax:**
+
+```synesis
+CONSTRAINT
+    # Mutual exclusion: An item cannot have both codes simultaneously
+    FORBID Code "Sentiment: Positive" WITH Code "Risk: Critical"
+
+    # Logical dependency: Code B requires presence of Code A
+    REQUIRE Code "Solution" IF Code "Problem" PRESENT
+END
+
+```
+
+### CROSSREF (Citation Network)
+
+Formalizes rhetorical relationships between bibliographic sources (Source-to-Source), independent of internal annotations.
+
+**Syntax:**
+
+```synesis
+CROSSREF
+    @smith2019 -> REFUTES -> @doe2018
+    @jones2020 -> EXTENDS -> @smith2019
+END
+```
+
+---
+
+## Knowledge Management (Zettelkasten)
+
+Introduces capability to create "Permanent Notes" that synthesize knowledge independent of a specific bibliographic source.
+
+### 4.1 ZETTEL Block
+
+Top-level entity, sibling of `SOURCE` and `ONTOLOGY`. Does not require `@bibref`.
+
+**Syntax:**
+
+```synesis
+# Syntax: ZETTEL [UNIQUE_ID]
+ZETTEL 2026011401
+    title: "The Atomicity Principle"
+    body: "A DSL should force concept breakdown..."
+
+    # Explicit connections (Rhizome)
+    links: 2026011205, 2025123001
+
+    # Metadata
+    tags: DSL Design
+    origin: @turing1936
+END
+```
+
+### Exclusive Fields (ZETTEL FIELDS)
+
+In the `.synt` template file, new field types are supported:
+
+* **LINK (Type REFERENCE):** Creates bidirectional edges between ZETTEL nodes.
+* **ORIGIN (Type REFERENCE):** Creates citation edge to a SOURCE.
+
+---
+
+## Canonical Annotation (Biblical/Exegetical)
+
+Specialized addressing system for texts that use the Locus pattern (Book, Chapter, Verse) instead of author-date bibliographic reference.
+
+### BIBLE Block
+
+Replaces `SOURCE` block for sacred texts. Uses USX standard for book identification.
+
+**Syntax:**
+
+```synesis
+# Syntax: BIBLE [USX_CODE] [CHAP:VERSE] [(VERSION)]
+BIBLE ROM 8:28-30 (ESV)
+
+    # Pericope title (String with mandatory quotes to support punctuation)
+    pericope: "The efficacy of calling: The eternal purpose."
+
+    ITEM
+        quote: "And we know that for those who love God all things work together..."
+        code: Providence
+    END
+END
+
+```
+
+### Addressing Rules (Parsing)
+
+Parser applies strict rules to avoid ambiguity:
+
+1. **USX Code:** Exactly 3 uppercase letters (e.g., `MAT`, `GEN`, `PSA`).
+2. **Separators:** Mandatory use of `:` to separate chapter/verse and `-` for ranges.
+3. **Pericope:** Must be delimited by double quotes `""` or triple `"""` to allow special characters, commas, and line breaks without breaking the parser.
+
+### Canon Template Example
+
+```synesis
+TEMPLATE biblical_exegesis
+
+BIBLE FIELDS
+    OPTIONAL pericope
+END
+
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED code
+    OPTIONAL original_term  # E.g.: Greek/Hebrew
+END
+```
+
+#### Appendix A: Implementation Notes (Lark Grammar)
+
+Grammar snippet to support `BIBLE` header:
+
+```lark
+// Canon Block Definition
+canon_block: "BIBLE" usx_code bible_ref version? block_body "END"
+
+// USX Codes (strict 3 uppercase letters)
+usx_code: UCASE_LETTER UCASE_LETTER UCASE_LETTER
+
+// Supported references: 8, 8:28, 8:28-30, 8:28-9:1
+bible_ref: chapter
+         | chapter ":" verse
+         | chapter ":" verse "-" verse
+         | chapter ":" verse "-" chapter ":" verse
+
+chapter: INT
+verse: INT | "END"
+version: "(" UCASE_LETTER+ ")" | "@" LCASE_LETTER+ DIGIT+
+```
+
+---
+
+## Immediate Visualization
+
+JSON output is useful for processing, but humans need to see the graph.
+
+Idea: Create a `synesis serve` command that starts a simple local server showing the connection graph (using D3.js or Cytoscape) generated from exported JSON.
+
+---
+
+## Data Science Integration
+CSV/Excel export support is good, but direct Pandas integration would be killer.
+
+Example: A Python library `import synesis` that allows loading the project directly into a DataFrame without going through the terminal, facilitating use in Jupyter Notebooks.
+
+## Possible Workflow
+
+Correct. The premise is exact: the **Compiler Core** (Parser + Semantic Analysis) acts as the single source of truth. Both file export, the Python library (`synesis.load`), and the LSP server consume the same **Abstract Syntax Tree (AST)** and the same **Symbol Table**.
+
+Here is the objective workflow for this implementation, focusing on the "Compiler as a Library" architecture:
+
+### Step 1: I/O Decoupling (Input/Output)
+
+The first step is to ensure the compiler doesn't "know" it's writing files.
+
+* **Action:** Separate export functions. Today, there's probably a `export_csv(ast, filepath)` function.
+* **Refactoring:** Split into two:
+1. `transform_to_tabular_data(ast)`: Receives AST and returns lists of dictionaries/objects in memory (without touching disk).
+2. `write_csv(data, filepath)`: Receives data and only writes the file.
+
+
+
+### Step 2: Public Core API Exposure
+
+The main Synesis module should expose programmatic access to compilation.
+
+* **Action:** Make orchestration function externally accessible.
+* **Definition:** Create/Adjust a method (e.g., `Synesis.compile_source()`) that accepts a string or file path and returns the `Project` object (the semantic validation result containing all linked structures).
+
+### Step 3: Python Adapter Creation (Data Science)
+
+This is the consumer you suggested (`synesis.load`).
+
+* **Dependency:** Define Pandas as optional dependency.
+* **Flow:**
+1. Calls Step 2 API to get `Project` object in memory.
+2. Calls Step 1 transformation function (`transform_to_tabular_data`).
+3. Instantiates Pandas DataFrames using this data.
+4. Applies typing (converts strings to `datetime` objects, categories, etc.) based on AST types.
+
+
+
+### Step 4: LSP Adaptation (Editor Intelligence)
+
+LSP consumes same AST, but needs different data (location instead of value).
+
+* **Action:** Ensure AST nodes (Item, Source, Field) preserve origin metadata (`line`, `column`, `file`).
+* **Flow:**
+1. LSP sends current file text (even incomplete).
+2. Core attempts parsing (with error tolerance).
+3. Core returns **Symbol Table** (list of available ontologies and definitions).
+4. LSP uses this table to provide *Autocomplete* and *Go to Definition*.
+
+
+
+### Step 5: CLI as "Thin Client"
+
+The `synesis compile` terminal command becomes just another client, like Python or LSP.
+
+* **Action:** CLI only collects arguments, calls Step 2 API, and uses file writing functions (`write_csv`, `write_json`) defined in Step 1.
+
+### Data Flow Summary
+
+1. **Input:** `.syn` / `.synt` files
+2. **Central Engine (Synesis Core):** Generates AST + Semantic Validation.
+3. **Distribution:**
+* via **CLI** -> Writes to Disk (JSON/CSV).
+* via **Python SDK** -> Delivers Objects/DataFrames in Memory.
+* via **LSP** -> Delivers Position Metadata and Errors to Editor.
+*
+---

@@ -1,0 +1,171 @@
+---
+title: "Synesis"
+subtitle: "A confluência da informação em inteligência."
+---
+
+# Bem-vindo ao Synesis
+
+O conhecimento humano é naturalmente intrincado, cheio de nuances e conexões profundas. Isso é complexidade — e é valioso. A complicação surge apenas quando nos faltam métodos adequados de organização de saberes.
+
+**Synesis** é uma linguagem de domínio específico (DSL) declarativa, criada para quem precisa de mais do que simples anotações. É um método de **consolidação de conhecimento**. 
+
+Ao contrário de ferramentas tradicionais, o Synesis atua como um compilador para o seu pensamento analítico: ele recebe suas interpretações e anotações em arquivos de texto puro, valida a consistência lógica entre elas e as transforma em estruturas de conhecimento canônicas e rigorosas. 
+
+Muitas vezes, acredita-se que o rigor técnico sufoca a criatividade. O Synesis prova o contrário: **a disciplina é a verdadeira forma de liberdade.** Ao delegar a organização lógica para uma estrutura canônica, sua mente fica livre para o que realmente importa: a interpretação, a nuance e o *insight*.
+O resultado é a verdadeira *sýnesis*: a convergência de fragmentos de informação em um todo inteligível, auditável e tecnicamente estruturado. 
+
+## A Origem do Nome
+
+Do grego *σύνεσις* (sýnesis):
+
+>**Etimologia**: **σῠνῑ́ημῐ** (*sŭnī́ēmĭ*, “reunir”, “fazer convergir”) + sufixo **-σῐς** (*-sĭs*). 
+
+**Significados:**
+1.  Confluência; união; convergência.
+2.  Entendimento; inteligência.
+3.  [cite_start]Consciência. 
+
+## Como funciona
+
+A estrutura do Synesis é modular e baseada inteiramente em **texto plano**, oferecendo um ambiente livre de distrações, portabilidade total e máxima eficiência. 
+
+Todo o processo é orquestrado por um arquivo de projeto (`.synp`), que conecta seus componentes:
+
+* **Referências Bibliográficas (`.bib`)**: Suas fontes originais. 
+* **Anotações Interpretativas (`.syn`)**: Seus insights, padronizados por templates (`.synt`). 
+* **Ontologias (`.syno`)**: O grande diferencial — arquivos que definem formalmente suas categorias de análise e inter-relações lógicas.
+
+### Exemplo de Sintaxe
+
+Você identifica uma fonte de conhecimento e cria blocos semânticos que conectam segmentos da fonte original com sua interpretação sistemática:
+
+```synesis
+SOURCE @entrevista_01
+END SOURCE
+
+ITEM @entrevista_01
+    quote: "O custo é muito alto para mim"
+    note: Barreira econômica para adoção
+    chain: Custo -> INIBE -> Adoção
+END ITEM
+```
+
+Esta abordagem eleva suas anotações ao nível de dados estruturados. A escrita diária é intuitiva e você não precisa ser programador para anotar; uma lógica de codificação básica é necessária apenas se você decidir construir suas próprias estruturas de análise (*templates*). Pense no arquivo de *template* como um contrato, um acordo que você estipula para suas anotações e o compilador. Você pode revisar/ampliar/atualizar este contrato na medida em que sua pesquisa avança. 
+
+## O Fluxo de Compilação
+Ao compilar esses arquivos, o Synesis verifica a consistência dos conceitos e gera saídas universais.
+
+```{mermaid}
+flowchart LR
+    %% --- DEFINIÇÃO DE CORES (Paleta Synesis 2.0) ---
+    %% Primary: #084C54 (Teal Profundo)
+    %% Accent: #00BFA5 (Mint/Cyan)
+    %% Fundo: #FFFFFF (Branco puro para garantir contraste)
+
+    %% --- ESTILOS DOS NÓS ---
+    %% Compilador: Círculo duplo, Borda Forte, Fundo Branco
+    classDef compiler fill:#fff,stroke:#084C54,stroke-width:4px,color:#084C54,font-weight:bold;
+    
+    %% High Value: Borda Mint, Fundo Cyan muito claro, Texto Teal
+    classDef highValue fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54;
+    
+    %% Nós Padrão (Inputs/Outputs): Fundo cinza claro, Borda suave
+    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C54;
+
+    %% --- ESTRUTURA DO DIAGRAMA ---
+
+    subgraph Input ["Ambiente de Trabalho"]
+        direction TB
+        E["Ontologia (.syno)"]:::defaultNode
+        D["Template (.synt)"]:::defaultNode
+        A["Fontes Bibliográficas (.bib)"]:::defaultNode
+        B["Anotações Interpretativas (.syn)"]:::defaultNode
+    end
+
+    %% O Motor Central
+    C((("Compilador Synesis\nValidação & Lógica"))):::compiler
+
+    subgraph Output ["Formatos de Intercâmbio"]
+        direction TB
+        F["JSON Estruturado"]:::defaultNode
+        G["Tabelas CSV/Excel"]:::defaultNode
+        H["REFI-QDA/Outros"]:::defaultNode
+    end
+
+    subgraph Ecosystem ["Ecossistema de Aplicação"]
+        direction TB
+        I["Bancos de Grafos\nNeo4j, Memgraph"]:::highValue
+        J["Agentes de IA Rastreáveis\nvia MCP"]:::highValue
+        K["Data Science & Dashboards\nR, Jupyter Labs"]:::highValue
+    end
+
+    %% --- FORÇAR ESTILO DOS SUBGRUPOS (A Correção Principal) ---
+    %% Usamos 'style' direto pelo ID do subgraph para garantir transparência
+    style Input fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+    style Output fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+    style Ecosystem fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+
+    %% --- CONEXÕES ---
+    E --> C
+    D --> C
+    A --> C
+    B --> C
+
+    C == "Compilação" ==> F
+    C --> G
+    C -.-> H
+
+    F == "Estrutura Complexa" ==> I
+    F == "Contexto Grounded" ==> J
+    F -. "Análise Quantitativa" .-> K
+    G -. "Análise Quantitativa" .-> K
+
+    %% Estilo das Linhas
+    linkStyle default stroke:#64748B,stroke-width:1px;
+```
+
+### O Poder da Integração
+
+O resultado da compilação Synesis vai muito além de documentos estáticos. O compilador transforma suas definições em formatos universais de intercâmbio (JSON, Excel, CSV), tornando seu conhecimento integrável a qualquer stack tecnológica: 
+
+* **Graph Databases**: Alimente nativamente Neo4j ou Memgraph para visualizar a topologia complexa dos seus conceitos. 
+
+* **Data Science**: Forneça datasets estruturados para análises estatísticas rigorosas em R ou visualizações em Jupyter Labs. 
+
+* **AI Ready**: Através do protocolo MCP (Model Context Protocol), conecte seus dados a assistentes como Claude Desktop, permitindo interações em linguagem natural com respostas 100% rastreáveis e baseadas na sua "fonte da verdade".
+
+## Para quem é o Synesis?
+
+:::{.callout-tip}
+## Pesquisadores de Humanidades
+Perfeito para pesquisas qualitativas complexas onde a precisão interpretativa é crítica. Veja nosso guia de introdução sem jargão técnico.
+
+Veja o [Guia para Pesquisadores](guide/guia_pesquisadores.qmd) — uma introdução sem jargão técnico.
+:::
+
+:::{.callout-note}
+## Tomadores de Decisão
+Ideal para documentação de sistemas de conhecimento e cenários que exigem rastreabilidade e escalabilidade.
+
+Veja o [Guia para Gestores](guide/guia_profissionais.qmd) — foco em valor organizacional.
+:::
+
+:::{.callout-warning}
+## Em dúvida se precisa de Synesis?
+
+Leia [Por que não usar Excel?](guide/guia_sincero.qmd) — uma resposta honesta.
+:::
+
+## O que Synesis NÃO é
+
+* **Não é programação de Software**: Embora use conceitos de engenharia, você não precisa "saber programar". Synesis é uma linguagem **declarativa**: você descreve *o que* sabe, e não *como* o computador deve processar. É marcação de conhecimento, não desenvolvimento de apps.
+* **Não é um Bloco de Notas**: Ferramentas de anotação priorizam a velocidade de captura e flexibilidade visual. O Synesis prioriza a **consistência lógica e a estrutura canônica**. Enquanto anotações aceitam contradições, o Synesis as valida e resolve.
+* **Não é um "Jardim Murado"**: Softwares para CAQDAS são excelentes, mas frequentemente prendem seus dados em formatos proprietários. O Synesis é **"Code-First" e interoperável**: seus dados são arquivos de texto abertos, versionáveis (Git) e compiláveis para qualquer outro sistema.
+
+## O Lugar do Synesis no seu Stack
+
+O Synesis foi desenhado para ser o **elo perdido** entre a pesquisa qualitativa e a ciência de dados, sem tentar substituir ferramentas especializadas:
+
+* **Não analisa estatísticas, ele as alimenta:** O Synesis não calcula regressões, mas gera os datasets estruturados (`.csv`, `.json`) que permitem ao R ou Python realizar análises quantitativas sobre dados qualitativos com precisão absoluta.
+* **Não é uma "Caixa Preta" de IA:** Diferente de IAs que resumem textos magicamente (e alucinam), o Synesis oferece *grounding*. Ele é a estrutura de verdade manual que serve de lastro para que a IA opere com segurança.
+* **Não substitui a leitura humana:** Ele é uma ferramenta de formalização. A interpretação continua sendo sua; o Synesis garante que essa interpretação seja sistemática e auditável.

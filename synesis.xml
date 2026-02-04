@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE language SYSTEM "language.dtd">
+<language name="synesis" version="1.2" kateversion="5.0" section="Sources" extensions="*.syn;*.syno;*.synp" priority="5">
+  <highlighting>
+    <list name="structure_keywords">
+      <item>PROJECT</item>
+      <item>INCLUDE</item>
+      <item>METADATA</item>
+      <item>BIBLIOGRAPHY</item>
+      <item>DESCRIPTION</item>
+      <item>REQUIRED</item>
+      <item>BUNDLE</item>      
+      <item>OPTIONAL</item>
+      <item>VALUE</item>
+      <item>VALUES</item>
+      <item>SCOPE</item>
+      <item>FIELD</item>
+
+      <item>ENUMERATED</item>
+      <item>ORDERED</item>
+      <item>MEMO</item>
+      <item>SCALE</item>
+      <item>FORMAT</item>
+      <item>ARITY</item>
+
+      <item>ANNOTATIONS</item>
+      <item>TEMPLATE</item>
+      <item>SOURCE</item>
+      <item>ITEM</item>
+      <item>ONTOLOGY</item>
+      <item>FIELDS</item>
+      <item>RELATIONS</item>
+      <item>TYPE</item>
+      <item>EXPORT</item>
+      <item>END</item>
+    </list>
+
+    <list name="property_keywords">
+      <item>text</item>
+      <item>quote</item>
+      <item>note</item>
+      <item>chain</item>
+      <item>rgt_element_a</item>
+      <item>rgt_element_b</item>
+      <item>ordem_1a</item>
+      <item>ordem_2a</item>
+      <item>ordem_3a</item>
+      <item>dimensao_agregada</item>
+    </list>
+
+    <list name="types">
+      <item>BOOLEAN</item>
+      <item>STRING</item>
+      <item>TEXT</item>
+      <item>INT</item>
+      <item>FLOAT</item>
+      <item>ENUM</item>
+      <item>LIST</item>
+      <item>DICT</item>
+      <item>CODE</item>
+      <item>TOPIC</item>
+      <item>ORDERED</item>
+      <item>ENUMERATED</item>
+      <item>SCALE</item>
+    </list>
+
+    <contexts>
+      <context name="Normal" attribute="Normal Text" lineEndContext="#stay">
+        
+        <DetectChar attribute="Comment" context="LineComment" char="/"/>
+        <DetectChar attribute="Comment" context="LineComment" char="#"/>
+
+        <DetectChar attribute="String" context="StringContext" char="&quot;"/>
+
+        <RegExpr attribute="Label" context="#stay" String="[^:\s]+:"/>
+
+        <keyword attribute="Keyword" context="#stay" String="structure_keywords"/>
+        <keyword attribute="Property" context="#stay" String="property_keywords"/>
+        <keyword attribute="DataType" context="#stay" String="types"/>
+
+        <RegExpr attribute="Operator" context="#stay" String="(->|>=)"/>
+        <RegExpr attribute="Function" context="#stay" String="@[a-zA-Z0-9_-]+"/>
+        <RegExpr attribute="Constant" context="#stay" String="\[.*?\]"/>
+      </context>
+
+      <context name="LineComment" attribute="Comment" lineEndContext="#pop" />
+
+      <context name="StringContext" attribute="String" lineEndContext="#pop">
+         <DetectChar attribute="String" context="#pop" char="&quot;"/>
+      </context>
+    </contexts>
+
+    <itemDatas>
+      <itemData name="Normal Text" defStyleNum="dsNormal"/>
+      
+      <itemData name="Keyword"     defStyleNum="dsKeyword"   bold="true" color="#D67C68"/>
+      
+      <itemData name="Property"    defStyleNum="dsAttribute" color="#886FAD" bold="true"/>
+      
+      <itemData name="DataType"    defStyleNum="dsDataType"  color="#3D6E70" bold="true"/> 
+      
+      <itemData name="Label"       defStyleNum="dsFunction"  color="#A66E4E"/>
+      
+      <itemData name="String"      defStyleNum="dsString"    color="#B58900"/>
+      
+      <itemData name="Operator"    defStyleNum="dsOperator"  color="#45494D" bold="true"/>
+      
+      <itemData name="Function"    defStyleNum="dsFunction"  italic="true" color="#4A6FA5"/>
+      
+      <itemData name="Constant"    defStyleNum="dsBaseN"     color="#9E436E"/>
+      
+      <itemData name="Comment"     defStyleNum="dsComment"   italic="true" color="#909599"/>
+    </itemDatas>
+  </highlighting>
+</language>

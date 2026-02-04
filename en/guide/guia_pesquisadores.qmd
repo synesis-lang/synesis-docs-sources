@@ -1,0 +1,273 @@
+# Synesis: A Language for Organizing Your Qualitative Research
+
+**Introductory guide for humanities researchers**
+
+---
+
+## What is Synesis?
+
+Synesis is a structured way to record your qualitative research annotations in simple text files. Think of it as a **digital field notebook** with clear rules that help you maintain consistency throughout your entire project.
+
+The name comes from the Greek *σύνεσις* (sýnesis), which means "comprehension" or "understanding" — exactly what we seek when analyzing qualitative data.
+
+---
+
+## Why use Synesis?
+
+### The common problem
+
+If you've worked with qualitative research before, you've probably encountered these situations:
+
+- Notes scattered across different files and formats
+- Difficulty remembering why you marked a particular excerpt as important
+- Codes that change names throughout the project
+- Hours reorganizing data before being able to analyze them
+- Difficulty explaining your analytical process to other researchers
+
+### Synesis proposal
+
+Synesis offers a simple and consistent structure to:
+
+- **Record** relevant excerpts from your sources
+- **Annotate** your interpretations and reflections
+- **Code** excerpts with analytical concepts
+- **Relate** concepts to each other (causal relations, influence, etc.)
+- **Document** your conceptual vocabulary (ontology)
+
+All of this in text files that you can open on any computer, now or twenty years from now.
+
+---
+
+## How does it work in practice?
+
+### A simple example
+
+Imagine you're analyzing interviews about acceptance of new technologies. You find this excerpt:
+
+> "I even wanted to use it, but the cost is too high for my budget."
+
+In Synesis, you would record it like this:
+
+```synesis
+SOURCE @interview_maria
+
+    ITEM
+        quote: "I even wanted to use it, but the cost is too high for my budget."
+        note: Participant expresses desire for adoption limited by economic barrier
+        chain: Cost -> INHIBITS -> Adoption
+    END
+
+END
+```
+
+What each part means:
+
+- **SOURCE**: indicates where the material comes from (an interview, a document, an article)
+- **ITEM**: is a unit of analysis — an excerpt you consider relevant
+- **quote**: the literal excerpt from the source
+- **note**: your interpretation or reflection about the excerpt
+- **chain**: the relationship you identified between concepts
+
+### Building relationships
+
+The notation `Cost -> INHIBITS -> Adoption` means: "Cost INHIBITS Adoption". This way of recording allows you to gradually build a map of relationships emerging from your data.
+
+You can chain multiple relationships:
+
+```synesis
+chain: Lack of Information -> GENERATES -> Distrust -> INHIBITS -> Adoption
+```
+
+This records a sequence: lack of information generates distrust, which in turn inhibits adoption.
+
+---
+
+## Basic components
+
+### 1. Sources (SOURCE)
+
+Each source you analyze receives a unique identifier, connected to your bibliographic references:
+
+```synesis
+SOURCE @silva2023
+    ...
+END
+```
+
+The `@silva2023` corresponds to an entry in your references file (BibTeX format, used by managers like Zotero and Mendeley).
+
+### 2. Analysis items (ITEM)
+
+Within each source, you record relevant excerpts:
+
+```synesis
+ITEM
+    quote: "The literal text extracted from the source"
+    note: Your interpretation or analytical comment
+    code: Concept A, Concept B
+    chain: Concept A -> RELATION -> Concept B
+END
+```
+
+You can have as many items as you need in each source.
+
+### 3. Conceptual vocabulary (ONTOLOGY)
+
+To maintain consistency, you define your main concepts:
+
+```synesis
+ONTOLOGY Cost
+    topic: Economic Factors
+    description: Financial expense associated with technology acquisition or use
+END
+
+ONTOLOGY Adoption
+    topic: Behavior
+    description: Decision to incorporate a technology into daily life
+END
+```
+
+This creates a living glossary for your project, helping maintain clear and consistent definitions.
+
+---
+
+## Types of relationships
+
+Relationships between concepts depend on your field of study. Some common examples:
+
+| Relationship | Meaning | Example |
+|---------|-------------|---------|
+| INFLUENCES | One factor affects another | Income -> INFLUENCES -> Access |
+| GENERATES | One factor produces another | Misinformation -> GENERATES -> Fear |
+| INHIBITS | One factor hinders another | Bureaucracy -> INHIBITS -> Participation |
+| ENABLES | One factor allows another | Education -> ENABLES -> Autonomy |
+| DEPENDS_ON | One factor requires another | Trust -> DEPENDS_ON -> Transparency |
+
+You define which relationships make sense for your research in the template file.
+
+---
+
+## Benefits for your research
+
+### Traceability
+
+Each interpretation is connected to the original excerpt. You (or another researcher) can always go back to the source to verify the context.
+
+### Consistency
+
+With a defined vocabulary, you avoid using "Cost", "Price" and "Economic Value" for the same concept at different moments of the analysis.
+
+### Methodological transparency
+
+Your analytical process is documented. When writing the methodology for your article or thesis, you have a clear record of how you reached your conclusions.
+
+### Portability
+
+Simple text files work on any operating system and don't depend on specific software. Your research isn't "locked" in a program.
+
+### Collaboration
+
+Colleagues can review your annotations, suggest alternative interpretations, and contribute to the project using the same conventions.
+
+---
+
+## How to get started
+
+### Step 1: Organize your sources
+
+Gather your bibliographic references in a `.bib` file (exportable from Zotero, Mendeley or similar).
+
+### Step 2: Define your structure
+
+Create a basic template defining:
+- Which fields you'll use (quote, note, code, chain)
+- Which types of relationships make sense for your study
+- Which concept categories you expect to find
+
+### Step 3: Start annotating
+
+As you read your sources, record relevant excerpts with your interpretations. Don't worry about having everything perfect from the start — the process is iterative.
+
+### Step 4: Refine your vocabulary
+
+As patterns emerge, document your concepts in the ontology. Revise definitions, group related concepts, refine relationships.
+
+### Step 5: Analyze the results
+
+The Synesis compiler transforms your annotations into structured formats (spreadsheets, for example) that facilitate pattern visualization and report generation.
+
+---
+
+## A complete project in miniature
+
+To visualize how the pieces fit together:
+
+```
+PROJECT: Green Technology Acceptance
+│
+├── references.bib          ← Your bibliographic references
+│
+├── template.synt            ← Your project rules
+│
+├── annotations/
+│   ├── interviews.syn      ← Interview annotations
+│   └── documents.syn       ← Document annotations
+│
+└── ontology.syno           ← Your conceptual vocabulary
+```
+
+The project file (`.synp`) connects everything:
+
+```synesis
+PROJECT green_technology_acceptance
+
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "references.bib"
+INCLUDE ANNOTATIONS "annotations/interviews.syn"
+INCLUDE ANNOTATIONS "annotations/documents.syn"
+INCLUDE ONTOLOGY "ontology.syno"
+
+DESCRIPTION
+    Study on factors influencing the acceptance
+    of green technologies in urban communities.
+END
+
+END
+```
+
+---
+
+## Frequently asked questions
+
+### Do I need to know how to program?
+
+No. Synesis uses a simple and readable syntax. If you can organize a document with titles and subtitles, you can use Synesis.
+
+### Can I use it with my current software?
+
+Yes. Synesis files are plain text, editable in any editor (Word, Google Docs, Notepad, or specialized editors). The compiler generates spreadsheets that you can open in Excel or Google Sheets.
+
+### What if I make a syntax error?
+
+The compiler indicates exactly where the problem is and suggests how to fix it. Error messages are written to be understandable, not technical.
+
+### Does Synesis replace software like NVivo or Atlas.ti?
+
+Synesis has a different purpose. While these software packages offer complete graphical interfaces, Synesis focuses on structuring and documenting the analytical process. Some researchers use both: Synesis for structured recording and other software for visualization.
+
+### Can I use it for any type of qualitative research?
+
+Synesis is flexible. The template allows adapting the structure for different methodological approaches: content analysis, grounded theory, thematic analysis, among others.
+
+---
+
+## Next steps
+
+1. **Read the Reference Guide** to learn all available commands
+2. **Experiment with a small project** — a few interviews or documents
+3. **Adapt the template** to your research's specific needs
+4. **Share your questions** with the user community
+
+---
+
+*Synesis was developed to make qualitative research more organized, transparent, and reproducible — without requiring advanced technical knowledge.*

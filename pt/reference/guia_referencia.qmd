@@ -1,0 +1,739 @@
+# Synesis: Guia de Referência da Linguagem
+
+**Versão 1.1**
+
+---
+
+## Introdução
+
+### Definição
+
+Synesis é uma Domain-Specific Language (DSL) declarativa para formalização, validação e compilação de corpora analíticos de pesquisas qualitativas. O compilador transforma anotações interpretativas em estruturas canônicas, assegurando inteligibilidade humana e rigor formal.
+
+### O que o Compilador Faz
+
+- Valida sintaxe e semântica de anotações
+- Gera AST (Abstract Syntax Tree)
+- Produz formatos estruturados básicos (JSON, CSV, EXCEL)
+- Normaliza conceitos via templates configuráveis
+
+### O que o Compilador NÃO Faz
+
+- Não é runtime ou sistema de execução
+- Não realiza análise estatística
+- Não gerencia interface de usuário
+- Não persiste estado entre execuções
+
+### Fronteiras Rígidas
+
+O compilador processa arquivos de texto, produz artefatos estruturados e termina. Não há estado persistente, loops condicionais ou side-effects além da escrita de arquivos de saída.
+
+---
+
+## Arquivos e Formatos
+
+### Arquivos de Entrada
+
+| Extensão | Descrição |
+|----------|-----------|
+| `.synp`  | Arquivo de projeto (ponto de entrada único) |
+| `.syn`   | Arquivos de anotação (SOURCE + ITEM) |
+| `.syno`  | Arquivos de ontologia (ONTOLOGY) |
+| `.synt`  | Arquivo de template (FIELD definitions) |
+| `.bib`   | Referências BibTeX/BibLaTeX |
+
+### Arquivos de Saída
+
+| Formato      | Descrição |
+|--------------|-----------|
+| JSON         | Representação serializada completa (inclui `location` em todos os nós) |
+| CSV          | Tabelas planas por tipo de bloco (inclui colunas `source_file`, `source_line`, `source_column`) |
+| EXCEL        | Tabelas planas como abas |
+| Diagnósticos | Relatório de erros com localização precisa |
+
+### Rastreabilidade em CSV
+
+Cada linha CSV de ITEM, CHAIN ou ONTOLOGY inclui colunas de localização:
+
+```csv
+bibref,from_code,relation,to_code,source_file,source_line,source_column
+ashworth2019,Gender,INFLUENCES,CCS Support,annotations/ccs.syn,367,11
+```
+
+### Invariantes do Compilador
+
+1. Compilação determinística: mesma entrada produz mesma saída
+2. Erros reportados com arquivo, linha, coluna e contexto
+3. Compilação parcial é exclusivamente pedagógica
+4. Artefatos finais (JSON, CSV) gerados apenas mediante compilação completa
+5. Validação de referências bibliográficas é obrigatória
+
+---
+
+## Estrutura do Projeto (.synp)
+
+O arquivo de projeto orquestra os componentes da análise e serve como ponto de entrada único para o compilador.
+
+### Sintaxe
+
+```synesis
+PROJECT project_name
+
+TEMPLATE "filename.synt"
+INCLUDE BIBLIOGRAPHY "filename.bib"
+INCLUDE ANNOTATIONS "filename.syn"
+INCLUDE ONTOLOGY "filename.syno"
+
+# Colchetes indicam que todo o bloco METADATA é opcional
+[METADATA
+    version: 1.0
+    author: string
+    [created: date]    # Campo individual opcional
+    [modified: date]   # Campo individual opcional
+    [dataset: string]
+END]
+
+# Colchetes indicam que todo o bloco DESCRIPTION é opcional
+[DESCRIPTION
+    Texto livre descrevendo o projeto...
+END]
+
+END
+```
+
+### Semântica
+
+- **PROJECT**: Palavra-chave obrigatória que inicia a definição do projeto
+- **TEMPLATE**: Referência ao arquivo `.synt` que define as regras de validação
+- **INCLUDE BIBLIOGRAPHY**: Caminho para arquivo `.bib` com referências
+- **INCLUDE ANNOTATIONS**: Caminho para arquivo(s) `.syn` com anotações
+- **INCLUDE ONTOLOGY**: Caminho para arquivo(s) `.syno` com definições ontológicas
+- **METADATA**: Bloco opcional com metadados do projeto
+- **DESCRIPTION**: Bloco opcional com descrição livre do projeto
+
+---
+
+## Definição de Template (.synt)
+
+O template define a estrutura e regras de validação para anotações.
+
+### Cabeçalho do Template
+
+```synesis
+TEMPLATE name 
+[version: "string"]
+[author: "string"]
+```
+
+### Blocos de Campos
+
+```synesis
+SOURCE FIELDS
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+```
+
+```synesis
+ITEM FIELDS
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+```
+
+```synesis
+ONTOLOGY FIELDS
+    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
+END
+```
+
+### Exemplo Completo
+
+```synesis
+TEMPLATE qualitative_analysis
+version: "1.0"
+author: "Researcher"
+
+SOURCE FIELDS
+    REQUIRED bibref
+    OPTIONAL access_date
+END
+
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
+    OPTIONAL code
+END
+
+ONTOLOGY FIELDS
+    REQUIRED description
+    OPTIONAL topic
+END
+```
+
+---
+
+## Definição de Campos (FIELD)
+
+A declaração FIELD especifica o tipo, escopo e restrições de cada campo.
+
+### Sintaxe
+
+```synesis
+FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE]
+    SCOPE [SOURCE | ITEM | ONTOLOGY]
+    [DESCRIPTION description text]
+    
+    # Propriedade exclusiva para TYPE CHAIN
+    [ARITY operator number] 
+    [RELATIONS
+        relation_name: description
+    END]
+
+    # Propriedade exclusiva para TYPE ORDERED ou ENUMERATED
+    [VALUES
+        [index] value_name: description  # Para ORDERED
+        value_name: description          # Para ENUMERATED
+    END]
+
+    # Propriedade exclusiva para TYPE SCALE
+    [FORMAT [min..max]]
+    
+END
+```
+
+### Exemplo Completo de FIELD
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Cadeia causal entre conceitos
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Relação de influência causal
+        ENABLES: Relação de habilitação
+        INHIBITS: Relação de inibição
+    END
+END
+
+FIELD aspect TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Aspecto modal de Dooyeweerd
+    VALUES
+        1 quantitative: Aspecto numérico
+        2 spatial: Aspecto espacial
+        3 kinematic: Aspecto cinético
+        4 physical: Aspecto físico
+        5 biotic: Aspecto biótico
+    END
+END
+
+FIELD sentiment TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Sentimento expresso no excerto
+    VALUES
+        positive: Sentimento positivo
+        negative: Sentimento negativo
+        neutral: Sentimento neutro
+    END
+END
+
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Nível de confiança da interpretação
+    FORMAT [1..5]
+END
+```
+
+---
+
+## Tipos de Campo
+
+### Tabela de Tipos
+
+| Tipo       | Escopo    | Semântica |
+|------------|-----------|-----------|
+| QUOTATION  | ITEM      | Excerto textual da fonte |
+| MEMO       | ITEM      | Anotação analítica do pesquisador |
+| CODE       | ITEM      | Rótulo conceitual (categorização) |
+| CHAIN      | ITEM      | Relação qualificada entre códigos |
+| TEXT       | qualquer  | Texto livre genérico |
+| DATE       | SOURCE    | Data com formato especificado |
+| SCALE      | qualquer  | Valor numérico em intervalo [min..max] |
+| ENUMERATED | qualquer  | Valor de lista fechada sem hierarquia |
+| ORDERED    | ONTOLOGY  | Valor de lista com hierarquia ordinal indexada |
+| TOPIC      | ONTOLOGY  | Categoria hierárquica superior (agrupamento dinâmico) |
+
+### Distinção: Linguagem vs Template
+
+| Nível              | FIXO (linguagem)                                      | CONFIGURÁVEL (template)                    |
+|--------------------|-------------------------------------------------------|--------------------------------------------|
+| Palavras-chave     | `SOURCE`, `ITEM`, `ONTOLOGY`, `FIELD`, `END`          | Nomes de campos como `aspect`, `quote`     |
+| Tipos de dados     | `QUOTATION`, `MEMO`, `CODE`, `CHAIN`, `TEXT`, etc.    | Valores em listas ORDERED/ENUMERATED       |
+| Estrutura          | Blocos SOURCE/ITEM/ONTOLOGY, sintaxe FIELD...END      | Quais campos são REQUIRED/OPTIONAL         |
+| Modificadores      | `BUNDLE`, `REQUIRED`, `OPTIONAL`, `SCOPE`, `TYPE`     | Quais campos usar BUNDLE                   |
+
+---
+
+## Blocos Estruturais
+
+### SOURCE
+
+Contextualiza ITEMs com referência bibliográfica. Cada SOURCE referencia exatamente uma entrada do arquivo `.bib`.
+
+```synesis
+SOURCE @bibref                # ← Referência obrigatória ao .bib
+    [field_name: value]       # ← Campos opcionais do SOURCE
+    ...
+
+END
+
+ITEM @bibref                  # ← Um ou mais ITEMs obrigatórios
+    ...
+
+END
+
+```
+
+**Exemplo anotado:**
+```synesis
+SOURCE @smith2023             # ← Deve existir em referencias.bib
+    access_date: 2025-01-15   # ← Campo opcional definido no template
+END                           # ← Fecha o bloco SOURCE
+
+ITEM @smith2023               # ← Primeiro item de análise
+    quote: "The technology shows promising results."
+    note: Autor expressa otimismo sobre resultados
+    chain: Technology -> INFLUENCES -> Acceptance
+END
+```
+
+### ITEM
+
+Unidade analítica fundamental. Contém excerto, memos, códigos e/ou cadeias. Pertence a exatamente um SOURCE.
+
+```synesis
+ITEM [@bibref]                # ← Referência opcional (herda do SOURCE pai)
+    field_name: value         # ← Um ou mais campos obrigatórios
+    [field_name: value] ...   # ← Campos adicionais conforme template
+END
+```
+
+**Exemplo anotado:**
+```synesis
+ITEM @ref2025                 # ← Referência opcional para rastreabilidade
+    quote: Texto extraído     # ← Campo obrigatório (QUOTATION)
+
+    note: Primeira interp.    # ← Primeiro par do BUNDLE
+    chain: A -> INFLUENCES -> B
+
+    note: Segunda interp.     # ← Segundo par do BUNDLE (mesma quantidade)
+    chain: C -> ENABLES -> D
+END                           # ← Fecha o bloco ITEM
+```
+
+### ONTOLOGY
+
+Define conceito do vocabulário controlado. Estrutura plana com possibilidade de hierarquia.
+
+```synesis
+ONTOLOGY concept_name         # ← Nome do conceito (pode conter espaços)
+    field_name: value         # ← Um ou mais campos obrigatórios
+    [field_name: value] ...   # ← Campos adicionais conforme template
+END
+```
+
+**Exemplo anotado:**
+```synesis
+ONTOLOGY Cost                 # ← Nome simples (sem espaços)
+    topic: Economics          # ← Agrupamento dinâmico (TOPIC)
+    description: Economic factor representing financial expenditure
+END
+
+ONTOLOGY Public Acceptance    # ← Nome com espaços (sem aspas)
+    topic: Social Factors     # ← Mesmo topic agrupa conceitos relacionados
+    description: Community-level support for technology
+END
+```
+
+---
+
+## Cadeias Semânticas (CHAIN)
+
+### Chain Qualificada
+
+Quando o template define RELATIONS, a cadeia usa o padrão: posições ímpares são códigos, posições pares são tipos de relação.
+
+```synesis
+chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
+#      ^^^^    ^^^^^^^^    ^^^^
+#      código  relação     código (padrão alternado)
+```
+
+**Exemplo anotado:**
+```synesis
+chain: Climate Belief -> INFLUENCES -> Support
+#      ^^^^^^^^^^^^^    ^^^^^^^^^^    ^^^^^^^
+#      código (origem)  relação       código (destino)
+
+chain: A -> INFLUENCES -> B -> ENABLES -> C
+#      ^    ^^^^^^^^^^    ^    ^^^^^^^    ^
+#      cod1 rel1          cod2 rel2       cod3 (cadeia estendida)
+```
+
+### Chain Simples
+
+Quando o template NÃO define RELATIONS, apenas códigos são separados por `->`. A relação é implícita.
+
+```synesis
+chain: Code -> Code [-> Code] ...
+#      ^^^^    ^^^^
+#      origem  destino (relação implícita entre cada par)
+```
+
+**Exemplo anotado:**
+```synesis
+chain: A -> B             # ← Relação implícita: A relaciona-se com B
+chain: A -> B -> C        # ← Duas relações implícitas: A→B e B→C
+```
+
+### Conceitos com Espaços
+
+O parser captura espaços internos sem exigir aspas:
+
+```synesis
+chain: Institutional Barrier -> ENABLES -> Financial Barrier
+#      ^^^^^^^^^^^^^^^^^^^^              ^^^^^^^^^^^^^^^^^^
+#      conceito com espaços              conceito com espaços (sem aspas)
+
+chain: Public Acceptance -> INFLUENCES -> CCS Support -> ENABLES -> Deployment
+#      ^^^^^^^^^^^^^^^^^                  ^^^^^^^^^^^               ^^^^^^^^^^
+#      3 palavras                         2 palavras                1 palavra
+```
+
+---
+
+## Modificador BUNDLE
+
+O modificador BUNDLE define grupos de campos que formam unidade mínima repetível de interpretação.
+
+### Sintaxe
+
+```synesis
+ITEM FIELDS
+    REQUIRED BUNDLE field_name, field_name [,field_name] ...
+    #        ^^^^^^ ^^^^^^^^^^  ^^^^^^^^^^
+    #        modif. campo1      campo2 (devem aparecer juntos)
+END
+```
+
+### Semântica
+
+- Campos em BUNDLE são obrigatórios como unidade indivisível
+- Mínimo 1 ocorrência do bundle completo
+- Campos do bundle **nunca** aparecem isoladamente
+- Devem aparecer em igual quantidade: `len(field1) == len(field2) == len(field3) >= 1`
+- Correspondência posicional: `field1[i]` relaciona-se com `field2[i]` e `field3[i]`
+
+### Exemplo Anotado
+
+```synesis
+ITEM @ref2025
+    quote: Texto extraído da fonte    # ← Campo independente
+
+    note: Primeira interpretação      # ← bundle[0].note
+    chain: A -> INFLUENCES -> B       # ← bundle[0].chain (par 1)
+
+    note: Segunda interpretação       # ← bundle[1].note
+    chain: C -> ENABLES -> D          # ← bundle[1].chain (par 2)
+END
+# Resultado: 2 pares note+chain, correspondência posicional garantida
+```
+
+### Validação
+
+- Campo isolado de bundle: **erro**
+- Contagens diferentes: **erro**
+- Ausência completa de bundle obrigatório: **erro**
+- Violação de BUNDLE gera erro de compilação (não warning)
+
+---
+
+## Tipo TOPIC
+
+O tipo TOPIC permite definir categorias hierárquicas superiores que agrupam conceitos ontológicos de forma dinâmica, sem pré-definição no template.
+
+### Diferença de ENUMERATED
+
+| Característica    | ENUMERATED             | TOPIC                   |
+|-------------------|------------------------|-------------------------|
+| Valores permitidos| Lista fechada pré-definida | Aberto, dinâmico      |
+| Uso               | Categorização controlada | Agrupamento emergente  |
+| Validação         | Rejeita valores fora da lista | Aceita qualquer string |
+
+### Exemplo Anotado
+
+```synesis
+ONTOLOGY Cost
+    topic: Economics              # ← Categoria emergente (não pré-definida)
+    description: Economic factor representing financial expenditure
+END
+
+ONTOLOGY Public Acceptance
+    topic: Social Factors         # ← Outra categoria emergente
+    description: Community-level support for technology
+END
+
+# Resultado: dois topics criados dinamicamente (Economics, Social Factors)
+# O compilador aceita qualquer string como valor de TOPIC
+```
+
+---
+
+## Pipeline de Compilação
+
+### Etapas Obrigatórias
+
+| #  | Etapa                 | Responsabilidade |
+|----|-----------------------|------------------|
+| 1  | Descoberta            | Ler .synp, resolver caminhos, listar arquivos |
+| 2  | Template Loading      | Parsear e validar .synt (define regras) |
+| 3  | BibTeX Loading        | Carregar .bib, construir índice de referências |
+| 4  | Parsing Sintático     | Lark processa cada arquivo .syn e .syno |
+| 5  | Transformação         | Converter árvores concretas em AST tipada |
+| 6  | Validação Semântica   | Verificar referências, tipos, campos obrigatórios |
+| 7  | Normalização          | Aplicar defaults, canonicalização de valores |
+| 8  | Vinculação            | Associar ITEMs a SOURCEs, CODEs e CHAINs a ONTOLOGYs |
+| 9  | Exportação            | Gerar JSON, CSV, conforme definido no template |
+
+### Ordem de Dependência
+
+```
+Projeto → Template → BibTeX → Anotações → Ontologia
+```
+
+Cada fase depende da anterior. Erros interrompem o pipeline.
+
+---
+
+## Error Handling Pedagógico
+
+### Princípio de Design
+
+O compilador prioriza mensagens de erro educativas que ensinam a sintaxe correta sem exigir leitura do manual.
+
+### Detector de "Vírgula Ausente" em Listas CODE
+
+**Erro comum:**
+```synesis
+code: Climate Belief Risk Perception  # ERRO: falta vírgula
+```
+
+**Mensagem sugerida:**
+```
+erro: arquivo.syn:3:26: Múltiplos códigos devem ser separados por vírgula.
+    code: Climate Belief Risk Perception
+                         ^~~~ falta vírgula antes de "Risk"
+
+Use vírgula para separar códigos:
+    code: Climate Belief, Risk Perception
+
+OU especifique cada código em linha separada:
+    code: Climate Belief
+    code: Risk Perception
+```
+
+### Detector de "Cadeia Malformada" em CHAIN
+
+**Erro comum:**
+```synesis
+chain: Climate Belief INFLUENCES Support  # ERRO: falta ->
+```
+
+**Mensagem sugerida:**
+```
+erro: arquivo.syn:2:27: Cadeia causal exige operador '->' entre elementos.
+    chain: Climate Belief INFLUENCES Support
+                          ^~~~~~~~~~~ falta '->' antes de "INFLUENCES"
+
+Use '->' para conectar elementos:
+    chain: Climate Belief -> INFLUENCES -> Support
+```
+
+---
+
+## Referência Rápida de Palavras-Chave
+
+### Palavras-Chave de Estrutura
+
+| Palavra-chave | Descrição |
+|---------------|-----------|
+| `PROJECT`     | Inicia definição de projeto |
+| `TEMPLATE`    | Referência ao arquivo de template ou início de definição |
+| `SOURCE`      | Bloco de fonte bibliográfica |
+| `ITEM`        | Unidade analítica |
+| `ONTOLOGY`    | Definição de conceito |
+| `FIELD`       | Definição de campo |
+| `END`         | Encerra qualquer bloco |
+
+### Palavras-Chave de Inclusão
+
+| Palavra-chave | Descrição |
+|---------------|-----------|
+| `INCLUDE`     | Inclui arquivo externo |
+| `BIBLIOGRAPHY`| Tipo de inclusão para .bib |
+| `ANNOTATIONS` | Tipo de inclusão para .syn |
+
+### Modificadores de Campo
+
+| Modificador | Descrição |
+|-------------|-----------|
+| `REQUIRED`  | Campo obrigatório |
+| `OPTIONAL`  | Campo opcional |
+| `BUNDLE`    | Grupo de campos obrigatórios como unidade |
+
+### Especificadores de Campo
+
+| Especificador | Descrição |
+|---------------|-----------|
+| `TYPE`        | Define o tipo do campo |
+| `SCOPE`       | Define o escopo (SOURCE, ITEM, ONTOLOGY) |
+| `DESCRIPTION` | Texto descritivo do campo |
+| `ARITY`       | Restrição de aridade para CHAIN |
+| `RELATIONS`   | Lista de relações para CHAIN |
+| `VALUES`      | Lista de valores para ORDERED/ENUMERATED |
+| `FORMAT`      | Formato para SCALE |
+
+---
+
+## Seções Sugeridas para Expansão
+
+*As seções abaixo estão indicadas como tópicos para desenvolvimento futuro do guia, com base nas funcionalidades implícitas nos documentos fonte.*
+
+### Validação de Referências Bibliográficas
+> Como o compilador valida que cada `@bibref` existe no arquivo .bib incluído.
+
+### Normalização e Canonicalização
+> Regras para normalização de valores e conceitos via template.
+
+### Exportação para JSON
+> Estrutura do JSON gerado, incluindo campos `location` para rastreabilidade.
+
+### Exportação para CSV
+> Formato das tabelas planas por tipo de bloco, colunas de rastreabilidade.
+
+### Exportação para EXCEL
+> Organização de abas por tipo de bloco.
+
+### Integração com Lark Parser
+> Detalhes técnicos do parser utilizado para processamento sintático.
+
+### Exemplos Completos de Projetos
+> Projetos exemplo demonstrando uso integrado de todos os componentes.
+
+### Boas Práticas de Anotação
+> Recomendações para estruturação consistente de anotações qualitativas.
+
+---
+
+## Apêndice A: Sintaxe Consolidada
+
+### Projeto (.synp)
+
+```synesis
+PROJECT project_name              # ← Nome do projeto (obrigatório)
+
+TEMPLATE "filename.synt"          # ← Arquivo de template (obrigatório)
+INCLUDE BIBLIOGRAPHY "filename.bib"   # ← Referências BibTeX
+INCLUDE ANNOTATIONS "filename.syn"    # ← Arquivos de anotação
+INCLUDE ONTOLOGY "filename.syno"      # ← Arquivos de ontologia
+
+[METADATA                         # ← Bloco opcional
+    version: 1.0
+    author: string
+    [created: date]               # ← Campo opcional dentro do bloco
+    [modified: date]
+    [dataset: string]
+END]
+
+[DESCRIPTION                      # ← Bloco opcional
+    Texto livre descrevendo o projeto...
+END]
+
+END                               # ← Fecha o PROJECT
+```
+
+### Template (.synt)
+
+```synesis
+TEMPLATE name                     # ← Nome do template (obrigatório)
+[version: "string"]               # ← Metadado opcional
+[author: "string"]
+
+SOURCE FIELDS                     # ← Campos válidos em blocos SOURCE
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+
+ITEM FIELDS                       # ← Campos válidos em blocos ITEM
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+
+ONTOLOGY FIELDS                   # ← Campos válidos em blocos ONTOLOGY
+    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
+END
+
+FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE]
+    SCOPE [SOURCE | ITEM | ONTOLOGY]  # ← Onde o campo pode ser usado
+    [DESCRIPTION description text]
+    
+    [ARITY operator number]       # ← Apenas para CHAIN
+    [RELATIONS                    # ← Apenas para CHAIN
+        relation_name: description
+    END]
+
+    [VALUES                       # ← Apenas para ORDERED/ENUMERATED
+        [index] value_name: description
+    END]
+
+    [FORMAT [min..max]]           # ← Apenas para SCALE
+    
+END
+```
+
+### Anotações (.syn)
+
+```synesis
+SOURCE @bibref                    # ← Referência ao .bib (obrigatório)
+    [field_name: value]           # ← Campos do SOURCE (conforme template)        
+END
+
+ITEM                          # ← Um ou mais ITEMs
+    field_name: value         # ← Campos obrigatórios
+    [field_name: value] ...   # ← Campos opcionais
+END
+```
+
+### Ontologia (.syno)
+
+```synesis
+ONTOLOGY concept_name             # ← Nome do conceito (pode ter espaços)
+    field_name: value             # ← Campos obrigatórios
+    [field_name: value] ...       # ← Campos opcionais
+END
+```
+
+### Cadeias (CHAIN)
+
+```synesis
+# Chain qualificada (com RELATIONS definidas no template)
+chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
+#      ^^^^    ^^^^^^^^    ^^^^
+#      código  relação     código (padrão alternado obrigatório)
+
+# Chain simples (sem RELATIONS no template)
+chain: Code -> Code [-> Code] ...
+#      ^^^^    ^^^^
+#      origem  destino (relação implícita)
+```
+
+---
+
+*Documento gerado a partir da especificação Synesis v1.1*

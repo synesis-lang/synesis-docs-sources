@@ -1,0 +1,23 @@
+---
+title: "Synesis Language"
+format:
+  html:
+    toc: false
+    number-sections: false
+---
+
+<script>
+  (function () {
+    var language =
+      (navigator.languages && navigator.languages[0]) ||
+      navigator.language ||
+      navigator.userLanguage ||
+      "en";
+    language = language.toLowerCase();
+    var target = language.indexOf("pt") === 0 ? "./pt/" : "./en/";
+    window.location.replace(target);
+  })();
+</script>
+
+Redirecting... If you are not redirected,
+[Portuguese](./pt/) or [English](./en/).

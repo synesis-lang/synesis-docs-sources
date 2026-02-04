@@ -1,0 +1,123 @@
+/*-- scss:defaults --*/
+
+// Paleta Synesis - Opção Logo (Estrutura + Fluidez)
+// Baseada na imagem: Tons de Azul Petróleo (Teal) e Prata/Ciano
+$primary: #145C63 !default; // Teal Petróleo: A cor sólida e escura das linhas principais do 'S'. Transmite seriedade e lógica.
+$accent:  #FFB74D !default; // Turquesa Metálico: Baseado nas áreas de brilho/gradiente do logo. Para destaque e ação.
+
+
+// Configuração padrão de links do Quarto/Bootstrap
+$link-color: $primary !default;
+$link-hover-color: $accent !default;
+
+/*-- scss:rules --*/
+
+// 1. Navegação e Sidebar
+// --------------------------------------------------------
+
+.sidebar-title {
+  color: $primary;
+  font-weight: 700;
+}
+
+// Estilização do item ativo na sidebar (onde o usuário está)
+div.sidebar-item-container .active {
+  font-weight: bold;
+  color: $accent !important; // Usa o Turquesa para indicar localização ativa
+}
+
+// Estilização do índice lateral (Table of Contents)
+.sidebar nav[role=doc-toc] ul>li>a.active, 
+.sidebar nav[role=doc-toc] ul>li>ul>li>a.active {
+  font-weight: bold;
+  color: $accent;
+  border-left: 2px solid $accent; // Linha guia visual
+  padding-left: 10px;
+  transition: all 0.2s ease-in-out;
+}
+
+// Efeito suave nos links da sidebar
+.sidebar a {
+  transition: color 0.2s ease;
+}
+.sidebar a:hover {
+  color: $accent !important;
+}
+
+img.quarto-cover-image {
+  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
+}
+
+// 2. Tipografia e Cabeçalhos
+// --------------------------------------------------------
+
+#title-block-header.quarto-title-block.default .quarto-title h1.title {
+  margin-bottom: 0.5rem;
+  color: $primary; // Título principal no Teal escuro
+}
+
+h1, h2 {
+  color: $primary; // Subtítulos principais reforçam a identidade da marca
+}
+
+h2 {
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  border-bottom: 1px solid rgba($primary, 0.2); // Separador sutil
+  padding-bottom: 0.3rem;
+}
+
+h3 { margin-top: 1.5em; font-size: 1.2rem; font-weight: 500; color: #444; }
+h4 { margin-top: 1.5em; font-size: 1.1rem; }
+h5 { margin-top: 1.5em; font-size: 1rem; }
+
+.quarto-section-identifier {
+  color: #6C6C6C; // Cinza neutro mantido, combina bem com o Teal
+  font-weight: normal;
+}
+
+// 3. Blocos de Código e Elementos Técnicos
+// --------------------------------------------------------
+
+code {
+  color: #2F3335; // Cinza chumbo levemente azulado
+  background-color: rgba($primary, 0.08); // Fundo sutilmente azulado (Teal) para harmonizar
+  padding: 0.1em 0.3em;
+  border-radius: 4px;
+}
+
+code a:any-link {
+  text-decoration: underline;
+  text-decoration-color: $accent; // Sublinhado vibrante
+}
+
+pre {
+  // Mantendo o gradiente neutro para legibilidade
+  background-image: linear-gradient(160deg,#f8f8f8 0,#f1f1f1 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+// Botões
+.btn-primary {
+  background-color: $primary;
+  border-color: $primary;
+  &:hover {
+    background-color: darken($primary, 5%);
+  }
+}
+
+.btn-action {
+  background-color: $accent;
+  color: white; // Texto branco para contraste no turquesa
+  border-radius: 4px;
+  padding: 0.5em 1em;
+  text-decoration: none;
+  font-weight: bold;
+  &:hover {
+    background-color: darken($accent, 10%); // Escurece um pouco no hover
+    color: white;
+  }
+}

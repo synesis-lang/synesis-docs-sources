@@ -1,0 +1,196 @@
+# Why not just do it in Excel?
+
+**An honest answer about when Synesis makes sense — and when it doesn't**
+
+---
+
+## The uncomfortable question
+
+> "Why should I learn a language, go through all this work, just to generate a spreadsheet in the end? Why not skip this step and annotate directly in Excel?"
+
+This is a legitimate question. And it deserves an honest answer.
+
+---
+
+## Short answer
+
+**If your project is small, your data is simple, and you work alone: use Excel.**
+
+Seriously. Don't overcomplicate things.
+
+Synesis exists to solve problems that Excel doesn't solve well. If you don't have those problems, you don't need Synesis.
+
+---
+
+## The problems Excel doesn't solve
+
+### 1. Excel doesn't validate conceptual consistency
+
+In Excel, nothing prevents you from writing:
+
+| Code | Relationship | Code |
+|--------|---------|--------|
+| Cost | influences | Adoption |
+| cost | INFLUENCES | adoption |
+| Price | affects | Acceptance |
+
+Are these three ways of saying the same thing? Or are they different concepts? Excel doesn't know. Neither will you remember six months from now.
+
+**Synesis forces consistency.** If you defined "Cost" in the ontology, the compiler complains when you write "cost" or "Price". This seems like bureaucracy until you have 200 codes and realize half are duplicates with slightly different names.
+
+### 2. Excel doesn't connect interpretation to evidence
+
+In Excel, you probably do something like this:
+
+| Quote | Code |
+|---------|--------|
+| "The price is too high" | Economic Barrier |
+
+Where is your interpretation? Why did you decide this is "Economic Barrier" and not "Value Perception"? Do you remember? Can you explain it to your advisor? To the reviewer who will review your article?
+
+**Synesis requires you to record the interpretation along with the coding.** This seems like extra work until someone questions your conclusions and you have to justify each analytical decision.
+
+### 3. Excel doesn't guarantee bidirectional traceability
+
+Try doing this in Excel:
+- Given a code, find all associated quotes
+- Given a quote, find all assigned codes
+- Given an article, find all extracted causal chains
+- Given a causal chain, find the original source
+
+You can do it with filters, VLOOKUP, pivot tables. It will work. Until you add 50 more sources and realize your spreadsheet has become a monster of interconnected tabs that only you understand (and even you, not always).
+
+**Synesis maintains the source → item → interpretation → code/chain structure automatically.** The compiler generates CSVs with traceability columns (`source_file`, `source_line`, `source_column`). You always know where each piece of data came from.
+
+### 4. Excel doesn't scale for complex projects
+
+With 10 interviews and 30 codes, Excel works.
+
+With 100 articles, 500 codes, and 3 researchers, Excel becomes a nightmare:
+- Who changed what?
+- Why did this code disappear?
+- Which version of the file was this quote in?
+- How do I merge analyses from three people?
+
+**Synesis files are text files.** They work with Git. You have complete history, can merge, can revert, can work in parallel. This isn't an advantage for an undergraduate thesis. It's essential for a 3-year research project with a team.
+
+### 5. Excel doesn't natively express causal relationships
+
+Try representing this in Excel:
+
+```synesis
+Lack of Information -> GENERATES -> Distrust -> INHIBITS -> Adoption
+```
+
+You'll need separate columns, or concatenated cells, or an improvised structure. Any subsequent analysis will require manual parsing.
+
+**Synesis has native syntax for causal chains.** The compiler understands the structure and can export in formats suitable for network analysis or knowledge graphs.
+
+---
+
+## What you gain from the "extra work"
+
+| "Extra work" | What you gain |
+|------------------|------------------|
+| Learning the syntax | Structure that forces conceptual clarity |
+| Defining ontology | Controlled vocabulary that doesn't become a mess |
+| Writing in plain text | Versionable, searchable, durable files |
+| Using the compiler | Automatic validation + multiple output formats |
+| Separating source/item/code | Complete and auditable traceability |
+
+---
+
+## When Excel is the right choice
+
+Be honest with yourself. Use Excel if:
+
+- Your project has fewer than 20 sources
+- You work alone
+- The codes are simple (no complex hierarchies)
+- You don't need to justify analytical decisions in detail
+- The project ends in a few months and won't be resumed
+- You don't plan to integrate with other analysis tools
+
+**There's no shame in that.** Right tool for the right problem.
+
+---
+
+## When Synesis is worth the investment
+
+Consider Synesis if:
+
+- You have dozens or hundreds of sources
+- Multiple people will code or review
+- The project lasts years (dissertation, thesis, institutional research)
+- You need to demonstrate methodological rigor
+- The data will be reanalyzed or expanded in the future
+- You want to integrate with network analysis or knowledge graphs
+- Terminological consistency is critical to your conclusions
+- You've already lost data or work due to spreadsheet problems
+
+---
+
+## The real cost of each approach
+
+### Excel
+
+**Initial cost:** Low. You already know how to use it.
+
+**Cost over time:** Grows exponentially. Maintaining complex spreadsheets, correcting inconsistencies, reconstructing lost traceability, explaining undocumented decisions.
+
+**Cost of error:** High. Errors propagate silently. You may discover inconsistencies only at the writing stage, when it's too late.
+
+### Synesis
+
+**Initial cost:** Medium. You need to learn the syntax and define the structure.
+
+**Cost over time:** Stable. The structure is maintained. Automatic validation catches errors early.
+
+**Cost of error:** Low. The compiler complains immediately when something is wrong.
+
+---
+
+## The question you should be asking
+
+It's not "why not use Excel?"
+
+It's: **"What is the cost of doing it wrong?"**
+
+If the cost of inconsistency, loss of traceability, or conceptual mess is low for your project, use Excel.
+
+If that cost is high — because you need to defend a thesis, publish an article, or make organizational decisions based on the data — the investment in structure pays off.
+
+---
+
+## An honest middle ground
+
+If you're in doubt:
+
+1. **Start in Excel** to explore the data
+2. **Migrate to Synesis** when you realize you need more structure
+3. **Export to Excel** when you need specific visualizations or analyses
+
+Synesis is not anti-Excel. Excel is one of the output formats. The question is: where is the **source of truth**?
+
+- If the source of truth is the spreadsheet, you have the problems I described.
+- If the source of truth is the Synesis files, Excel is just one of the ways to visualize.
+
+---
+
+## Brutal conclusion
+
+Synesis is not for everyone. It's not for every project.
+
+It's for those who have already suffered with:
+- Spreadsheets that became incomprehensible monsters
+- Duplicate codes that contaminated the analysis
+- "Where did this come from?" questions without answers
+- Months of work lost due to lack of structure
+
+If you've never had these problems, maybe you don't need Synesis.
+
+If you have, you know exactly why it's worth investing in structure from the start.
+
+---
+
+*The best tool is the one that solves your problem. Sometimes it's Excel. Sometimes it's not.*

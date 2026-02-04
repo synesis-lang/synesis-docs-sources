@@ -1,0 +1,171 @@
+---
+title: "Synesis"
+subtitle: "The confluence of information into intelligence."
+---
+
+# Welcome to Synesis
+
+Human knowledge is inherently intricate, full of nuances and deep connections. This is complexity — and it is valuable. Complication arises only when we lack adequate methods for organizing knowledge.
+
+**Synesis** is a declarative domain-specific language (DSL) created for those who need more than simple notes. It is a method of **knowledge consolidation**.
+
+Unlike traditional tools, Synesis acts as a compiler for your analytical thinking: it receives your interpretations and annotations in plain text files, validates logical consistency between them, and transforms them into canonical and rigorous knowledge structures.
+
+Often, it is believed that technical rigor stifles creativity. Synesis proves the opposite: **discipline is the true form of freedom.** By delegating logical organization to a canonical structure, your mind is free for what truly matters: interpretation, nuance, and *insight*.
+The result is true *sýnesis*: the convergence of information fragments into an intelligible, auditable, and technically structured whole.
+
+## The Origin of the Name
+
+From the Greek *σύνεσις* (sýnesis):
+
+>**Etymology**: **σῠνῑ́ημῐ** (*sŭnī́ēmĭ*, "to bring together", "to make converge") + suffix **-σῐς** (*-sĭs*).
+
+**Meanings:**
+1.  Confluence; union; convergence.
+2.  Understanding; intelligence.
+3.  [cite_start]Consciousness.
+
+## How it works
+
+Synesis structure is modular and entirely based on **plain text**, offering a distraction-free environment, total portability, and maximum efficiency.
+
+The entire process is orchestrated by a project file (`.synp`), which connects its components:
+
+* **Bibliographic References (`.bib`)**: Your original sources.
+* **Interpretive Annotations (`.syn`)**: Your insights, standardized by templates (`.synt`).
+* **Ontologies (`.syno`)**: The major differentiator — files that formally define your analysis categories and logical interrelations.
+
+### Syntax Example
+
+You identify a knowledge source and create semantic blocks that connect segments from the original source with your systematic interpretation:
+
+```synesis
+SOURCE @interview_01
+END SOURCE
+
+ITEM @interview_01
+    quote: "The cost is too high for me"
+    note: Economic barrier to adoption
+    chain: Cost -> INHIBITS -> Adoption
+END ITEM
+```
+
+This approach elevates your annotations to the level of structured data. Daily writing is intuitive and you don't need to be a programmer to annotate; basic coding logic is only needed if you decide to build your own analysis structures (*templates*). Think of the *template* file as a contract, an agreement you establish for your annotations and the compiler. You can revise/expand/update this contract as your research progresses.
+
+## The Compilation Flow
+When compiling these files, Synesis verifies concept consistency and generates universal outputs.
+
+```{mermaid}
+flowchart LR
+    %% --- COLOR DEFINITION (Synesis 2.0 Palette) ---
+    %% Primary: #084C54 (Deep Teal)
+    %% Accent: #00BFA5 (Mint/Cyan)
+    %% Background: #FFFFFF (Pure white for contrast)
+
+    %% --- NODE STYLES ---
+    %% Compiler: Double circle, Strong Border, White Background
+    classDef compiler fill:#fff,stroke:#084C54,stroke-width:4px,color:#084C54,font-weight:bold;
+
+    %% High Value: Mint Border, Very Light Cyan Background, Teal Text
+    classDef highValue fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54;
+
+    %% Default Nodes (Inputs/Outputs): Light gray background, Soft border
+    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C54;
+
+    %% --- DIAGRAM STRUCTURE ---
+
+    subgraph Input ["Working Environment"]
+        direction TB
+        E["Ontology (.syno)"]:::defaultNode
+        D["Template (.synt)"]:::defaultNode
+        A["Bibliographic Sources (.bib)"]:::defaultNode
+        B["Interpretive Annotations (.syn)"]:::defaultNode
+    end
+
+    %% The Central Engine
+    C((("Synesis Compiler\nValidation & Logic"))):::compiler
+
+    subgraph Output ["Interchange Formats"]
+        direction TB
+        F["Structured JSON"]:::defaultNode
+        G["CSV/Excel Tables"]:::defaultNode
+        H["REFI-QDA/Others"]:::defaultNode
+    end
+
+    subgraph Ecosystem ["Application Ecosystem"]
+        direction TB
+        I["Graph Databases\nNeo4j, Memgraph"]:::highValue
+        J["Traceable AI Agents\nvia MCP"]:::highValue
+        K["Data Science & Dashboards\nR, Jupyter Labs"]:::highValue
+    end
+
+    %% --- FORCE SUBGROUP STYLES (Main Fix) ---
+    %% Using 'style' directly by subgraph ID to ensure transparency
+    style Input fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+    style Output fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+    style Ecosystem fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
+
+    %% --- CONNECTIONS ---
+    E --> C
+    D --> C
+    A --> C
+    B --> C
+
+    C == "Compilation" ==> F
+    C --> G
+    C -.-> H
+
+    F == "Complex Structure" ==> I
+    F == "Grounded Context" ==> J
+    F -. "Quantitative Analysis" .-> K
+    G -. "Quantitative Analysis" .-> K
+
+    %% Line Styles
+    linkStyle default stroke:#64748B,stroke-width:1px;
+```
+
+### The Power of Integration
+
+The result of Synesis compilation goes far beyond static documents. The compiler transforms your definitions into universal interchange formats (JSON, Excel, CSV), making your knowledge integrable with any technology stack:
+
+* **Graph Databases**: Natively feed Neo4j or Memgraph to visualize the complex topology of your concepts.
+
+* **Data Science**: Provide structured datasets for rigorous statistical analysis in R or visualizations in Jupyter Labs.
+
+* **AI Ready**: Through the MCP protocol (Model Context Protocol), connect your data to assistants like Claude Desktop, enabling natural language interactions with 100% traceable responses based on your "source of truth".
+
+## Who is Synesis for?
+
+:::{.callout-tip}
+## Humanities Researchers
+Perfect for complex qualitative research where interpretive precision is critical. See our introduction guide without technical jargon.
+
+See the [Researcher's Guide](guide/guia_pesquisadores.qmd) — an introduction without technical jargon.
+:::
+
+:::{.callout-note}
+## Decision Makers
+Ideal for knowledge system documentation and scenarios that require traceability and scalability.
+
+See the [Manager's Guide](guide/guia_profissionais.qmd) — focus on organizational value.
+:::
+
+:::{.callout-warning}
+## Unsure if you need Synesis?
+
+Read [Why not use Excel?](guide/guia_sincero.qmd) — an honest answer.
+:::
+
+## What Synesis is NOT
+
+* **It's not Software Programming**: Although it uses engineering concepts, you don't need to "know how to program". Synesis is a **declarative** language: you describe *what* you know, not *how* the computer should process it. It's knowledge markup, not app development.
+* **It's not a Notepad**: Note-taking tools prioritize capture speed and visual flexibility. Synesis prioritizes **logical consistency and canonical structure**. While notes accept contradictions, Synesis validates and resolves them.
+* **It's not a "Walled Garden"**: CAQDAS software packages are excellent, but often lock your data in proprietary formats. Synesis is **"Code-First" and interoperable**: your data are open text files, versionable (Git) and compilable to any other system.
+
+## Synesis Place in Your Stack
+
+Synesis was designed to be the **missing link** between qualitative research and data science, without trying to replace specialized tools:
+
+* **It doesn't analyze statistics, it feeds them:** Synesis doesn't calculate regressions, but generates structured datasets (`.csv`, `.json`) that allow R or Python to perform quantitative analysis on qualitative data with absolute precision.
+* **It's not an AI "Black Box":** Unlike AIs that magically summarize texts (and hallucinate), Synesis offers *grounding*. It is the manual truth structure that serves as backing for AI to operate safely.
+* **It doesn't replace human reading:** It is a formalization tool. The interpretation remains yours; Synesis ensures that this interpretation is systematic and auditable.

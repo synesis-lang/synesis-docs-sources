@@ -1,0 +1,738 @@
+# Synesis: Language Reference Guide
+
+**Version 1.1**
+
+---
+
+## Introduction
+
+### Definition
+
+Synesis is a declarative Domain-Specific Language (DSL) for formalization, validation, and compilation of analytical corpora for qualitative research. The compiler transforms interpretive annotations into canonical structures, ensuring human intelligibility and formal rigor.
+
+### What the Compiler Does
+
+- Validates syntax and semantics of annotations
+- Generates AST (Abstract Syntax Tree)
+- Produces basic structured formats (JSON, CSV, EXCEL)
+- Normalizes concepts via configurable templates
+
+### What the Compiler Does NOT Do
+
+- It's not a runtime or execution system
+- Does not perform statistical analysis
+- Does not manage user interface
+- Does not persist state between executions
+
+### Rigid Boundaries
+
+The compiler processes text files, produces structured artifacts, and terminates. There is no persistent state, conditional loops, or side-effects beyond writing output files.
+
+---
+
+## Files and Formats
+
+### Input Files
+
+| Extension | Description |
+|----------|-----------|
+| `.synp`  | Project file (single entry point) |
+| `.syn`   | Annotation files (SOURCE + ITEM) |
+| `.syno`  | Ontology files (ONTOLOGY) |
+| `.synt`  | Template file (FIELD definitions) |
+| `.bib`   | BibTeX/BibLaTeX references |
+
+### Output Files
+
+| Format      | Description |
+|--------------|-----------|
+| JSON         | Complete serialized representation (includes `location` in all nodes) |
+| CSV          | Flat tables by block type (includes `source_file`, `source_line`, `source_column` columns) |
+| EXCEL        | Flat tables as tabs |
+| Diagnostics  | Error report with precise location |
+
+### CSV Traceability
+
+Each CSV row for ITEM, CHAIN, or ONTOLOGY includes location columns:
+
+```csv
+bibref,from_code,relation,to_code,source_file,source_line,source_column
+ashworth2019,Gender,INFLUENCES,CCS Support,annotations/ccs.syn,367,11
+```
+
+### Compiler Invariants
+
+1. Deterministic compilation: same input produces same output
+2. Errors reported with file, line, column, and context
+3. Partial compilation is exclusively pedagogical
+4. Final artifacts (JSON, CSV) generated only upon complete compilation
+5. Bibliographic reference validation is mandatory
+
+---
+
+## Project Structure (.synp)
+
+The project file orchestrates analysis components and serves as the single entry point for the compiler.
+
+### Syntax
+
+```synesis
+PROJECT project_name
+
+TEMPLATE "filename.synt"
+INCLUDE BIBLIOGRAPHY "filename.bib"
+INCLUDE ANNOTATIONS "filename.syn"
+INCLUDE ONTOLOGY "filename.syno"
+
+# Brackets indicate the entire METADATA block is optional
+[METADATA
+    version: 1.0
+    author: string
+    [created: date]    # Individual optional field
+    [modified: date]   # Individual optional field
+    [dataset: string]
+END]
+
+# Brackets indicate the entire DESCRIPTION block is optional
+[DESCRIPTION
+    Free text describing the project...
+END]
+
+END
+```
+
+### Semantics
+
+- **PROJECT**: Mandatory keyword that starts project definition
+- **TEMPLATE**: Reference to `.synt` file that defines validation rules
+- **INCLUDE BIBLIOGRAPHY**: Path to `.bib` file with references
+- **INCLUDE ANNOTATIONS**: Path to `.syn` file(s) with annotations
+- **INCLUDE ONTOLOGY**: Path to `.syno` file(s) with ontological definitions
+- **METADATA**: Optional block with project metadata
+- **DESCRIPTION**: Optional block with free project description
+
+---
+
+## Template Definition (.synt)
+
+The template defines structure and validation rules for annotations.
+
+### Template Header
+
+```synesis
+TEMPLATE name
+[version: "string"]
+[author: "string"]
+```
+
+### Field Blocks
+
+```synesis
+SOURCE FIELDS
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+```
+
+```synesis
+ITEM FIELDS
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+```
+
+```synesis
+ONTOLOGY FIELDS
+    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
+END
+```
+
+### Complete Example
+
+```synesis
+TEMPLATE qualitative_analysis
+version: "1.0"
+author: "Researcher"
+
+SOURCE FIELDS
+    REQUIRED bibref
+    OPTIONAL access_date
+END
+
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
+    OPTIONAL code
+END
+
+ONTOLOGY FIELDS
+    REQUIRED description
+    OPTIONAL topic
+END
+```
+
+---
+
+## Field Definition (FIELD)
+
+The FIELD declaration specifies the type, scope, and restrictions of each field.
+
+### Syntax
+
+```synesis
+FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE]
+    SCOPE [SOURCE | ITEM | ONTOLOGY]
+    [DESCRIPTION description text]
+
+    # Exclusive property for TYPE CHAIN
+    [ARITY operator number]
+    [RELATIONS
+        relation_name: description
+    END]
+
+    # Exclusive property for TYPE ORDERED or ENUMERATED
+    [VALUES
+        [index] value_name: description  # For ORDERED
+        value_name: description          # For ENUMERATED
+    END]
+
+    # Exclusive property for TYPE SCALE
+    [FORMAT [min..max]]
+
+END
+```
+
+### Complete FIELD Example
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Causal chain between concepts
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Causal influence relationship
+        ENABLES: Enablement relationship
+        INHIBITS: Inhibition relationship
+    END
+END
+
+FIELD aspect TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Dooyeweerd's modal aspect
+    VALUES
+        1 quantitative: Numerical aspect
+        2 spatial: Spatial aspect
+        3 kinematic: Kinetic aspect
+        4 physical: Physical aspect
+        5 biotic: Biotic aspect
+    END
+END
+
+FIELD sentiment TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Sentiment expressed in the excerpt
+    VALUES
+        positive: Positive sentiment
+        negative: Negative sentiment
+        neutral: Neutral sentiment
+    END
+END
+
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Interpretation confidence level
+    FORMAT [1..5]
+END
+```
+
+---
+
+## Field Types
+
+### Type Table
+
+| Type       | Scope     | Semantics |
+|------------|-----------|-----------|
+| QUOTATION  | ITEM      | Textual excerpt from source |
+| MEMO       | ITEM      | Researcher's analytical annotation |
+| CODE       | ITEM      | Conceptual label (categorization) |
+| CHAIN      | ITEM      | Qualified relationship between codes |
+| TEXT       | any       | Generic free text |
+| DATE       | SOURCE    | Date with specified format |
+| SCALE      | any       | Numeric value in range [min..max] |
+| ENUMERATED | any       | Value from closed list without hierarchy |
+| ORDERED    | ONTOLOGY  | Value from list with indexed ordinal hierarchy |
+| TOPIC      | ONTOLOGY  | Higher hierarchical category (dynamic grouping) |
+
+### Distinction: Language vs Template
+
+| Level              | FIXED (language)                                      | CONFIGURABLE (template)                    |
+|--------------------|-------------------------------------------------------|--------------------------------------------|
+| Keywords     | `SOURCE`, `ITEM`, `ONTOLOGY`, `FIELD`, `END`          | Field names like `aspect`, `quote`     |
+| Data types     | `QUOTATION`, `MEMO`, `CODE`, `CHAIN`, `TEXT`, etc.    | Values in ORDERED/ENUMERATED lists       |
+| Structure          | SOURCE/ITEM/ONTOLOGY blocks, FIELD...END syntax      | Which fields are REQUIRED/OPTIONAL         |
+| Modifiers      | `BUNDLE`, `REQUIRED`, `OPTIONAL`, `SCOPE`, `TYPE`     | Which fields use BUNDLE                   |
+
+---
+
+## Structural Blocks
+
+### SOURCE
+
+Contextualizes ITEMs with bibliographic reference. Each SOURCE references exactly one entry from the `.bib` file.
+
+```synesis
+SOURCE @bibref                # ← Mandatory reference to .bib
+    [field_name: value]       # ← Optional SOURCE fields
+
+    ITEM                      # ← One or more mandatory ITEMs
+        ...
+    END
+
+END
+```
+
+**Annotated example:**
+```synesis
+SOURCE @smith2023             # ← Must exist in references.bib
+    access_date: 2025-01-15   # ← Optional field defined in template
+
+    ITEM                      # ← First analysis item
+        quote: "The technology shows promising results."
+        note: Author expresses optimism about results
+        chain: Technology -> INFLUENCES -> Acceptance
+    END
+
+END                           # ← Closes SOURCE block
+```
+
+### ITEM
+
+Fundamental analytical unit. Contains excerpt, memos, codes, and/or chains. Belongs to exactly one SOURCE.
+
+```synesis
+ITEM [@bibref]                # ← Optional reference (inherits from parent SOURCE)
+    field_name: value         # ← One or more mandatory fields
+    [field_name: value] ...   # ← Additional fields per template
+END
+```
+
+**Annotated example:**
+```synesis
+ITEM @ref2025                 # ← Optional reference for traceability
+    quote: Extracted text     # ← Mandatory field (QUOTATION)
+
+    note: First interp.       # ← First BUNDLE pair
+    chain: A -> INFLUENCES -> B
+
+    note: Second interp.      # ← Second BUNDLE pair (same count)
+    chain: C -> ENABLES -> D
+END                           # ← Closes ITEM block
+```
+
+### ONTOLOGY
+
+Defines concept from controlled vocabulary. Flat structure with possibility of hierarchy.
+
+```synesis
+ONTOLOGY concept_name         # ← Concept name (can contain spaces)
+    field_name: value         # ← One or more mandatory fields
+    [field_name: value] ...   # ← Additional fields per template
+END
+```
+
+**Annotated example:**
+```synesis
+ONTOLOGY Cost                 # ← Simple name (no spaces)
+    topic: Economics          # ← Dynamic grouping (TOPIC)
+    description: Economic factor representing financial expenditure
+END
+
+ONTOLOGY Public Acceptance    # ← Name with spaces (no quotes)
+    topic: Social Factors     # ← Same topic groups related concepts
+    description: Community-level support for technology
+END
+```
+
+---
+
+## Semantic Chains (CHAIN)
+
+### Qualified Chain
+
+When the template defines RELATIONS, the chain uses the pattern: odd positions are codes, even positions are relation types.
+
+```synesis
+chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
+#      ^^^^    ^^^^^^^^    ^^^^
+#      code    relation    code (alternating pattern)
+```
+
+**Annotated example:**
+```synesis
+chain: Climate Belief -> INFLUENCES -> Support
+#      ^^^^^^^^^^^^^    ^^^^^^^^^^    ^^^^^^^
+#      code (origin)    relation      code (destination)
+
+chain: A -> INFLUENCES -> B -> ENABLES -> C
+#      ^    ^^^^^^^^^^    ^    ^^^^^^^    ^
+#      cod1 rel1          cod2 rel2       cod3 (extended chain)
+```
+
+### Simple Chain
+
+When the template does NOT define RELATIONS, only codes are separated by `->`. The relationship is implicit.
+
+```synesis
+chain: Code -> Code [-> Code] ...
+#      ^^^^    ^^^^
+#      origin  destination (implicit relationship between each pair)
+```
+
+**Annotated example:**
+```synesis
+chain: A -> B             # ← Implicit relationship: A relates to B
+chain: A -> B -> C        # ← Two implicit relationships: A→B and B→C
+```
+
+### Concepts with Spaces
+
+The parser captures internal spaces without requiring quotes:
+
+```synesis
+chain: Institutional Barrier -> ENABLES -> Financial Barrier
+#      ^^^^^^^^^^^^^^^^^^^^              ^^^^^^^^^^^^^^^^^^
+#      concept with spaces               concept with spaces (no quotes)
+
+chain: Public Acceptance -> INFLUENCES -> CCS Support -> ENABLES -> Deployment
+#      ^^^^^^^^^^^^^^^^^                  ^^^^^^^^^^^               ^^^^^^^^^^
+#      3 words                            2 words                   1 word
+```
+
+---
+
+## BUNDLE Modifier
+
+The BUNDLE modifier defines groups of fields that form a minimum repeatable unit of interpretation.
+
+### Syntax
+
+```synesis
+ITEM FIELDS
+    REQUIRED BUNDLE field_name, field_name [,field_name] ...
+    #        ^^^^^^ ^^^^^^^^^^  ^^^^^^^^^^
+    #        modif. field1      field2 (must appear together)
+END
+```
+
+### Semantics
+
+- BUNDLE fields are mandatory as an indivisible unit
+- Minimum 1 occurrence of complete bundle
+- Bundle fields **never** appear in isolation
+- Must appear in equal quantity: `len(field1) == len(field2) == len(field3) >= 1`
+- Positional correspondence: `field1[i]` relates to `field2[i]` and `field3[i]`
+
+### Annotated Example
+
+```synesis
+ITEM @ref2025
+    quote: Text extracted from source    # ← Independent field
+
+    note: First interpretation           # ← bundle[0].note
+    chain: A -> INFLUENCES -> B          # ← bundle[0].chain (pair 1)
+
+    note: Second interpretation          # ← bundle[1].note
+    chain: C -> ENABLES -> D             # ← bundle[1].chain (pair 2)
+END
+# Result: 2 note+chain pairs, guaranteed positional correspondence
+```
+
+### Validation
+
+- Isolated bundle field: **error**
+- Different counts: **error**
+- Complete absence of mandatory bundle: **error**
+- BUNDLE violation generates compilation error (not warning)
+
+---
+
+## TOPIC Type
+
+The TOPIC type allows defining higher hierarchical categories that dynamically group ontological concepts, without pre-definition in the template.
+
+### Difference from ENUMERATED
+
+| Characteristic    | ENUMERATED             | TOPIC                   |
+|-------------------|------------------------|-------------------------|
+| Allowed values    | Pre-defined closed list | Open, dynamic           |
+| Usage             | Controlled categorization | Emergent grouping      |
+| Validation        | Rejects values outside list | Accepts any string     |
+
+### Annotated Example
+
+```synesis
+ONTOLOGY Cost
+    topic: Economics              # ← Emergent category (not pre-defined)
+    description: Economic factor representing financial expenditure
+END
+
+ONTOLOGY Public Acceptance
+    topic: Social Factors         # ← Another emergent category
+    description: Community-level support for technology
+END
+
+# Result: two topics dynamically created (Economics, Social Factors)
+# The compiler accepts any string as TOPIC value
+```
+
+---
+
+## Compilation Pipeline
+
+### Mandatory Steps
+
+| #  | Step                  | Responsibility |
+|----|-----------------------|------------------|
+| 1  | Discovery             | Read .synp, resolve paths, list files |
+| 2  | Template Loading      | Parse and validate .synt (defines rules) |
+| 3  | BibTeX Loading        | Load .bib, build reference index |
+| 4  | Syntactic Parsing     | Lark processes each .syn and .syno file |
+| 5  | Transformation        | Convert concrete trees to typed AST |
+| 6  | Semantic Validation   | Verify references, types, required fields |
+| 7  | Normalization         | Apply defaults, value canonicalization |
+| 8  | Linking               | Associate ITEMs to SOURCEs, CODEs and CHAINs to ONTOLOGYs |
+| 9  | Export                | Generate JSON, CSV, as defined in template |
+
+### Dependency Order
+
+```
+Project → Template → BibTeX → Annotations → Ontology
+```
+
+Each phase depends on the previous one. Errors interrupt the pipeline.
+
+---
+
+## Pedagogical Error Handling
+
+### Design Principle
+
+The compiler prioritizes educational error messages that teach correct syntax without requiring manual reading.
+
+### "Missing Comma" Detector in CODE Lists
+
+**Common error:**
+```synesis
+code: Climate Belief Risk Perception  # ERROR: missing comma
+```
+
+**Suggested message:**
+```
+error: file.syn:3:26: Multiple codes must be separated by comma.
+    code: Climate Belief Risk Perception
+                         ^~~~ missing comma before "Risk"
+
+Use comma to separate codes:
+    code: Climate Belief, Risk Perception
+
+OR specify each code on separate line:
+    code: Climate Belief
+    code: Risk Perception
+```
+
+### "Malformed Chain" Detector in CHAIN
+
+**Common error:**
+```synesis
+chain: Climate Belief INFLUENCES Support  # ERROR: missing ->
+```
+
+**Suggested message:**
+```
+error: file.syn:2:27: Causal chain requires '->' operator between elements.
+    chain: Climate Belief INFLUENCES Support
+                          ^~~~~~~~~~~ missing '->' before "INFLUENCES"
+
+Use '->' to connect elements:
+    chain: Climate Belief -> INFLUENCES -> Support
+```
+
+---
+
+## Keyword Quick Reference
+
+### Structure Keywords
+
+| Keyword | Description |
+|---------------|-----------|
+| `PROJECT`     | Starts project definition |
+| `TEMPLATE`    | Reference to template file or start of definition |
+| `SOURCE`      | Bibliographic source block |
+| `ITEM`        | Analytical unit |
+| `ONTOLOGY`    | Concept definition |
+| `FIELD`       | Field definition |
+| `END`         | Closes any block |
+
+### Inclusion Keywords
+
+| Keyword | Description |
+|---------------|-----------|
+| `INCLUDE`     | Includes external file |
+| `BIBLIOGRAPHY`| Inclusion type for .bib |
+| `ANNOTATIONS` | Inclusion type for .syn |
+
+### Field Modifiers
+
+| Modifier | Description |
+|-------------|-----------|
+| `REQUIRED`  | Mandatory field |
+| `OPTIONAL`  | Optional field |
+| `BUNDLE`    | Group of mandatory fields as unit |
+
+### Field Specifiers
+
+| Specifier | Description |
+|---------------|-----------|
+| `TYPE`        | Defines field type |
+| `SCOPE`       | Defines scope (SOURCE, ITEM, ONTOLOGY) |
+| `DESCRIPTION` | Field descriptive text |
+| `ARITY`       | Arity restriction for CHAIN |
+| `RELATIONS`   | Relation list for CHAIN |
+| `VALUES`      | Value list for ORDERED/ENUMERATED |
+| `FORMAT`      | Format for SCALE |
+
+---
+
+## Suggested Sections for Expansion
+
+*The sections below are indicated as topics for future development of the guide, based on functionality implied in source documents.*
+
+### Bibliographic Reference Validation
+> How the compiler validates that each `@bibref` exists in the included .bib file.
+
+### Normalization and Canonicalization
+> Rules for normalizing values and concepts via template.
+
+### JSON Export
+> Structure of generated JSON, including `location` fields for traceability.
+
+### CSV Export
+> Format of flat tables by block type, traceability columns.
+
+### EXCEL Export
+> Tab organization by block type.
+
+### Integration with Lark Parser
+> Technical details of the parser used for syntactic processing.
+
+### Complete Project Examples
+> Example projects demonstrating integrated use of all components.
+
+### Annotation Best Practices
+> Recommendations for consistent structuring of qualitative annotations.
+
+---
+
+## Appendix A: Consolidated Syntax
+
+### Project (.synp)
+
+```synesis
+PROJECT project_name              # ← Project name (mandatory)
+
+TEMPLATE "filename.synt"          # ← Template file (mandatory)
+INCLUDE BIBLIOGRAPHY "filename.bib"   # ← BibTeX references
+INCLUDE ANNOTATIONS "filename.syn"    # ← Annotation files
+INCLUDE ONTOLOGY "filename.syno"      # ← Ontology files
+
+[METADATA                         # ← Optional block
+    version: 1.0
+    author: string
+    [created: date]               # ← Optional field within block
+    [modified: date]
+    [dataset: string]
+END]
+
+[DESCRIPTION                      # ← Optional block
+    Free text describing the project...
+END]
+
+END                               # ← Closes PROJECT
+```
+
+### Template (.synt)
+
+```synesis
+TEMPLATE name                     # ← Template name (mandatory)
+[version: "string"]               # ← Optional metadata
+[author: "string"]
+
+SOURCE FIELDS                     # ← Valid fields in SOURCE blocks
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+
+ITEM FIELDS                       # ← Valid fields in ITEM blocks
+    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+END
+
+ONTOLOGY FIELDS                   # ← Valid fields in ONTOLOGY blocks
+    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
+END
+
+FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE]
+    SCOPE [SOURCE | ITEM | ONTOLOGY]  # ← Where field can be used
+    [DESCRIPTION description text]
+
+    [ARITY operator number]       # ← Only for CHAIN
+    [RELATIONS                    # ← Only for CHAIN
+        relation_name: description
+    END]
+
+    [VALUES                       # ← Only for ORDERED/ENUMERATED
+        [index] value_name: description
+    END]
+
+    [FORMAT [min..max]]           # ← Only for SCALE
+
+END
+```
+
+### Annotations (.syn)
+
+```synesis
+SOURCE @bibref                    # ← Reference to .bib (mandatory)
+    [field_name: value]           # ← SOURCE fields (per template)
+
+    ITEM                          # ← One or more ITEMs
+        field_name: value         # ← Mandatory fields
+        [field_name: value] ...   # ← Optional fields
+    END
+
+END
+```
+
+### Ontology (.syno)
+
+```synesis
+ONTOLOGY concept_name             # ← Concept name (can have spaces)
+    field_name: value             # ← Mandatory fields
+    [field_name: value] ...       # ← Optional fields
+END
+```
+
+### Chains (CHAIN)
+
+```synesis
+# Qualified chain (with RELATIONS defined in template)
+chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
+#      ^^^^    ^^^^^^^^    ^^^^
+#      code    relation    code (mandatory alternating pattern)
+
+# Simple chain (without RELATIONS in template)
+chain: Code -> Code [-> Code] ...
+#      ^^^^    ^^^^
+#      origin  destination (implicit relationship)
+```
+
+---
+
+*Document generated from Synesis v1.1 specification*

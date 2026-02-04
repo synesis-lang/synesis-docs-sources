@@ -1,0 +1,273 @@
+# Synesis: Uma Linguagem para Organizar sua Pesquisa Qualitativa
+
+**Guia introdutório para pesquisadores de humanidades**
+
+---
+
+## O que é Synesis?
+
+Synesis é uma forma estruturada de registrar suas anotações de pesquisa qualitativa em arquivos de texto simples. Pense nela como um **caderno de campo digital** com regras claras que ajudam você a manter consistência ao longo de todo o projeto.
+
+O nome vem do grego *σύνεσις* (sýnesis), que significa "compreensão" ou "entendimento" — exatamente o que buscamos ao analisar dados qualitativos.
+
+---
+
+## Por que usar Synesis?
+
+### O problema comum
+
+Se você já trabalhou com pesquisa qualitativa, provavelmente conhece estas situações:
+
+- Anotações espalhadas em diferentes arquivos e formatos
+- Dificuldade em lembrar por que marcou determinado trecho como importante
+- Códigos que mudam de nome ao longo do projeto
+- Horas reorganizando dados antes de poder analisá-los
+- Dificuldade em explicar seu processo analítico para outros pesquisadores
+
+### A proposta de Synesis
+
+Synesis oferece uma estrutura simples e consistente para:
+
+- **Registrar** excertos relevantes das suas fontes
+- **Anotar** suas interpretações e reflexões
+- **Codificar** trechos com conceitos analíticos
+- **Relacionar** conceitos entre si (relações causais, de influência, etc.)
+- **Documentar** seu vocabulário conceitual (ontologia)
+
+Tudo isso em arquivos de texto que você pode abrir em qualquer computador, agora ou daqui a vinte anos.
+
+---
+
+## Como funciona na prática?
+
+### Um exemplo simples
+
+Imagine que você está analisando entrevistas sobre aceitação de novas tecnologias. Você encontra este trecho:
+
+> "Eu até queria usar, mas o custo é muito alto para o meu orçamento."
+
+Em Synesis, você registraria assim:
+
+```synesis
+SOURCE @entrevista_maria
+    
+    ITEM
+        quote: "Eu até queria usar, mas o custo é muito alto para o meu orçamento."
+        note: Participante expressa desejo de adoção limitado por barreira econômica
+        chain: Custo -> INIBE -> Adoção
+    END
+
+END
+```
+
+O que cada parte significa:
+
+- **SOURCE**: indica de onde vem o material (uma entrevista, um documento, um artigo)
+- **ITEM**: é uma unidade de análise — um trecho que você considera relevante
+- **quote**: o excerto literal da fonte
+- **note**: sua interpretação ou reflexão sobre o trecho
+- **chain**: a relação que você identificou entre conceitos
+
+### Construindo relações
+
+A notação `Custo -> INIBE -> Adoção` significa: "o Custo INIBE a Adoção". Essa forma de registrar permite que você construa, aos poucos, um mapa das relações que emergem dos seus dados.
+
+Você pode encadear múltiplas relações:
+
+```synesis
+chain: Falta de Informação -> GERA -> Desconfiança -> INIBE -> Adoção
+```
+
+Isso registra uma sequência: a falta de informação gera desconfiança, que por sua vez inibe a adoção.
+
+---
+
+## Os componentes básicos
+
+### 1. Fontes (SOURCE)
+
+Cada fonte que você analisa recebe um identificador único, conectado às suas referências bibliográficas:
+
+```synesis
+SOURCE @silva2023
+    ...
+END
+```
+
+O `@silva2023` corresponde a uma entrada no seu arquivo de referências (formato BibTeX, usado por gerenciadores como Zotero e Mendeley).
+
+### 2. Itens de análise (ITEM)
+
+Dentro de cada fonte, você registra os trechos relevantes:
+
+```synesis
+ITEM
+    quote: "O texto literal extraído da fonte"
+    note: Sua interpretação ou comentário analítico
+    code: Conceito A, Conceito B
+    chain: Conceito A -> RELAÇÃO -> Conceito B
+END
+```
+
+Você pode ter quantos itens precisar em cada fonte.
+
+### 3. Vocabulário conceitual (ONTOLOGY)
+
+Para manter consistência, você define seus conceitos principais:
+
+```synesis
+ONTOLOGY Custo
+    topic: Fatores Econômicos
+    description: Despesa financeira associada à aquisição ou uso de tecnologia
+END
+
+ONTOLOGY Adoção
+    topic: Comportamento
+    description: Decisão de incorporar uma tecnologia ao cotidiano
+END
+```
+
+Isso cria um glossário vivo do seu projeto, ajudando a manter definições claras e consistentes.
+
+---
+
+## Tipos de relação
+
+As relações entre conceitos dependem do seu campo de estudo. Alguns exemplos comuns:
+
+| Relação | Significado | Exemplo |
+|---------|-------------|---------|
+| INFLUENCIA | Um fator afeta outro | Renda -> INFLUENCIA -> Acesso |
+| GERA | Um fator produz outro | Desinformação -> GERA -> Medo |
+| INIBE | Um fator dificulta outro | Burocracia -> INIBE -> Participação |
+| POSSIBILITA | Um fator permite outro | Educação -> POSSIBILITA -> Autonomia |
+| DEPENDE_DE | Um fator requer outro | Confiança -> DEPENDE_DE -> Transparência |
+
+Você define quais relações fazem sentido para sua pesquisa no arquivo de template.
+
+---
+
+## Benefícios para sua pesquisa
+
+### Rastreabilidade
+
+Cada interpretação está conectada ao trecho original. Você (ou outro pesquisador) pode sempre voltar à fonte para verificar o contexto.
+
+### Consistência
+
+Com um vocabulário definido, você evita usar "Custo", "Preço" e "Valor econômico" para o mesmo conceito em diferentes momentos da análise.
+
+### Transparência metodológica
+
+Seu processo analítico fica documentado. Ao escrever a metodologia do seu artigo ou tese, você tem um registro claro de como chegou às suas conclusões.
+
+### Portabilidade
+
+Arquivos de texto simples funcionam em qualquer sistema operacional e não dependem de software específico. Sua pesquisa não fica "presa" em um programa.
+
+### Colaboração
+
+Colegas podem revisar suas anotações, sugerir interpretações alternativas e contribuir com o projeto usando as mesmas convenções.
+
+---
+
+## Como começar
+
+### Passo 1: Organize suas fontes
+
+Reúna suas referências bibliográficas em um arquivo `.bib` (exportável de Zotero, Mendeley ou similar).
+
+### Passo 2: Defina sua estrutura
+
+Crie um template básico definindo:
+- Quais campos você usará (citação, nota, código, cadeia)
+- Quais tipos de relação fazem sentido para seu estudo
+- Quais categorias de conceitos você espera encontrar
+
+### Passo 3: Comece a anotar
+
+À medida que lê suas fontes, registre os trechos relevantes com suas interpretações. Não se preocupe em ter tudo perfeito desde o início — o processo é iterativo.
+
+### Passo 4: Refine seu vocabulário
+
+Conforme padrões emergem, documente seus conceitos na ontologia. Revise definições, agrupe conceitos relacionados, refine as relações.
+
+### Passo 5: Analise os resultados
+
+O compilador Synesis transforma suas anotações em formatos estruturados (planilhas, por exemplo) que facilitam a visualização de padrões e a geração de relatórios.
+
+---
+
+## Um projeto completo em miniatura
+
+Para visualizar como as peças se encaixam:
+
+```
+PROJETO: Aceitação de Tecnologias Verdes
+│
+├── referencias.bib          ← Suas referências bibliográficas
+│
+├── template.synt            ← Regras do seu projeto
+│
+├── anotacoes/
+│   ├── entrevistas.syn      ← Anotações de entrevistas
+│   └── documentos.syn       ← Anotações de documentos
+│
+└── ontologia.syno           ← Seu vocabulário conceitual
+```
+
+O arquivo de projeto (`.synp`) conecta tudo:
+
+```synesis
+PROJECT aceitacao_tecnologias_verdes
+
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "referencias.bib"
+INCLUDE ANNOTATIONS "anotacoes/entrevistas.syn"
+INCLUDE ANNOTATIONS "anotacoes/documentos.syn"
+INCLUDE ONTOLOGY "ontologia.syno"
+
+DESCRIPTION
+    Estudo sobre fatores que influenciam a aceitação 
+    de tecnologias verdes em comunidades urbanas.
+END
+
+END
+```
+
+---
+
+## Perguntas frequentes
+
+### Preciso saber programar?
+
+Não. Synesis usa uma sintaxe simples e legível. Se você consegue organizar um documento com títulos e subtítulos, consegue usar Synesis.
+
+### Posso usar com meu software atual?
+
+Sim. Os arquivos Synesis são texto puro, editáveis em qualquer editor (Word, Google Docs, Notepad, ou editores especializados). O compilador gera planilhas que você pode abrir no Excel ou Google Sheets.
+
+### E se eu errar a sintaxe?
+
+O compilador indica exatamente onde está o problema e sugere como corrigir. As mensagens de erro são escritas para serem compreensíveis, não técnicas.
+
+### Synesis substitui softwares como NVivo ou Atlas.ti?
+
+Synesis tem propósito diferente. Enquanto esses softwares oferecem interfaces gráficas completas, Synesis foca na estruturação e documentação do processo analítico. Alguns pesquisadores usam ambos: Synesis para registro estruturado e outros softwares para visualização.
+
+### Posso usar para qualquer tipo de pesquisa qualitativa?
+
+Synesis é flexível. O template permite adaptar a estrutura para diferentes abordagens metodológicas: análise de conteúdo, teoria fundamentada, análise temática, entre outras.
+
+---
+
+## Próximos passos
+
+1. **Leia o Guia de Referência** para conhecer todos os comandos disponíveis
+2. **Experimente com um projeto pequeno** — algumas entrevistas ou documentos
+3. **Adapte o template** às necessidades específicas da sua pesquisa
+4. **Compartilhe suas dúvidas** com a comunidade de usuários
+
+---
+
+*Synesis foi desenvolvida para tornar a pesquisa qualitativa mais organizada, transparente e reproduzível — sem exigir conhecimento técnico avançado.*

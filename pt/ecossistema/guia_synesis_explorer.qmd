@@ -1,0 +1,116 @@
+# Guia rapido: Synesis Explorer (VS Code)
+
+**Objetivo:** ajudar voce a instalar e usar a extensao para navegar seus arquivos Synesis (.syn, .synt, .synp, .syno) de forma simples.
+
+---
+
+## O que a extensao faz
+
+- Mostra suas referencias, codigos e relacoes em paineis laterais
+- Abre um grafo de relacoes e o resumo (abstract) das referencias
+- Ajuda a encontrar trechos com facilidade
+
+![Tela inicial do VS Code com a extensao instalada.](../../images/01_tela_inicial.png)
+
+---
+
+## Requisitos basicos
+
+- VS Code instalado
+- Arquivos Synesis no seu computador
+
+---
+
+## Instalacao (arquivo VSIX)
+
+1. Abra o VS Code
+2. Clique no icone de extensoes (barra lateral)
+3. Clique nos tres pontinhos (menu) e escolha "Install from VSIX..."
+4. Selecione o arquivo `.vsix` da extensao
+5. Aguarde a instalacao e reinicie o VS Code se solicitado
+
+![Menu "Install from VSIX..."](../../images/02_install.png)
+---
+
+## Como abrir seu projeto
+
+1. Abra a pasta do seu projeto no VS Code
+2. Certifique-se de que seus arquivos `.syn` e o projeto `.synp` estao na pasta
+
+![Pasta do projeto aberta no VS Code.](../../images/03_projeto_synesis.png)
+---
+
+## Onde encontrar o Synesis Explorer
+
+1. Na barra lateral esquerda, clique no icone "Synesis Explorer"
+2. Voce vera tres secoes:
+   - References
+   - Codes
+   - Relations (aparece quando houver relacoes)
+
+![Painel Synesis Explorer com as tres secoes.](../../images/04_painel_synesis.png)
+---
+
+## Usando os Explorers
+
+### References
+- Lista suas fontes (SOURCE)
+- Use o botao de atualizar (refresh) quando mudar arquivos
+- Use o filtro para encontrar rapidamente uma referencia
+
+![Referencias com lista e botoes no topo.](../../images/05_references.png)
+
+### Codes
+- Mostra os codigos encontrados nos seus dados
+- Use refresh e filtro da mesma forma
+
+![Codes com lista de codigos.](../../images/06_codes.png)
+
+### Relations
+- Mostra relacoes (chains) encontradas
+- Se nao aparecer, verifique se há campos do tipo `chain:` nos arquivos de anotação (.syn)
+
+![Relations com algumas relacoes listadas.](../../images/07_relations.png)
+
+---
+
+## Usando os Viewers
+
+### Graph Viewer
+- Mostra um grafo das relacoes
+- Atalho: `Ctrl+Alt+G` (Windows/Linux) ou `Cmd+Shift+G` (Mac)
+
+![Grafo aberto em uma aba.](../../images/08_graph_viewer.png)
+
+### Abstract Viewer
+- Mostra o abstract de referencias BibTeX
+- Atalho: `Ctrl+Shift+A` (Windows/Linux) ou `Cmd+Shift+A` (Mac)
+
+![Abstract aberto em uma aba.](../../images/09_abstract_viewer.png)
+
+---
+
+## Dicas rapidas
+
+- Se algo nao atualizar, clique em refresh
+- O Word Wrap é ativado automaticamente para facilitar a leitura
+- Use o filtro para reduzir listas grandes
+
+---
+
+## Problemas comuns
+
+**Nao vejo nada no painel**
+- Verifique se a pasta do projeto foi aberta no VS Code
+- Verifique se ha arquivos `.syn` na pasta
+
+**Relations nao aparecem**
+- Verifique se existem linhas `chain:` nos arquivos
+
+---
+
+## Pronto para usar
+
+Com isso, voce ja consegue navegar, filtrar e visualizar seus dados Synesis diretamente no VS Code.
+
+![Fluxo completo (arquivo aberto + explorer + viewer).](../../images/10_full_view.png)

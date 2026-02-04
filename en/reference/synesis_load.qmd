@@ -1,0 +1,810 @@
+# Synesis: In-Memory API (`synesis.load`)
+
+**Version 0.2.0**
+
+---
+
+## Introduction
+
+The `synesis.load` API allows compiling Synesis projects directly in memory, without dependency on files on disk. This functionality is ideal for:
+
+- **Jupyter Notebooks**: Interactive analysis of qualitative data
+- **Python Scripts**: Research pipeline automation
+- **Pandas Integration**: Direct export to DataFrames
+- **Testing and Prototyping**: Quick annotation validation
+
+### Difference between CLI and API
+
+| Aspect | CLI (`synesis compile`) | API (`synesis.load`) |
+|---------|-------------------------|----------------------|
+| Input | Files on disk (.synp, .syn, .synt) | Strings in memory |
+| Output | JSON/CSV/Excel files | Dicts, DataFrames |
+| Usage | Terminal, CI/CD | Notebooks, Scripts |
+| I/O | Disk read/write | Zero I/O |
+
+---
+
+## Installation
+
+### Requirements
+
+```bash
+pip install synesis
+```
+
+### With Pandas support (recommended)
+
+```bash
+pip install synesis pandas
+```
+
+### Verify installation
+
+```python
+import synesis
+print(synesis.__version__)  # 0.2.0
+```
+
+---
+
+## Quick Start
+
+```python
+import synesis
+
+# In-memory contents
+template = """
+TEMPLATE Minimal
+SOURCE FIELDS
+    OPTIONAL date
+END SOURCE FIELDS
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
+FIELD date TYPE DATE SCOPE SOURCE END FIELD
+FIELD quote TYPE QUOTATION SCOPE ITEM END FIELD
+END TEMPLATE
+"""
+
+project = """
+PROJECT Demo
+    TEMPLATE "template.synt"
+END PROJECT
+"""
+
+annotations = {
+    "sample.syn": """
+SOURCE @ref2024
+    date: 2024-06-15
+
+    ITEM
+        quote: The technology shows promising results.
+    END ITEM
+END SOURCE
+"""
+}
+
+bibliography = """
+@article{ref2024,
+    author = {Silva, Maria},
+    title = {Technology Study},
+    year = {2024}
+}
+"""
+
+# Compile
+result = synesis.load(
+    project_content=project,
+    template_content=template,
+    annotation_contents=annotations,
+    bibliography_content=bibliography,
+)
+
+# Check result
+if result.success:
+    print(f"Compiled: {result.stats.item_count} items")
+    df = result.to_dataframe("items")
+    print(df)
+else:
+    print(result.get_diagnostics())
+```
+
+---
+
+## Function `synesis.load()`
+
+### Signature
+
+```python
+def load(
+    project_content: str,
+    template_content: str,
+    annotation_contents: Optional[Dict[str, str]] = None,
+    ontology_contents: Optional[Dict[str, str]] = None,
+    bibliography_content: Optional[str] = None,
+    project_filename: str = "<project>",
+    template_filename: str = "<template>",
+) -> MemoryCompilationResult
+```
+
+### Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|-------------|-----------|
+| `project_content` | `str` | Yes | `.synp` file content |
+| `template_content` | `str` | Yes | `.synt` file content |
+| `annotation_contents` | `Dict[str, str]` | No | Dictionary `{filename: content}` for `.syn` files |
+| `ontology_contents` | `Dict[str, str]` | No | Dictionary `{filename: content}` for `.syno` files |
+| `bibliography_content` | `str` | No | `.bib` file content (BibTeX) |
+| `project_filename` | `str` | No | Virtual name for error messages |
+| `template_filename` | `str` | No | Virtual name for error messages |
+
+### Return
+
+Returns a `MemoryCompilationResult` object with compiled data and export methods.
+
+### Complete Example
+
+```python
+import synesis
+
+result = synesis.load(
+    project_content="""
+        PROJECT QualitativeResearch
+            TEMPLATE "analysis.synt"
+            INCLUDE BIBLIOGRAPHY "refs.bib"
+            INCLUDE ANNOTATIONS "data.syn"
+            INCLUDE ONTOLOGY "concepts.syno"
+        END PROJECT
+    """,
+    template_content="""
+        TEMPLATE QualitativeAnalysis
+
+        SOURCE FIELDS
+            REQUIRED date
+            OPTIONAL country
+        END SOURCE FIELDS
+
+        ITEM FIELDS
+            REQUIRED quote
+            REQUIRED BUNDLE note, chain
+            OPTIONAL code
+        END ITEM FIELDS
+
+        ONTOLOGY FIELDS
+            REQUIRED description
+            OPTIONAL topic
+        END ONTOLOGY FIELDS
+
+        FIELD date TYPE DATE SCOPE SOURCE END FIELD
+        FIELD country TYPE TEXT SCOPE SOURCE END FIELD
+        FIELD quote TYPE QUOTATION SCOPE ITEM END FIELD
+        FIELD note TYPE MEMO SCOPE ITEM END FIELD
+        FIELD code TYPE CODE SCOPE ITEM END FIELD
+        FIELD chain TYPE CHAIN
+            SCOPE ITEM
+            ARITY >= 2
+            RELATIONS
+                INFLUENCES: Influence relationship
+                ENABLES: Enablement relationship
+            END RELATIONS
+        END FIELD
+        FIELD description TYPE TEXT SCOPE ONTOLOGY END FIELD
+        FIELD topic TYPE TOPIC SCOPE ONTOLOGY END FIELD
+
+        END TEMPLATE
+    """,
+    annotation_contents={
+        "interviews.syn": """
+            SOURCE @silva2024
+                date: 2024-03-15
+                country: Brazil
+
+                ITEM
+                    quote: Cost is a significant barrier.
+                    note: Interviewee identifies economic factor
+                    chain: Cost -> INFLUENCES -> Adoption
+                END ITEM
+
+                ITEM
+                    quote: Public acceptance facilitates implementation.
+                    note: Relationship between social and technical factors
+                    chain: Public Acceptance -> ENABLES -> Implementation
+                END ITEM
+            END SOURCE
+        """
+    },
+    ontology_contents={
+        "concepts.syno": """
+            ONTOLOGY Cost
+                description: Economic cost factor
+                topic: Economics
+            END ONTOLOGY
+
+            ONTOLOGY Public Acceptance
+                description: Community acceptance
+                topic: Social Factors
+            END ONTOLOGY
+
+            ONTOLOGY Adoption
+                description: Technology adoption
+                topic: Technology
+            END ONTOLOGY
+
+            ONTOLOGY Implementation
+                description: Technical implementation
+                topic: Technology
+            END ONTOLOGY
+        """
+    },
+    bibliography_content="""
+        @article{silva2024,
+            author = {Silva, João and Santos, Maria},
+            title = {Technology Adoption Factors},
+            journal = {Brazilian Research Journal},
+            year = {2024}
+        }
+    """,
+)
+
+if result.success:
+    print(f"Sources: {result.stats.source_count}")
+    print(f"Items: {result.stats.item_count}")
+    print(f"Ontologies: {result.stats.ontology_count}")
+    print(f"Chains: {result.stats.chain_count}")
+```
+
+---
+
+## Class `MemoryCompilationResult`
+
+The object returned by `synesis.load()` offers methods to access and export compiled data.
+
+### Attributes
+
+| Attribute | Type | Description |
+|----------|------|-----------|
+| `success` | `bool` | `True` if compilation without errors |
+| `linked_project` | `LinkedProject` | Linked project (or `None` if errors) |
+| `validation_result` | `ValidationResult` | Errors, warnings, and information |
+| `template` | `TemplateNode` | Loaded template |
+| `bibliography` | `Dict[str, BibEntry]` | Indexed bibliography |
+| `stats` | `CompilationStats` | Compilation statistics |
+
+### Statistics (`CompilationStats`)
+
+```python
+result.stats.source_count    # Number of SOURCEs
+result.stats.item_count      # Number of ITEMs
+result.stats.ontology_count  # Number of ONTOLOGYs
+result.stats.code_count      # Unique codes
+result.stats.chain_count     # Number of CHAINs
+result.stats.triple_count    # Extracted triples (from, rel, to)
+```
+
+### Verification Methods
+
+```python
+# Check success
+if result.success:
+    # Process data
+    ...
+
+# Check specific errors
+if result.has_errors():
+    print("Errors found")
+
+if result.has_warnings():
+    print("Warnings found")
+
+# Get formatted diagnostics
+print(result.get_diagnostics())
+```
+
+---
+
+## Export Methods
+
+### `to_json_dict()`
+
+Returns complete JSON structure as Python dictionary.
+
+```python
+data = result.to_json_dict()
+
+# Access data
+project_name = data["project"]["name"]
+sources = data["sources"]
+
+for source in sources:
+    print(f"Source: {source['bibref']}")
+    for item in source["items"]:
+        print(f"  Quote: {item['quote']}")
+
+# Serialize to JSON
+import json
+json_str = json.dumps(data, indent=2, ensure_ascii=False)
+```
+
+### `to_csv_tables()`
+
+Returns all tables as dictionary of tuples `(headers, rows)`.
+
+```python
+tables = result.to_csv_tables()
+
+# List available tables
+print(tables.keys())  # dict_keys(['sources', 'items', 'ontologies', 'chains', 'codes'])
+
+# Access specific table
+headers, rows = tables["items"]
+for row in rows:
+    print(row)
+```
+
+### `to_dataframe(table_name)`
+
+Returns a specific table as `pandas.DataFrame`.
+
+```python
+import pandas as pd
+
+# Items table
+df_items = result.to_dataframe("items")
+print(df_items.head())
+
+# Chains table
+df_chains = result.to_dataframe("chains")
+print(df_chains)
+```
+
+### `to_dataframes()`
+
+Returns all tables as dictionary of DataFrames.
+
+```python
+dfs = result.to_dataframes()
+
+# Access any table
+dfs["sources"].info()
+dfs["items"].describe()
+dfs["chains"].head()
+dfs["ontologies"].to_csv("ontologies.csv")
+```
+
+---
+
+## Available Tables
+
+### `sources`
+
+Bibliographic sources with metadata.
+
+| Column | Description |
+|--------|-----------|
+| `bibref` | Bibliographic reference (@key) |
+| `date` | Date (if defined) |
+| `country` | Country (if defined) |
+| `source_file` | Origin file |
+| `source_line` | Line in file |
+| `source_column` | Column in file |
+
+### `items`
+
+Analytical units (excerpts and annotations).
+
+| Column | Description |
+|--------|-----------|
+| `bibref` | Source reference |
+| `quote` | Textual excerpt |
+| `notes` | Analytical annotations (list) |
+| `codes` | Applied codes (list) |
+| `source_file` | Origin file |
+| `source_line` | Line in file |
+| `source_column` | Column in file |
+
+### `chains`
+
+Relational triples extracted from chains.
+
+| Column | Description |
+|--------|-----------|
+| `bibref` | Source reference |
+| `from_code` | Origin code |
+| `relation` | Relationship type |
+| `to_code` | Destination code |
+| `source_file` | Origin file |
+| `source_line` | Line in file |
+| `source_column` | Column in file |
+
+### `ontologies`
+
+Concept definitions.
+
+| Column | Description |
+|--------|-----------|
+| `concept` | Concept name |
+| `description` | Description |
+| `topic` | Higher category |
+| `source_file` | Origin file |
+| `source_line` | Line in file |
+| `source_column` | Column in file |
+
+### `codes`
+
+Code frequency.
+
+| Column | Description |
+|--------|-----------|
+| `code` | Code name |
+| `count` | Usage frequency |
+
+---
+
+## Pandas Integration
+
+### Basic Analysis
+
+```python
+import synesis
+import pandas as pd
+
+result = synesis.load(
+    project_content=project,
+    template_content=template,
+    annotation_contents=annotations,
+)
+
+if result.success:
+    # Load tables
+    dfs = result.to_dataframes()
+
+    # Items analysis
+    df_items = dfs["items"]
+    print(f"Total items: {len(df_items)}")
+    print(f"Items per source: {df_items['bibref'].value_counts()}")
+
+    # Chains analysis
+    df_chains = dfs["chains"]
+    print(f"Most frequent relations: {df_chains['relation'].value_counts()}")
+
+    # Most used codes
+    df_codes = dfs["codes"]
+    print(df_codes.sort_values("count", ascending=False))
+```
+
+### Filtering and Grouping
+
+```python
+# Filter items by source
+items_silva = df_items[df_items["bibref"] == "silva2024"]
+
+# Group chains by relation
+chains_by_rel = df_chains.groupby("relation").size()
+
+# Ontologies by topic
+ontologies_by_topic = dfs["ontologies"].groupby("topic").size()
+```
+
+### Export
+
+```python
+# To CSV
+df_items.to_csv("items_analysis.csv", index=False)
+
+# To Excel (multiple tabs)
+with pd.ExcelWriter("analysis.xlsx") as writer:
+    for name, df in dfs.items():
+        df.to_excel(writer, sheet_name=name, index=False)
+```
+
+---
+
+## Usage in Jupyter Notebook
+
+### Cell 1: Setup
+
+```python
+import synesis
+import pandas as pd
+pd.set_option('display.max_colwidth', 100)
+```
+
+### Cell 2: Define Contents
+
+```python
+template = """
+TEMPLATE JupyterDemo
+
+SOURCE FIELDS
+    REQUIRED date
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED description
+END ONTOLOGY FIELDS
+
+FIELD date TYPE DATE SCOPE SOURCE END FIELD
+FIELD quote TYPE QUOTATION SCOPE ITEM END FIELD
+FIELD note TYPE MEMO SCOPE ITEM END FIELD
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Causal influence
+        ENABLES: Enablement
+        INHIBITS: Inhibition
+    END RELATIONS
+END FIELD
+FIELD description TYPE TEXT SCOPE ONTOLOGY END FIELD
+
+END TEMPLATE
+"""
+
+project = """
+PROJECT NotebookAnalysis
+    TEMPLATE "template.synt"
+END PROJECT
+"""
+```
+
+### Cell 3: Add Data
+
+```python
+annotations = {
+    "data.syn": """
+SOURCE @study2024
+    date: 2024-01-10
+
+    ITEM
+        quote: High initial cost hinders adoption.
+        note: Economic barrier identified
+        chain: Cost -> INHIBITS -> Adoption
+    END ITEM
+
+    ITEM
+        quote: Government support accelerates implementation.
+        note: Positive institutional factor
+        chain: Government Support -> ENABLES -> Implementation
+    END ITEM
+
+    ITEM
+        quote: Lack of technical knowledge limits usage.
+        note: Training barrier
+        chain: Technical Knowledge -> INFLUENCES -> Usage
+    END ITEM
+END SOURCE
+"""
+}
+
+ontologies = {
+    "concepts.syno": """
+ONTOLOGY Cost
+    description: Associated financial costs
+END ONTOLOGY
+
+ONTOLOGY Adoption
+    description: Technology adoption process
+END ONTOLOGY
+
+ONTOLOGY Government Support
+    description: Public policy support
+END ONTOLOGY
+
+ONTOLOGY Implementation
+    description: Technical project execution
+END ONTOLOGY
+
+ONTOLOGY Technical Knowledge
+    description: Required technical knowledge
+END ONTOLOGY
+
+ONTOLOGY Usage
+    description: Effective technology use
+END ONTOLOGY
+"""
+}
+
+bibliography = """
+@article{study2024,
+    author = {Oliveira, Ana},
+    title = {Barriers to Technology Adoption},
+    year = {2024}
+}
+"""
+```
+
+### Cell 4: Compile
+
+```python
+result = synesis.load(
+    project_content=project,
+    template_content=template,
+    annotation_contents=annotations,
+    ontology_contents=ontologies,
+    bibliography_content=bibliography,
+)
+
+print(f"Success: {result.success}")
+print(f"Sources: {result.stats.source_count}")
+print(f"Items: {result.stats.item_count}")
+print(f"Chains: {result.stats.chain_count}")
+```
+
+### Cell 5: Visualize Items
+
+```python
+df_items = result.to_dataframe("items")
+df_items[["bibref", "quote", "notes"]]
+```
+
+### Cell 6: Analyze Chains
+
+```python
+df_chains = result.to_dataframe("chains")
+df_chains
+```
+
+### Cell 7: Relationship Network
+
+```python
+# Relationship frequency
+df_chains["relation"].value_counts().plot(kind="bar", title="Relationship Types")
+```
+
+### Cell 8: Export JSON
+
+```python
+import json
+
+data = result.to_json_dict()
+print(json.dumps(data, indent=2, ensure_ascii=False)[:500])
+```
+
+---
+
+## Function `compile_string()`
+
+For parsing individual fragments without complete compilation.
+
+### Signature
+
+```python
+def compile_string(
+    content: str,
+    filename: str = "<string>"
+) -> List[Any]
+```
+
+### Usage
+
+```python
+import synesis
+
+# Parse annotation fragment
+nodes = synesis.compile_string("""
+SOURCE @ref2024
+    date: 2024-05-20
+
+    ITEM
+        quote: Example text.
+    END ITEM
+END SOURCE
+""")
+
+# Access AST nodes
+source = nodes[0]
+print(f"Bibref: {source.bibref}")
+print(f"Items: {len(source.items)}")
+
+for item in source.items:
+    print(f"  Quote: {item.quote}")
+```
+
+### Returned Node Types
+
+| Type | Description |
+|------|-----------|
+| `SourceNode` | SOURCE block with nested ITEMs |
+| `ItemNode` | Individual ITEM block |
+| `OntologyNode` | ONTOLOGY block |
+| `ProjectNode` | PROJECT block |
+
+---
+
+## Error Handling
+
+### Syntax Errors
+
+Syntax errors raise `SynesisSyntaxError` exception:
+
+```python
+try:
+    result = synesis.load(
+        project_content="PROJECT Broken",  # Missing END PROJECT
+        template_content=template,
+    )
+except Exception as e:
+    print(f"Syntax error: {e}")
+```
+
+### Validation Errors
+
+Semantic errors are captured in the result:
+
+```python
+result = synesis.load(
+    project_content=project,
+    template_content=template,
+    annotation_contents={
+        "bad.syn": """
+SOURCE @nonexistent
+    ITEM
+        quote: Reference doesn't exist in .bib
+    END ITEM
+END SOURCE
+"""
+    },
+)
+
+if not result.success:
+    print("Validation errors:")
+    print(result.get_diagnostics())
+```
+
+### Diagnostics Format
+
+```
+error: bad.syn:1:8: Bibliographic reference '@nonexistent' not found.
+    SOURCE @nonexistent
+           ^~~~~~~~~~~
+
+    Available references: @silva2024, @oliveira2023
+```
+
+---
+
+## Quick Reference
+
+### Import
+
+```python
+import synesis
+
+# Main functions
+synesis.load(...)           # Complete in-memory compilation
+synesis.compile_string(...) # Fragment parsing
+
+# Classes
+synesis.MemoryCompilationResult  # Compilation result
+synesis.CompilationStats         # Statistics
+```
+
+### Typical Flow
+
+```python
+# 1. Prepare contents
+project = "..."
+template = "..."
+annotations = {"file.syn": "..."}
+
+# 2. Compile
+result = synesis.load(project, template, annotations)
+
+# 3. Verify
+if result.success:
+    # 4. Export
+    df = result.to_dataframe("items")
+    data = result.to_json_dict()
+else:
+    print(result.get_diagnostics())
+```
+
+---
+
+*Documentation generated for Synesis v0.2.0*

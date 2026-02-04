@@ -1,0 +1,23 @@
+# VSCode
+.vscode/
+
+# Claude
+.claude/
+
+# Quarto
+.quarto/
+
+# Site html files
+_site/
+
+
+# OS files
+.DS_Store
+Thumbs.db
+
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~

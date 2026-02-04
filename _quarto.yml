@@ -1,0 +1,29 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - images
+    - .nojekyll
+
+website:
+  title: "Synesis Language"
+
+bibliography: references.bib
+csl: apa.csl
+
+format:
+  html:
+    theme:
+      - cosmo
+      - synesis.scss
+    code-copy: true
+    code-overflow: wrap
+    toc: true
+    toc-depth: 4
+    number-sections: true
+    highlight-style: github
+    syntax-definitions:
+      - synesis.xml
+
+execute:
+  freeze: auto

@@ -1,0 +1,623 @@
+# Synesis2Neo4j: Knowledge Graph Pipeline
+
+**Version 0.1.0**
+
+---
+
+## Introduction
+
+`synesis2neo4j` is the official ingestion pipeline from the **Synesis** language to **Neo4j** graph databases. It transforms structured qualitative analyses into navigable knowledge graphs ready for AI (GraphRAG).
+
+### Flow Diagram
+
+```{mermaid}
+%%| fig-width: 8
+graph TD
+    %% --- Synesis 2.0 Palette ---
+    %% Primary: #084C54 (Deep Teal)
+    %% Accent: #00BFA5 (Mint/Cyan)
+
+    classDef files fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C54
+    classDef engine fill:#fff,stroke:#084C54,stroke-width:3px,color:#084C54,font-weight:bold
+    classDef data fill:#E0F7FA,stroke:#084C54,stroke-width:1px,color:#084C54
+    classDef graphDb fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54
+    classDef agent fill:#084C54,stroke:#00BFA5,stroke-width:2px,color:#fff
+    classDef metrics fill:#F8FAFC,stroke:#00BFA5,stroke-width:1px,color:#084C54
+
+    subgraph INPUT["1. Input: Research as Code"]
+        SYN["Annotated Corpus (.syn)"]:::files
+        SYNO["Ontology (.syno)"]:::files
+        SYNP["Project (.synp)"]:::files
+        SYNT["Template (.synt)"]:::files
+    end
+
+    subgraph ENGINE["2. Synesis Engine"]
+        COMPILER[/"synesis.load"/]:::engine
+        VALIDATOR("Semantic Validation"):::engine
+    end
+
+    SYNP --> COMPILER
+    SYN --> COMPILER
+    SYNO --> COMPILER
+    SYNT --> COMPILER
+    COMPILER --> VALIDATOR
+
+    subgraph STRUCTURED["3. Structured Data"]
+        JSON["Canonical Object (Traceable)"]:::data
+        SCHEMA["Dynamic Schema (from Template)"]:::data
+    end
+
+    VALIDATOR -->|Success| JSON
+    SYNT -.->|Defines| SCHEMA
+
+    subgraph GRAPH["4. Knowledge Graph"]
+        NEO4J[("Neo4j")]:::graphDb
+        NATIVE["Native Metrics (Cypher)"]:::graphDb
+        GDS["GDS Metrics (Optional)"]:::graphDb
+        DEG["Degree Centrality"]:::metrics
+        PR["PageRank Relevance"]:::metrics
+        BC["Betweenness Bridges"]:::metrics
+        COM["Louvain Communities"]:::metrics
+    end
+
+    JSON -->|Sync| NEO4J
+    SCHEMA -->|Sync| NEO4J
+    NEO4J --> NATIVE
+    NATIVE --> GDS
+    NATIVE -.-> DEG
+    GDS -.-> PR
+    GDS -.-> BC
+    GDS -.-> COM
+
+    subgraph CONSUMPTION["5. Intelligent Consumption"]
+        MCP["MCP Agent"]:::agent
+        LLM["LLMs / Claude"]:::agent
+    end
+
+    NEO4J -->|GraphRAG| MCP
+    MCP -->|GraphRAG| NEO4J
+    MCP -->|Queries| LLM
+    LLM -->|Queries| MCP
+
+    %% Subgraph Styles
+    style INPUT fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5,color:#084C54
+    style ENGINE fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5,color:#084C54
+    style STRUCTURED fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5,color:#084C54
+    style GRAPH fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5,color:#084C54
+    style CONSUMPTION fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5,color:#084C54
+
+    linkStyle default stroke:#64748B,stroke-width:1px
+```
+
+### Key Features
+
+| Feature | Description |
+|---------|-------------|
+| **Zero-IO** | Compiles in memory via `synesis.load()`, no intermediate files |
+| **Universal** | Reads Template (.synt) and creates graph structure dynamically |
+| **Automatic Metrics** | Calculates native (Cypher) and advanced (GDS) metrics |
+| **Traceability** | Maintains origin metadata on all nodes and edges |
+| **Atomicity** | Synchronization via single transaction |
+
+### Use Cases
+
+- **Qualitative Research**: Visualize and navigate concept networks
+- **Bibliometric Analysis**: Map relationships between factors in literature
+- **GraphRAG**: Feed AI agents with structured knowledge
+- **Data Science**: Apply network algorithms (PageRank, Louvain, Betweenness)
+
+---
+
+## Prerequisites
+
+### Required Software
+
+| Software | Version | Link |
+|----------|---------|------|
+| **Python** | 3.11+ | [python.org](https://www.python.org/downloads/) |
+| **Neo4j** | 5.x | [Neo4j Download](https://neo4j.com/download/) |
+
+### Neo4j Installation Options
+
+#### Neo4j Desktop (Recommended for development)
+
+Complete graphical interface to manage multiple local databases.
+
+1. Download at: [neo4j.com/download](https://neo4j.com/download/)
+2. Install and create a new project
+3. Add a local database (DBMS)
+4. Start the database and note the password
+
+#### Neo4j Community Server
+
+For servers or headless environments.
+
+```bash
+# Docker (simplest)
+docker run -d \
+    --name neo4j \
+    -p 7474:7474 -p 7687:7687 \
+    -e NEO4J_AUTH=neo4j/your_secure_password \
+    neo4j:5
+```
+
+#### Neo4j Aura (Cloud)
+
+Managed cloud database, ideal for production.
+
+1. Access: [console.neo4j.io](https://console.neo4j.io/)
+2. Create a Free or Professional instance
+3. Copy connection credentials
+
+---
+
+## Installation
+
+### Python Requirements
+
+```bash
+pip install synesis neo4j rich tomli
+```
+
+### Clone the Repository
+
+```bash
+git clone https://github.com/synesis-lang/synesis2neo4j.git
+cd synesis2neo4j
+```
+
+### Verify Installation
+
+```bash
+python synesis2neo4j.py --version
+# synesis2neo4j 0.1.0
+```
+
+### GDS Plugin (Optional)
+
+For advanced metrics (PageRank, Betweenness, Louvain), install [Neo4j Graph Data Science](https://neo4j.com/docs/graph-data-science/current/installation/):
+
+**Neo4j Desktop:**
+1. Open your project
+2. Click "Plugins" in the database panel
+3. Install "Graph Data Science Library"
+
+**Neo4j Server:**
+```bash
+# Download the JAR matching your version
+# Copy to Neo4j's plugins/ folder
+# Restart the server
+```
+
+---
+
+## Configuration
+
+### `config.toml` File
+
+Create a `config.toml` file in the project root:
+
+```toml
+[neo4j]
+uri = "bolt://localhost:7687"
+user = "neo4j"
+password = "your_secret_password"
+database = "neo4j"  # Optional, default is 'neo4j'
+```
+
+### Configuration Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `uri` | `str` | Yes | Connection URI (bolt:// or neo4j://) |
+| `user` | `str` | Yes | Database user |
+| `password` | `str` | Yes | Database password |
+| `database` | `str` | No | Database name (default: neo4j) |
+
+### URI Examples
+
+| Environment | URI |
+|-------------|-----|
+| Local (Desktop/Docker) | `bolt://localhost:7687` |
+| Neo4j Aura | `neo4j+s://xxxx.databases.neo4j.io` |
+| Remote server | `bolt://192.168.1.100:7687` |
+
+---
+
+## Usage
+
+### Basic Command
+
+```bash
+python synesis2neo4j.py --project ./my_project/analysis.synp
+```
+
+### Command Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--project` | Path to `.synp` file (required) |
+| `--config` | Configuration file (default: `config.toml`) |
+| `--version`, `-v` | Display script version |
+
+### Complete Example
+
+```bash
+# With default configuration
+python synesis2neo4j.py --project ./research/bibliometrics.synp
+
+# With custom configuration
+python synesis2neo4j.py --project ./analysis.synp --config production.toml
+```
+
+---
+
+## Execution Flow
+
+The pipeline executes the following steps in sequence:
+
+### 1. Compilation (In-Memory)
+
+```
+[>] Starting Synesis compiler at: ./project.synp
+[+] Compilation OK. 150 items processed.
+```
+
+The Synesis compiler validates syntax and semantics. Errors stop the process without touching the database.
+
+### 2. Configuration Loading
+
+```
+[>] Loading Configuration
+[+] Loading Configuration completed.
+```
+
+Reads credentials from `config.toml`.
+
+### 3. Database Creation/Verification
+
+```
+[>] Target database: my-project
+[>] Checking/Creating Database
+[+] Database already exists: my-project
+```
+
+Creates database automatically if it doesn't exist (requires Neo4j Enterprise/Aura).
+
+### 4. Graph Synchronization
+
+```
+[>] Synchronizing Graph (Transactional)
+[+] Synchronizing Graph (Transactional) completed.
+```
+
+Clears previous database and injects new data in atomic transaction.
+
+### 5. Native Metrics
+
+```
+[>] Calculating Native Metrics
+[+] Calculating Native Metrics completed.
+```
+
+Calculates degree, mention_count, source_count via pure Cypher.
+
+### 6. GDS Metrics (if available)
+
+```
+[>] GDS graph strategy: RELATES_TO
+[>] GDS projection: 45 nodes, 120 relationships
+[+] PageRank calculated
+[+] Betweenness calculated
+[+] Communities (Louvain) calculated
+```
+
+If GDS plugin is not installed, displays warning and continues:
+
+```
+[!] GDS not installed. Install the Graph Data Science plugin for
+    advanced metrics (PageRank, Betweenness, Communities).
+```
+
+---
+
+## Data Modeling
+
+### Template → Graph
+
+The pipeline automatically translates Template field types to graph structures:
+
+| Template Type | Graph Element | Relationship Created |
+|---------------|---------------|---------------------|
+| `CODE` | Concept Node (dynamic label) | `MENTIONS` (Item → Concept) |
+| `TOPIC` | Taxonomy Node | `GROUPED_BY` |
+| `ASPECT` | Taxonomy Node | `QUALIFIED_BY` |
+| `DIMENSION` | Taxonomy Node | `BELONGS_TO` |
+| `CHAIN` | Explicit Relationship | `RELATES_TO` |
+| `TEXT` / `MEMO` | Property | — |
+| `ENUMERATED` | Property | — |
+
+### Base Nodes
+
+| Node | Description | Main Properties |
+|------|-------------|-----------------|
+| `Source` | Bibliographic source | `bibtex`, `title`, `author`, `year`, `doi` |
+| `Item` | Citation unit | `item_id`, `citation`, `description` |
+
+### Main Relationships
+
+| Relationship | Source | Target | Description |
+|--------------|--------|--------|-------------|
+| `FROM_SOURCE` | Item | Source | Citation traceability |
+| `MENTIONS` | Item | Concept | Citation mentions concept |
+| `GROUPED_BY` | Concept | Topic | Thematic classification |
+| `QUALIFIED_BY` | Concept | Aspect | Dimensional qualification |
+| `BELONGS_TO` | Concept | Dimension | High-level aggregation |
+| `RELATES_TO` | Concept | Concept | Explicit relationship (CHAIN) |
+| `IS_LINKED_TO` | Topic | Topic | Weighted co-taxonomy |
+| `MAPPED_TO_ASPECT` | Topic | Aspect | Taxonomy mapping |
+| `MAPPED_TO_DIMENSION` | Topic | Dimension | Taxonomy mapping |
+
+---
+
+## Graph Metrics
+
+### Native Metrics (Always Available)
+
+Calculated via pure Cypher, no external dependencies.
+
+#### Concept Nodes
+
+| Metric | Description | Analytical Use |
+|--------|-------------|----------------|
+| `degree` | Total degree (in + out) | Overall connectivity |
+| `in_degree` | Incoming relationships | Concepts referencing this one |
+| `out_degree` | Outgoing relationships | Concepts referenced by this one |
+| `mention_count` | Citations that mention | Frequency in primary data |
+| `source_count` | Distinct sources | Dispersion/generalization |
+
+#### Taxonomy Nodes
+
+| Metric | Description | Analytical Use |
+|--------|-------------|----------------|
+| `concept_count` | Classified concepts | Category coverage |
+| `weighted_degree` | Sum of IS_LINKED_TO weights | Inter-taxonomy relationship strength |
+| `aspect_diversity` | Distinct aspects | Qualitative diversity |
+| `dimension_diversity` | Distinct dimensions | Dimensional dispersion |
+
+#### Source Nodes
+
+| Metric | Description | Analytical Use |
+|--------|-------------|----------------|
+| `item_count` | Extracted citations | Source data volume |
+| `concept_count` | Mentioned concepts | Conceptual richness |
+
+### GDS Metrics (Requires Plugin)
+
+| Metric | Algorithm | Description |
+|--------|-----------|-------------|
+| `pagerank` | PageRank | Connection-based relevance |
+| `betweenness` | Betweenness Centrality | "Bridge" role between clusters |
+| `community` | Louvain | Thematic community detection |
+
+#### Projection Strategies
+
+| Strategy | When Used | Description |
+|----------|-----------|-------------|
+| **RELATES_TO** | Templates with `CHAIN` | Uses explicit relationships |
+| **CO_TAXONOMY** | Templates with `CODE` + `TOPIC` | Connects via shared taxonomy |
+| **CO_CITATION** | Fallback | Connects via co-occurrence in sources |
+
+---
+
+## Cypher Queries
+
+### Most Central Concepts
+
+```cypher
+MATCH (c:Concept)
+WHERE c.pagerank IS NOT NULL
+RETURN c.name, c.pagerank, c.mention_count, c.community
+ORDER BY c.pagerank DESC
+LIMIT 10
+```
+
+### Thematic Communities
+
+```cypher
+MATCH (c:Concept)
+WHERE c.community = 1
+RETURN c.name, c.pagerank, c.degree
+ORDER BY c.pagerank DESC
+```
+
+### Relationship Network
+
+```cypher
+MATCH (s:Concept)-[r:RELATES_TO]->(t:Concept)
+RETURN s.name AS source, r.type AS relation, t.name AS target
+ORDER BY s.name
+```
+
+### Full Traceability
+
+```cypher
+MATCH (i:Item)-[:MENTIONS]->(c:Concept)
+MATCH (i)-[:FROM_SOURCE]->(s:Source)
+WHERE c.name = "Cost"
+RETURN s.title, i.citation, c.name
+```
+
+### Interconnected Topics
+
+```cypher
+MATCH (t1:Topic)-[r:IS_LINKED_TO]->(t2:Topic)
+RETURN t1.name, t2.name, r.strength
+ORDER BY r.strength DESC
+LIMIT 20
+```
+
+---
+
+## MCP Agent Integration
+
+### What is MCP?
+
+The **Model Context Protocol (MCP)** allows LLMs (like Claude) to interact with external data sources. With the Neo4j MCP server, Claude can query your graph directly.
+
+### Claude Desktop Installation
+
+1. Download at: [claude.ai/download](https://claude.ai/download)
+2. Install and log in with your Anthropic account
+3. Configure the MCP server (next section)
+
+### MCP Server Configuration
+
+Install the `uv` package manager:
+
+```bash
+pip install uv
+```
+
+Edit the `claude_desktop_config.json` file:
+
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+**macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "synesis-neo4j": {
+      "command": "uvx",
+      "args": ["mcp-neo4j-cypher@0.5.2", "--read-only"],
+      "env": {
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USERNAME": "neo4j",
+        "NEO4J_PASSWORD": "your_password",
+        "NEO4J_DATABASE": "database_name"
+      }
+    }
+  }
+}
+```
+
+### Example Questions for Claude
+
+| Question | What it Returns |
+|----------|-----------------|
+| "Which concepts have the highest PageRank?" | Top concepts by relevance |
+| "Show sources mentioning 'Acceptance'" | Item → Source traceability |
+| "Which concepts belong to community 1?" | Cluster analysis |
+| "Compare metrics of main concepts" | Comparative table |
+| "What is the graph structure?" | Schema and counts |
+
+---
+
+## Error Handling
+
+### Compilation Errors
+
+```
+[x] Compiling Project (In-Memory) failed: ...
+
+┌─────────────────────────────────┐
+│ Compilation Diagnostics         │
+├─────────────────────────────────┤
+│ error: sample.syn:15:8          │
+│ Undefined reference '@missing'  │
+└─────────────────────────────────┘
+```
+
+The database is not modified if compilation errors occur.
+
+### Connection Errors
+
+```
+[x] [connection] Failed to connect to Neo4j
+    Details: Unable to retrieve routing information
+```
+
+Check:
+- Neo4j is running
+- URI and credentials are correct
+- Firewall allows connection on port 7687
+
+### Synchronization Errors
+
+```
+[x] [sync] Synchronization failed
+    Details: Transaction timeout
+```
+
+For very large graphs, consider increasing Neo4j timeout.
+
+---
+
+## Project Structure
+
+```
+synesis2neo4j/
+├── synesis2neo4j.py      # Main script
+├── config.toml           # Configuration (create)
+├── README.md             # English documentation
+├── README.pt.md          # Portuguese documentation
+└── mcp/
+    ├── SETUP.md          # MCP configuration guide
+    ├── QUERIES_REFERENCE.md  # Query reference
+    └── claude_desktop_config.template.json
+```
+
+---
+
+## Quick Reference
+
+### Installation
+
+```bash
+pip install synesis neo4j rich tomli
+git clone https://github.com/synesis-lang/synesis2neo4j.git
+```
+
+### Configuration
+
+```toml
+# config.toml
+[neo4j]
+uri = "bolt://localhost:7687"
+user = "neo4j"
+password = "password"
+```
+
+### Execution
+
+```bash
+python synesis2neo4j.py --project ./project.synp
+```
+
+### Verification in Neo4j Browser
+
+```cypher
+// Count nodes
+MATCH (n) RETURN labels(n)[0] AS label, count(*) AS count
+
+// View metrics
+MATCH (c:Concept) RETURN c.name, c.pagerank, c.community LIMIT 10
+```
+
+---
+
+## Useful Links
+
+| Resource | URL |
+|----------|-----|
+| **Synesis Language** | [synesis-lang.github.io/synesis-docs](https://synesis-lang.github.io/synesis-docs) |
+| **Neo4j Download** | [neo4j.com/download](https://neo4j.com/download/) |
+| **Neo4j Aura (Cloud)** | [console.neo4j.io](https://console.neo4j.io/) |
+| **Neo4j GDS Docs** | [neo4j.com/docs/graph-data-science](https://neo4j.com/docs/graph-data-science/current/) |
+| **Claude Desktop** | [claude.ai/download](https://claude.ai/download) |
+| **MCP Neo4j Server** | [github.com/neo4j-contrib/mcp-neo4j](https://github.com/neo4j-contrib/mcp-neo4j) |
+
+---
+
+*Documentation generated for synesis2neo4j v0.1.0*

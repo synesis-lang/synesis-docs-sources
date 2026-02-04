@@ -1,0 +1,82 @@
+project:
+  type: website
+  output-dir: ../_site/en
+
+bibliography: ../references.bib
+csl: ../apa.csl
+
+format:
+  html:
+    theme:
+      - cosmo
+      - ../synesis.scss
+    code-copy: true
+    code-overflow: wrap
+    toc: true
+    toc-depth: 4
+    number-sections: true
+    highlight-style: github
+    syntax-definitions:
+      - ../synesis.xml
+
+execute:
+  freeze: auto
+
+lang: en
+
+website:
+  title: "Synesis Language"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Introduction
+      - text: Guides
+        menu:
+          - href: guide/guia_pesquisadores.qmd
+            text: Researchers
+          - href: guide/guia_profissionais.qmd
+            text: Professionals
+          - href: guide/guia_sincero.qmd
+            text: Honest guide
+      - text: Reference
+        menu:
+          - href: reference/guia_referencia.qmd
+            text: Reference
+          - href: reference/synesis_load.qmd
+            text: Synesis API          
+          - href: reference/ideas.qmd
+            text: Ideas
+      - text: Ecosystem
+        menu:
+          - href: ecossistema/guia_synesis_explorer.qmd
+            text: Synesis Explorer
+          - href: ecossistema/synesis2neo4j_en.qmd
+            text: Synesis To Neo4j Graph Database            
+      - href: about.qmd
+        text: About
+    right:
+      - text: "🌐 EN"
+        menu:
+          - text: "🇧🇷 Português"
+            href: ../pt/
+          - text: "🇬🇧 English"
+            href: ../en/
+
+  sidebar:
+    style: "docked"
+    contents:
+      - index.qmd
+      - section: "Guides by Audience"
+        contents:
+          - guide/guia_pesquisadores.qmd
+          - guide/guia_profissionais.qmd
+          - guide/guia_sincero.qmd
+      - section: "Reference"
+        contents:
+          - reference/guia_referencia.qmd
+          - reference/synesis_load.qmd             
+          - reference/ideas.qmd
+      - section: "Ecosystem"
+        contents:
+          - ecossistema/guia_synesis_explorer.qmd
+          - ecossistema/synesis2neo4j_en.qmd
