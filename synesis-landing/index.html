@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Synesis — Compile Your Thinking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav__inner">
+      <a href="./" class="nav__logo" aria-label="Synesis home">
+        <svg class="nav__logo-icon" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <circle cx="8" cy="8"  r="3" fill="#1A3A5C"/>
+          <circle cx="8" cy="24" r="3" fill="#1A3A5C"/>
+          <circle cx="24" cy="16" r="3" fill="#C8963A"/>
+          <line x1="11" y1="9.5"  x2="21" y2="14.5" stroke="#1A3A5C" stroke-width="1.5"/>
+          <line x1="11" y1="22.5" x2="21" y2="17.5" stroke="#1A3A5C" stroke-width="1.5"/>
+        </svg>
+        <span class="nav__logo-wordmark"><span class="nav__logo-s">S</span>YNESIS</span>
+      </a>
+      <ul class="nav__links">
+        <li><a href="#why">Why Synesis</a></li>
+        <li><a href="#how">How it works</a></li>
+        <li><a href="#ecosystem">Ecosystem</a></li>
+        <li><a href="../en/" class="nav__link--docs">Documentation →</a></li>
+        <li><a href="pt/" style="font-size:0.8rem; color: var(--color-ref-mid);">PT</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero__grid-bg" aria-hidden="true"></div>
+
+    <div class="hero__inner">
+      <div class="hero__eyebrow">
+        <span class="tag">v0.2 beta</span>
+        <span class="tag tag--mono">.bib &nbsp;·&nbsp;.synp &nbsp;·&nbsp; .synt &nbsp;·&nbsp; .syno &nbsp;·&nbsp; .syn</span>
+      </div>
+
+      <h1 class="hero__headline">
+        Compile<br />
+        <em>your thinking.</em>
+      </h1>
+
+      <p class="hero__sub">
+        Synesis is a domain-specific language and compiler that transforms interpretive
+        annotations into formally validated knowledge structures — auditable, portable,
+        and ready for any analytical ecosystem.
+      </p>
+
+      <div class="hero__cta-group">
+        <a href="../en/" class="btn btn--primary">
+          Read the documentation
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </a>
+        <a href="https://github.com/synesis-lang" class="btn btn--secondary">
+          View on GitHub
+        </a>
+      </div>
+
+      <div class="hero__code-block">
+        <div class="code-block__header">
+          <div class="code-block__controls">
+            <span class="code-block__dot code-block__dot--red"></span>
+            <span class="code-block__dot code-block__dot--yellow"></span>
+            <span class="code-block__dot code-block__dot--green"></span>
+          </div>
+          <span class="code-block__filename">seaweed-biofuels.syn</span>
+        </div>
+        <pre class="code-block__body"><code><span class="syn-keyword">SOURCE</span> <span class="syn-ref">@author2026</span>
+    description:     <span class="syn-string">Seaweed biofuels: macro-environmental scan.</span>
+    epistemic_model: <span class="syn-string">Strategic management, PESTEL</span>
+    method:          <span class="syn-string">Conceptual analysis, literature review</span>
+<span class="syn-keyword">END SOURCE</span>
+
+<span class="syn-keyword">ITEM</span> <span class="syn-ref">@author2026</span>
+    text: <span class="syn-string">Social acceptance shapes industry viability
+        beyond purely technological constraints.</span>
+
+    note: <span class="syn-string">Non-technological factors drive adoption
+        through the social acceptance pathway.</span>
+
+    chain: <span class="syn-ref">Social_Acceptance</span> <span class="syn-op">-&gt;</span> <span class="syn-value">SHAPES</span> <span class="syn-op">-&gt;</span> <span class="syn-ref">Industry_Viability</span>
+<span class="syn-keyword">END ITEM</span></code></pre>
+        <div class="code-block__output">
+          <span class="output__icon">✓</span>
+          <span class="output__text">Compiled · 1 source · 1 item · 1 chain · 0 errors</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <section class="section section--light" id="why">
+    <div class="section__inner">
+      <div class="section__label">The problem</div>
+      <h2 class="section__headline">You already have the insights.<br />What's missing is an open language to formalize them.</h2>
+      <p class="section__body">
+        Note-taking apps optimize for capture — but do not verify integrity across annotations.
+        Reference managers organize citations with precision, but treat meaning as free text.
+        Qualitative research platforms offer powerful visual coding, but keep data in proprietary
+        formats that isolate knowledge from the ecosystems where analysis unfolds.
+      </p>
+      <p class="section__body">
+        The fundamental problem is not storage. It is <strong>formalization</strong>.
+        Not a new tool to replace the others — but a representation layer that connects them:
+        human-readable, machine-processable, auditable by design.
+        A language where human interpretation can be written by researchers,
+        generated by AI, and verified by anyone.
+      </p>
+
+      <div class="compare-grid">
+        <div class="compare-grid__col compare-grid__col--them">
+          <div class="compare-grid__head">Other tools</div>
+          <ul class="compare-grid__list">
+            <li>Each tool produces its own silo</li>
+            <li>Annotations as free text — no queryable structure</li>
+            <li>Visual relations, not formalized — not exportable as data</li>
+            <li>No language server — no inline validation while writing</li>
+            <li>Expensive subscriptions or costly licenses</li>
+          </ul>
+        </div>
+        <div class="compare-grid__col compare-grid__col--us">
+          <div class="compare-grid__head">Synesis</div>
+          <ul class="compare-grid__list">
+            <li>Plain text · Git-native</li>
+            <li>Typed, qualified chains between codes — machine-readable</li>
+            <li>LSP for VS Code — inline validation, autocomplete, error hints</li>
+            <li>Exports to graph DBs, Jupyter, MCP agents</li>
+            <li>Compatible with Zotero, CAQDAS and AI — scales to BigQual</li>
+            <li>Open source · MIT License · free forever</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--dark" id="how">
+    <div class="section__inner">
+      <div class="section__label section__label--light">How it works</div>
+      <h2 class="section__headline section__headline--light">
+        Write. Compile. Export.<br />
+        <em>Knowledge as code.</em>
+      </h2>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step__number">01</div>
+          <div class="step__content">
+            <h3 class="step__title">Write in .syn</h3>
+            <p class="step__body">
+              Declare claims, sources, relations, and annotations in a plain-text DSL.
+              Any editor. Any operating system. Fully under version control.
+            </p>
+          </div>
+        </div>
+        <div class="step__arrow" aria-hidden="true">→</div>
+        <div class="step">
+          <div class="step__number">02</div>
+          <div class="step__content">
+            <h3 class="step__title">Compile & validate</h3>
+            <p class="step__body">
+              The Synesis compiler checks referential integrity, enforces template
+              constraints, and flags unanchored claims before they propagate.
+            </p>
+          </div>
+        </div>
+        <div class="step__arrow" aria-hidden="true">→</div>
+        <div class="step">
+          <div class="step__number">03</div>
+          <div class="step__content">
+            <h3 class="step__title">Export everywhere</h3>
+            <p class="step__body">
+              Output to graph databases, Jupyter Lab, MCP-compatible AI agents,
+              JSON, MS-Excel, or CSV. Structured intelligence, interoperable by design.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--light" id="ecosystem">
+    <div class="section__inner">
+      <div class="section__label">Ecosystem</div>
+      <h2 class="section__headline">Structured knowledge,<br />wherever you work.</h2>
+
+      <div class="eco-grid">
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><circle cx="8" cy="8" r="3" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="24" cy="8" r="3" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="8" cy="24" r="3" fill="#C8963A"/><circle cx="24" cy="24" r="3" stroke="#1A3A5C" stroke-width="1.5"/><line x1="11" y1="8" x2="21" y2="8" stroke="#1A3A5C" stroke-width="1.5"/><line x1="8" y1="11" x2="8" y2="21" stroke="#1A3A5C" stroke-width="1.5"/><line x1="24" y1="11" x2="24" y2="21" stroke="#1A3A5C" stroke-width="1.5"/><line x1="11" y1="24" x2="21" y2="24" stroke="#1A3A5C" stroke-width="1.5"/><line x1="10.5" y1="10.5" x2="21.5" y2="21.5" stroke="#1A3A5C" stroke-width="1.5"/></svg>
+          </div>
+          <h3 class="eco-card__title">Graph Databases</h3>
+          <p class="eco-card__body">Export directly to Neo4j. Knowledge relationships are first-class citizens.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="4" y="6" width="24" height="20" rx="2" stroke="#1A3A5C" stroke-width="1.5"/><line x1="4" y1="11" x2="28" y2="11" stroke="#1A3A5C" stroke-width="1.5"/><rect x="8" y="15" width="6" height="4" rx="1" fill="#C8963A"/><rect x="18" y="15" width="6" height="4" rx="1" stroke="#1A3A5C" stroke-width="1.5"/></svg>
+          </div>
+          <h3 class="eco-card__title">Jupyter Lab</h3>
+          <p class="eco-card__body">Import compiled knowledge directly into notebooks. Query your claim graph alongside your data analysis.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="6" y="6" width="20" height="20" rx="10" stroke="#1A3A5C" stroke-width="1.5"/><path d="M12 16h8M16 12v8" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </div>
+          <h3 class="eco-card__title">AI Agents (MCP)</h3>
+          <p class="eco-card__body">Expose your knowledge base to MCP-compatible AI agents. Your structured insights become machine-readable intelligence.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="4" y="4" width="11" height="11" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><rect x="17" y="4" width="11" height="11" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><rect x="4" y="17" width="11" height="11" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><rect x="17" y="17" width="11" height="11" rx="1.5" stroke="#C8963A" stroke-width="1.5"/></svg>
+          </div>
+          <h3 class="eco-card__title">Standard Formats</h3>
+          <p class="eco-card__body">JSON, MS-Excel, CSV, REFI-QDA — Synesis speaks the lingua franca of data interchange. No proprietary lock-in, ever.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="11" stroke="#1A3A5C" stroke-width="1.5"/><path d="M16 5c0 0-4 4-4 11s4 11 4 11" stroke="#1A3A5C" stroke-width="1.5"/><line x1="5" y1="16" x2="27" y2="16" stroke="#1A3A5C" stroke-width="1.5"/></svg>
+          </div>
+          <h3 class="eco-card__title">Git & Version Control</h3>
+          <p class="eco-card__body">Plain text files. Diff-friendly. Every analytical decision is tracked, auditable, and reversible. Science as it should be.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="5" y="4" width="14" height="18" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><line x1="8" y1="9" x2="16" y2="9" stroke="#1A3A5C" stroke-width="1.5"/><line x1="8" y1="12" x2="16" y2="12" stroke="#1A3A5C" stroke-width="1.5"/><line x1="8" y1="15" x2="13" y2="15" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="22" cy="22" r="6" stroke="#C8963A" stroke-width="1.5"/><line x1="19" y1="22" x2="25" y2="22" stroke="#C8963A" stroke-width="1.5"/><line x1="22" y1="19" x2="22" y2="25" stroke="#C8963A" stroke-width="1.5"/></svg>
+          </div>
+          <h3 class="eco-card__title">Zotero Plugin</h3>
+          <p class="eco-card__body">Export Zotero annotations directly as <code>.syn</code> SOURCE/ITEM blocks. Your reference library becomes the foundation of a structured knowledge base.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="3" y="4" width="16" height="22" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><line x1="6" y1="9" x2="16" y2="9" stroke="#1A3A5C" stroke-width="1.5"/><line x1="6" y1="13" x2="16" y2="13" stroke="#1A3A5C" stroke-width="1.5"/><line x1="6" y1="17" x2="11" y2="17" stroke="#1A3A5C" stroke-width="1.5"/><rect x="17" y="14" width="12" height="14" rx="1.5" fill="rgba(26,58,92,0.07)" stroke="#1A3A5C" stroke-width="1.5"/><line x1="20" y1="18" x2="26" y2="18" stroke="#1A3A5C" stroke-width="1.5"/><line x1="20" y1="21" x2="26" y2="21" stroke="#1A3A5C" stroke-width="1.5"/><line x1="20" y1="24" x2="23" y2="24" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="24" cy="8" r="4" fill="#C8963A" fill-opacity="0.15" stroke="#C8963A" stroke-width="1.5"/><polyline points="22,8 24,10 27,6" stroke="#C8963A" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3 class="eco-card__title">Synesis Explorer (VS Code)</h3>
+          <p class="eco-card__body">Native Language Server Protocol for <code>.syn</code>. Inline validation, autocomplete and navigation across large files — References, Codes and Relations in dedicated panels, with an integrated Graph Viewer.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><rect x="4" y="5" width="11" height="16" rx="1.5" stroke="#1A3A5C" stroke-width="1.5"/><line x1="7" y1="9" x2="12" y2="9" stroke="#1A3A5C" stroke-width="1.5"/><line x1="7" y1="12" x2="12" y2="12" stroke="#1A3A5C" stroke-width="1.5"/><line x1="7" y1="15" x2="10" y2="15" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="23" cy="10" r="4" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="23" cy="24" r="4" stroke="#C8963A" stroke-width="1.5"/><line x1="23" y1="14" x2="23" y2="20" stroke="#1A3A5C" stroke-width="1.5" stroke-dasharray="2 2"/><polyline points="21,19 23,21 25,19" stroke="#1A3A5C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <h3 class="eco-card__title">Canonical Texts & Hermeneutics</h3>
+          <p class="eco-card__body">Concordances and topical indexes tell you <em>where</em> a concept appears. Synesis goes further: with <code>chain:</code>, researchers and theologians build relational maps of passages — where Faith <code>→ PRESUPPOSES →</code> Grace, or Revelation <code>→ ENABLES →</code> Understanding — in plain text, auditable and exportable as a graph.</p>
+        </div>
+        <div class="eco-card">
+          <div class="eco-card__icon">
+            <svg viewBox="0 0 32 32" fill="none"><circle cx="7" cy="16" r="3" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="16" cy="7" r="3" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="25" cy="16" r="3" stroke="#1A3A5C" stroke-width="1.5"/><circle cx="16" cy="25" r="3" fill="#C8963A" stroke="#C8963A" stroke-width="1.5"/><line x1="10" y1="16" x2="22" y2="16" stroke="#1A3A5C" stroke-width="1.5"/><line x1="16" y1="10" x2="16" y2="22" stroke="#1A3A5C" stroke-width="1.5"/><line x1="9" y1="13.5" x2="13.5" y2="9" stroke="#1A3A5C" stroke-width="1.2" stroke-dasharray="2 2"/><line x1="22.5" y1="13.5" x2="18.5" y2="9" stroke="#1A3A5C" stroke-width="1.2" stroke-dasharray="2 2"/><line x1="9" y1="18.5" x2="13.5" y2="23" stroke="#1A3A5C" stroke-width="1.2" stroke-dasharray="2 2"/><line x1="22.5" y1="18.5" x2="18.5" y2="23" stroke="#1A3A5C" stroke-width="1.2" stroke-dasharray="2 2"/></svg>
+          </div>
+          <h3 class="eco-card__title">BigQual — Qualitative Research at Scale</h3>
+          <p class="eco-card__body">Corpora annotated by multiple researchers, partially AI-generated, verifiable by design. Synesis makes human interpretation accumulable, comparable and queryable — without sacrificing rigor.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section section--cta">
+    <div class="section__inner section__inner--narrow">
+      <div class="cta-graph" aria-hidden="true">
+        <svg viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="28" cy="16" r="7" stroke="#F7F4EF" stroke-width="1.5"/>
+          <circle cx="28" cy="64" r="7" stroke="#F7F4EF" stroke-width="1.5"/>
+          <circle cx="92" cy="40" r="7" fill="#C8963A"/>
+          <line x1="35" y1="19" x2="85" y2="37" stroke="#F7F4EF" stroke-width="1.5"/>
+          <line x1="35" y1="61" x2="85" y2="43" stroke="#F7F4EF" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h2 class="cta__headline">
+        Your insights deserve<br />a formal language.
+      </h2>
+      <p class="cta__sub">
+        Synesis is open source and currently in beta.
+        The documentation is the best place to start.
+      </p>
+      <a href="../en/" class="btn btn--amber">
+        Read the documentation
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer__inner">
+      <div class="footer__logo">
+        <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
+          <circle cx="8"  cy="8"  r="3" fill="#6B6B70"/>
+          <circle cx="8"  cy="24" r="3" fill="#6B6B70"/>
+          <circle cx="24" cy="16" r="3" fill="#6B6B70"/>
+          <line x1="11" y1="9.5"  x2="21" y2="14.5" stroke="#6B6B70" stroke-width="1.5"/>
+          <line x1="11" y1="22.5" x2="21" y2="17.5" stroke="#6B6B70" stroke-width="1.5"/>
+        </svg>
+        <span>Synesis</span>
+      </div>
+      <nav class="footer__nav" aria-label="Footer navigation">
+        <a href="#why">Why Synesis</a>
+        <a href="#how">How it works</a>
+        <a href="#ecosystem">Ecosystem</a>
+      </nav>
+      <div class="footer__links">
+        <a href="https://github.com/synesis-lang">GitHub</a>
+        <a href="../en/">Documentation</a>
+        <a href="#">License (MIT)</a>
+        <a href="pt/">Português</a>
+      </div>
+      <div class="footer__legal">
+        A plain-text, compiler-first knowledge language.
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -1,0 +1,541 @@
+---
+title: "Synesis para Pesquisa Qualitativa"
+subtitle: "Tutorial prático para pesquisadores de humanidades"
+---
+
+# Bem-vindo, Pesquisador!
+
+Neste tutorial, **nós vamos** criar juntos um projeto de análise qualitativa usando Synesis. Se você trabalha com entrevistas, análise documental, teoria fundamentada ou análise temática, este guia é para você.
+
+**O que você vai construir:**
+
+- Um projeto de análise de entrevistas
+- Um sistema de codificação conceitual
+- Relações causais entre conceitos
+- Exportações para análise quantitativa
+
+**Pré-requisitos:**
+
+- Python 3.10+ instalado
+- Um gerenciador de referências (Zotero recomendado, mas opcional)
+- Familiaridade básica com pesquisa qualitativa
+
+:::{.callout-tip}
+## Novo no Synesis?
+Se você nunca usou Synesis, comece com [Getting Started](getting-started.qmd) primeiro. Este tutorial assume que você já conhece os comandos básicos.
+:::
+
+---
+
+## Nosso Cenário de Pesquisa
+
+Vamos trabalhar com um estudo fictício sobre **resistência à adoção de telemedicina** em comunidades rurais. Imagine que você conduziu 3 entrevistas semiestruturadas e agora precisa analisar os dados.
+
+---
+
+## Passo 1: Preparar Nossas Fontes
+
+Primeiro, crie uma pasta para o projeto:
+
+```bash
+mkdir analise-telemedicina
+cd analise-telemedicina
+```
+
+Agora, crie um arquivo `referencias.bib` com suas entrevistas:
+
+```bibtex
+@interview{entrevista_dona_maria,
+  author = {Maria da Silva},
+  title = {Entrevista sobre acesso à saúde},
+  year = {2026},
+  location = {Vila Rural X},
+  type = {Entrevista semiestruturada},
+  duration = {45 minutos}
+}
+
+@interview{entrevista_sr_joao,
+  author = {João Santos},
+  title = {Entrevista sobre tecnologia e saúde},
+  year = {2026},
+  location = {Vila Rural Y},
+  type = {Entrevista em profundidade},
+  duration = {60 minutos}
+}
+
+@interview{entrevista_dra_ana,
+  author = {Ana Costa},
+  title = {Entrevista - perspectiva profissional},
+  year = {2026},
+  role = {Médica rural},
+  type = {Entrevista semiestruturada},
+  duration = {40 minutos}
+}
+```
+
+Salve este arquivo.
+
+:::{.callout-note}
+## Checkpoint ✓
+Você deve ter agora:
+- Pasta `analise-telemedicina/` criada
+- Arquivo `referencias.bib` com 3 entrevistas
+:::
+
+---
+
+## Passo 2: Definir Nosso Template
+
+Vamos criar um template adaptado para análise qualitativa. Crie `template.synt`:
+
+```synesis
+TEMPLATE analise_qualitativa
+VERSION 1.0
+DESCRIPTION: "Template para análise temática de entrevistas"
+
+BLOCK SOURCE
+    FIELD bibref : BIBREF REQUIRED
+        DESCRIPTION: "Referência bibliográfica da fonte"
+END BLOCK
+
+BLOCK ITEM
+    SCOPE SOURCE
+
+    FIELD quote : TEXT REQUIRED
+        DESCRIPTION: "Citação literal do participante"
+
+    FIELD memo : TEXT OPTIONAL
+        DESCRIPTION: "Memo analítico: reflexões sobre o trecho"
+
+    FIELD code : CODE OPTIONAL MULTIPLE
+        DESCRIPTION: "Códigos conceituais atribuídos"
+
+    FIELD chain : CHAIN OPTIONAL
+        DESCRIPTION: "Relações causais identificadas"
+
+    FIELD context : TEXT OPTIONAL
+        DESCRIPTION: "Contexto da fala (situação, emoção, hesitação)"
+END BLOCK
+```
+
+**Observe:** Adicionamos o campo `context` — isso é útil para registrar nuances qualitativas (como hesitações, emoções, mudanças de tom).
+
+:::{.callout-note}
+## Checkpoint ✓
+Valide o template:
+```bash
+synesis check template.synt
+```
+Deve retornar: `✓ Template is valid`
+:::
+
+---
+
+## Passo 3: Construir Nossa Ontologia
+
+Agora vamos definir os códigos conceituais. Em pesquisa qualitativa, esses códigos emergem dos dados, mas vamos criar alguns iniciais baseados em leitura prévia. Crie `ontologia.syno`:
+
+```synesis
+ONTOLOGY codigos_telemedicina
+VERSION 1.0
+
+TOPIC "Barreiras à Adoção"
+    CODE "Desconfiança Tecnológica"
+        DEFINITION: "Receio ou incredulidade em relação à eficácia de tecnologias médicas remotas"
+    END CODE
+
+    CODE "Falta de Infraestrutura"
+        DEFINITION: "Ausência ou precariedade de internet, equipamentos ou eletricidade"
+    END CODE
+
+    CODE "Preferência por Contato Presencial"
+        DEFINITION: "Valorização do encontro face-a-face com o profissional de saúde"
+    END CODE
+
+    CODE "Letramento Digital Baixo"
+        DEFINITION: "Dificuldade ou falta de familiaridade com uso de tecnologias digitais"
+    END CODE
+END TOPIC
+
+TOPIC "Facilitadores"
+    CODE "Necessidade Urgente"
+        DEFINITION: "Situação de emergência ou falta de alternativas viáveis presenciais"
+    END CODE
+
+    CODE "Apoio Comunitário"
+        DEFINITION: "Suporte de vizinhos, familiares ou agentes de saúde no uso da tecnologia"
+    END CODE
+END TOPIC
+
+TOPIC "Relações Causais"
+    RELATION "GERA"
+        DEFINITION: "Um fator produz ou resulta em outro"
+    END RELATION
+
+    RELATION "INIBE"
+        DEFINITION: "Um fator dificulta, impede ou reduz outro"
+    END RELATION
+
+    RELATION "FAVORECE"
+        DEFINITION: "Um fator promove, facilita ou aumenta outro"
+    END RELATION
+
+    RELATION "MEDIA"
+        DEFINITION: "Um fator age como intermediário entre dois outros"
+    END RELATION
+END TOPIC
+
+END ONTOLOGY
+```
+
+Valide:
+
+```bash
+synesis check ontologia.syno
+```
+
+:::{.callout-note}
+## Checkpoint ✓
+Você agora tem 6 códigos conceituais definidos. À medida que analisar os dados, você pode adicionar mais.
+:::
+
+---
+
+## Passo 4: Anotar Nossa Primeira Entrevista
+
+Agora vem a parte principal: vamos anotar trechos das entrevistas. Crie `anotacoes.syn`:
+
+```synesis
+SOURCE @entrevista_dona_maria
+END SOURCE
+
+ITEM @entrevista_dona_maria
+    quote: "Eu não confio nessas coisas de conversar com médico pelo computador. Como ele vai saber o que eu tenho se não me tocar, não me examinar?"
+    memo: Participante expressa desconfiança na eficácia diagnóstica da telemedicina. Associa qualidade do atendimento à presença física e ao exame clínico presencial. Fala com tom de incredulidade.
+    code: Desconfiança Tecnológica
+    code: Preferência por Contato Presencial
+    chain: Desconfiança Tecnológica -> INIBE -> Adoção de Telemedicina
+    context: Disse isso logo no início da conversa, antes mesmo de eu perguntar diretamente sobre telemedicina
+END ITEM
+
+ITEM @entrevista_dona_maria
+    quote: "Aqui a internet cai toda hora. Às vezes fica dois, três dias sem. Como vou marcar consulta se nem WiFi tenho direito?"
+    memo: Infraestrutura precária como barreira concreta. Frustração evidente na fala. O termo "nem WiFi tenho direito" sugere percepção de exclusão ou injustiça.
+    code: Falta de Infraestrutura
+    chain: Falta de Infraestrutura -> INIBE -> Acesso à Telemedicina
+    context: Falou com voz mais alta, demonstrando irritação
+END ITEM
+```
+
+**Agora é sua vez!** Continue anotando. Vamos adicionar trechos da segunda entrevista:
+
+```synesis
+SOURCE @entrevista_sr_joao
+END SOURCE
+
+ITEM @entrevista_sr_joao
+    quote: "Eu tentei usar uma vez que minha neta me ajudou. Foi bom, resolvi sem sair de casa. Mas sozinho eu não consigo não, preciso de alguém pra mexer no celular pra mim."
+    memo: Experiência positiva quando mediada por familiar. Reconhece benefício (evitar deslocamento) mas identifica dependência de suporte técnico informal. Dicotomia entre percepção de utilidade e capacidade de uso autônomo.
+    code: Letramento Digital Baixo
+    code: Apoio Comunitário
+    chain: Apoio Comunitário -> MEDIA -> Letramento Digital Baixo -> FAVORECE -> Uso de Telemedicina
+    context: Falou com gratidão ao mencionar a neta, mas com resignação ao admitir a dependência
+END ITEM
+
+ITEM @entrevista_sr_joao
+    quote: "Quando meu filho ficou internado na capital, a médica daqui falou com o médico de lá pelo vídeo. Foi uma bênção, porque ela pôde explicar o caso dele direitinho."
+    memo: Exemplo concreto de uso bem-sucedido entre profissionais (comunicação inter-hospitalar). Contextualiza telemedicina como ferramenta para continuidade de cuidado, não apenas para primeira consulta. Termo religioso ("bênção") indica forte impacto emocional positivo.
+    code: Necessidade Urgente
+    chain: Necessidade Urgente -> FAVORECE -> Aceitação de Telemedicina
+    context: Única vez na entrevista em que sorriu ao falar do tema
+END ITEM
+```
+
+:::{.callout-tip}
+## Dica de Pesquisador
+Observe como o campo `context` captura nuances qualitativas importantes (tom de voz, emoções, linguagem corporal). Essas anotações serão valiosas na fase de interpretação mais profunda.
+:::
+
+---
+
+## Passo 5: Anotar a Terceira Entrevista (Perspectiva Profissional)
+
+Agora vamos adicionar a perspectiva da profissional de saúde:
+
+```synesis
+SOURCE @entrevista_dra_ana
+END SOURCE
+
+ITEM @entrevista_dra_ana
+    quote: "Os pacientes têm dificuldade, mas é mais a internet do que a vontade. Quando funciona, eles gostam. O problema é que nem sempre funciona."
+    memo: Profissional identifica infraestrutura como barreira principal, não resistência cultural. Reconhece aceitação dos pacientes quando condições técnicas são adequadas. Importante contraponto à narrativa de "resistência ao novo".
+    code: Falta de Infraestrutura
+    chain: Falta de Infraestrutura -> INIBE -> Uso Efetivo de Telemedicina
+    context: Disse isso com frustração visível, gesticulando ao mencionar a internet
+END ITEM
+
+ITEM @entrevista_dra_ana
+    quote: "Eu prefiro presencial quando posso, porque consigo ver coisas que não aparecem na tela. Mas para retorno, para tirar dúvida rápida, telemedicina é perfeita."
+    memo: Profissional diferencia contextos de uso apropriado vs inapropriado. Nuança importante: não é rejeição binária, mas uso contextualizado. Sugere que telemedicina complementa, não substitui presencial.
+    code: Preferência por Contato Presencial
+    context: Tom pragmático, não emotivo. Fala de quem avalia prós e contras tecnicamente
+END ITEM
+```
+
+Salve o arquivo `anotacoes.syn`.
+
+:::{.callout-note}
+## Checkpoint ✓
+Você anotou 6 trechos de 3 entrevistas diferentes. Validate:
+```bash
+synesis check anotacoes.syn
+```
+:::
+
+---
+
+## Passo 6: Criar o Arquivo de Projeto
+
+Agora vamos conectar tudo. Crie `analise.synp`:
+
+```synesis
+PROJECT analise_telemedicina_rural
+VERSION 1.0
+
+TEMPLATE "template.synt"
+
+INCLUDE BIBLIOGRAPHY "referencias.bib"
+INCLUDE ONTOLOGY "ontologia.syno"
+INCLUDE ANNOTATIONS "anotacoes.syn"
+
+DESCRIPTION
+    Análise qualitativa sobre barreiras e facilitadores
+    à adoção de telemedicina em comunidades rurais.
+    Abordagem: Análise temática
+    Período: Janeiro-Fevereiro 2026
+END
+
+METADATA
+    researcher: "Seu Nome"
+    institution: "Sua Universidade"
+    ethics_approval: "CEP-2025-XXX"
+END
+
+END PROJECT
+```
+
+---
+
+## Passo 7: Compilar e Analisar
+
+Compile o projeto:
+
+```bash
+synesis compile analise.synp --output resultados/
+```
+
+**Verifique os arquivos gerados:**
+
+```
+resultados/
+├── analise.json          # Estrutura completa
+├── sources.csv          # Lista de fontes
+├── items.csv            # Todas as anotações
+├── codes.csv            # Frequência de códigos
+├── chains.csv           # Relações causais
+├── memos.csv            # Todos os memos
+└── analise.xlsx         # Excel multi-aba
+```
+
+### Análise no Excel
+
+Abra `analise.xlsx`. Você verá:
+
+**Aba "Codes":**
+| Código | Frequência | Fontes |
+|--------|------------|--------|
+| Falta de Infraestrutura | 3 | dona_maria, sr_joao, dra_ana |
+| Desconfiança Tecnológica | 1 | dona_maria |
+| Preferência por Contato Presencial | 2 | dona_maria, dra_ana |
+| ... | ... | ... |
+
+**Aba "Chains":**
+| Relação | Código A | Código B | Frequência |
+|---------|----------|----------|------------|
+| INIBE | Desconfiança Tecnológica | Adoção de Telemedicina | 1 |
+| INIBE | Falta de Infraestrutura | Acesso à Telemedicina | 2 |
+| ... | ... | ... | ... |
+
+:::{.callout-tip}
+## Insight de Análise
+Observe que "Falta de Infraestrutura" aparece em todas as 3 entrevistas (pacientes E profissional). Isso sugere que a barreira não é apenas "resistência cultural", mas concreta e sistêmica.
+:::
+
+---
+
+## Passo 8: Refinar Análise (Processo Iterativo)
+
+Agora que você viu os padrões iniciais, volte aos dados. Você pode:
+
+### 8.1 Adicionar Novos Códigos
+
+Se você identifica um padrão recorrente, adicione à ontologia:
+
+```synesis
+CODE "Percepção de Exclusão Digital"
+    DEFINITION: "Sentimento de estar à margem devido a falta de acesso tecnológico"
+END CODE
+```
+
+### 8.2 Refinar Códigos Existentes
+
+Se um código está ambíguo, divida:
+
+```synesis
+# Antes:
+CODE "Desconfiança Tecnológica"
+
+# Depois:
+CODE "Desconfiança na Eficácia Diagnóstica"
+    DEFINITION: "Dúvida sobre capacidade de diagnóstico sem exame físico"
+END CODE
+
+CODE "Desconfiança na Segurança de Dados"
+    DEFINITION: "Receio sobre privacidade e vazamento de informações médicas"
+END CODE
+```
+
+### 8.3 Adicionar Mais Anotações
+
+Volte às entrevistas originais e anote trechos adicionais que você não havia percebido na primeira leitura.
+
+### 8.4 Recompilar
+
+```bash
+synesis compile analise.synp --output resultados/
+```
+
+Veja como os números mudaram!
+
+---
+
+## Passo 9: Exportar para Visualização
+
+Para criar um grafo visual das relações:
+
+```bash
+# Se você tem a extensão Synesis Explorer instalada
+# Abra o projeto no VSCode e pressione Ctrl+Alt+G
+```
+
+Ou exporte para Neo4j para análise de rede:
+
+```bash
+python synesis2neo4j.py --project analise.synp --config neo4j_config.toml
+```
+
+Consulte [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd) para detalhes.
+
+---
+
+## 🎉 Parabéns!
+
+Você acabou de completar uma análise qualitativa estruturada com Synesis! Você:
+
+- ✅ Preparou fontes bibliográficas
+- ✅ Criou um template adaptado para pesquisa qualitativa
+- ✅ Definiu uma ontologia de códigos conceituais
+- ✅ Anotou 6 trechos de 3 entrevistas com memos analíticos
+- ✅ Capturou nuances qualitativas (contexto, emoções)
+- ✅ Identificou relações causais entre conceitos
+- ✅ Compilou e analisou padrões quantitativos
+- ✅ Aprendeu o processo iterativo de refinamento
+
+---
+
+## Boas Práticas para Pesquisadores
+
+### 1. Anote Progressivamente
+Não espere terminar todas as entrevistas para começar a anotar. Analise à medida que coleta dados — isso permite ajustar roteiro de entrevistas.
+
+### 2. Use Memos Analiticamente
+O campo `memo` não é para repetir a citação. Use para:
+- Interpretar o significado
+- Identificar contradições ou nuances
+- Levantar hipóteses
+- Conectar com teoria
+
+### 3. Documente Decisões
+No campo `context` ou em memos, registre POR QUE você atribuiu determinado código. Isso será crucial na fase de escrita.
+
+### 4. Revise Sistematicamente
+A cada 5-10 anotações, compile e veja a distribuição de códigos. Pergunte:
+- Algum código está superabundante (muito genérico)?
+- Algum código aparece uma única vez (muito específico)?
+- Há padrões emergentes não capturados?
+
+### 5. Valide com Pares
+Compartilhe seu arquivo `.syno` (ontologia) com colegas. Peça para eles:
+- Verificarem se as definições são claras
+- Identificarem sobreposições conceituais
+- Sugerirem códigos ausentes
+
+---
+
+## Diferenças de Abordagens Metodológicas
+
+### Teoria Fundamentada (Grounded Theory)
+- Comece com ontologia vazia
+- Adicione códigos conforme emergem dos dados (codificação aberta)
+- Use `chain` para capturar categorias centrais e relações entre categorias
+- Itere até saturação teórica
+
+### Análise Temática
+- Defina temas iniciais (dedutivos) ou deixe emergir (indutivos)
+- Use `CODE` para temas e subtemas
+- Use `TOPIC` na ontologia para agrupar temas
+- Campo `memo` para reflexões sobre temas recorrentes
+
+### Análise de Conteúdo
+- Template mais rígido, com campos predefinidos
+- Ontologia criada a priori baseada em literatura
+- Foco em frequência (use output CSV para quantificação)
+- Menos uso de `chain`, mais uso de `code`
+
+### Análise Crítica do Discurso
+- Use `context` extensivamente (prosódia, hesitações, silêncios)
+- Campo `memo` para identificar estratégias discursivas
+- `chain` para capturar pressupostos ideológicos
+- Anote o que NÃO foi dito (silêncios significativos)
+
+---
+
+## Recursos para Aprofundamento
+
+### Para Melhorar sua Codificação
+- [Como definir uma ontologia](../howto/definir_ontologia.qmd)
+- [Como criar e validar chains](../howto/criar_chains.qmd)
+
+### Para Entender o "Porquê"
+- [Por que estrutura importa](../explanation/por_que_estrutura_importa.qmd)
+- [Por que não Excel?](../explanation/guia_sincero.qmd)
+
+### Para Consultar Sintaxe
+- [Referência da Linguagem](../reference/guia_referencia.qmd)
+
+---
+
+## Próximo Projeto
+
+Agora que você domina o básico, experimente:
+
+1. **Projeto com múltiplos tipos de fonte**: Combine entrevistas + documentos + observações
+2. **Análise longitudinal**: Anote dados coletados em diferentes momentos
+3. **Análise comparativa**: Use `TOPIC` na ontologia para separar subcasos
+4. **Integração com Zotero**: Use o plugin [zotero-synesis-export](https://github.com/synesis-lang/zotero-synesis-export) para exportar highlights de PDFs diretamente como `.syn`
+
+---
+
+**Ficou com dúvidas metodológicas?** Abra uma discussão em [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou consulte a comunidade de pesquisadores Synesis.
+
+**Boa pesquisa!** 📚🔍✨

@@ -17,9 +17,13 @@ cd ..
 echo Criando página raiz de redirecionamento...
 quarto render index.qmd --to html --output-dir _site
 
+echo Copiando landing pages para _site\landing\...
+xcopy /E /I /Y synesis-landing _site\landing
+
 echo Build concluído!
 echo Estrutura gerada:
 dir _site
-if exist _site\pt echo   Português OK
-if exist _site\en echo   Inglês OK
+if exist _site\pt      echo   Documentação PT OK
+if exist _site\en      echo   Documentação EN OK
+if exist _site\landing echo   Landing page OK
 if exist _site\.nojekyll echo   .nojekyll presente

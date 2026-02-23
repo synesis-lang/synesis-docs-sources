@@ -1,0 +1,111 @@
+# Como a Synesis surgiu?
+
+O problema original
+
+---
+
+Synesis surgiu de uma pesquisa concreta: a investigação sobre aceitação social de tecnologias de energia offshore, conduzida no âmbito do OTIC (Offshore Technology Innovation Centre) da Universidade de São Paulo (USP). O objetivo era identificar e organizar os fatores que influenciam a percepção pública sobre inovações tecnológicas no contexto da transição energética — um problema ao mesmo tempo empírico e interpretativo.
+
+Para dar conta desse problema, foi necessário construir um fluxo de trabalho integrado que combinasse técnicas bibliométricas, codificação qualitativa e inteligência artificial. Ferramentas como RStudio, o pacote Bibliometrix e VOSviewer eram usadas para identificar os artigos científicos mais relevantes por contagem de citações, exportados de bases como Web of Science e Scopus. Zotero centralizava o gerenciamento das referências e servia, também, como ambiente de anotação qualitativa inicial.
+
+## O Zotero como ponto de partida
+
+O Zotero não foi projetado para análise qualitativa. Ainda assim, revelou-se útil para uma primeira fase de codificação aberta: era possível anotar PDFs com marcadores e comentários, associar tags a trechos destacados e exportar essas anotações em um formato customizado.
+
+Para isso, o Zotero foi configurado com templates personalizados nas preferências avançadas. Cada anotação exportada seguia uma estrutura com delimitadores específicos:
+
+```synesis
+[-begin_header-]
+referencia_bibtex: burke2018
+descricao: Explores the relationship between renewable energy systems and political power distribution, examining energy democracy as a framework for energy transitions.
+modelo_epistemico: Energy democracy, political power theory
+metodo: Conceptual review
+[-end_header-]
+
+[-begin-][@burke2018@][!Distributed energy-politics posits that distributed energy sources and technologies enable and organize distributed political power and vice versa.!][%Distributed energy systems can reorganize political power structures%][#Energy System#][&correlates-with&][#Governance#][-end-]
+```
+
+O formato funcionava para volumes pequenos, revisados manualmente. Mas já carregava uma fragilidade estrutural: os delimitadores eram convenções textuais, não gramática formal. E o próprio pesquisador humano dependia desse mesmo formato informal para registrar suas interpretações.
+
+## A IA entra no fluxo
+
+À medida que o corpus crescia — centenas de abstracts exportados em BibTeX, convertidos para CSV pelo script `bib2csv.py` —, tornou-se inviável processar tudo manualmente. A solução foi incorporar modelos de linguagem via API para automatizar a extração de fatores e relações.
+
+O script `abstract_processor9.py` enviava cada abstract ao modelo, com um prompt estruturado em cinco partes (`system_prompt`, `task`, `instructions`, `relation_types`, `critical_reminders`), e recebia de volta o mesmo formato de TAGs já usado no Zotero. A escala aumentou. O problema também.
+
+Modelos de linguagem produzem texto probabilístico. REGEX pressupõe padrões estáveis. Pequenas variações no output — um espaço extra, uma TAG mal fechada, uma cadeia de relações fora da ordem esperada — quebravam o parsing. Cada ajuste exigia novas expressões regulares. O sistema dependia de um equilíbrio cada vez mais frágil entre a estabilidade do modelo, a disciplina no formato e a complexidade crescente das anotações. 
+
+## A proliferação de remendos
+
+Para contornar as limitações, o toolkit foi crescendo. O `editor.py` surgiu como interface visual para revisar e corrigir manualmente os arquivos `.txt` gerados pela IA — com suporte a clique direito para editar fatores, relações e cadeias. O `compare_annotations.py` foi criado para medir a distância entre o que a IA produzia e o que o pesquisador pretendia dizer, usando métricas de similaridade Levenshtein, sobreposição de palavras e contagem de blocos:
+
+```
+INFO: burke2018:
+INFO:   Exact Match: 60.0%
+INFO:   Levenshtein Similarity: 99.8%
+INFO:   Word Overlap: 98.2%
+INFO:   Blocks: File1=5, File2=4
+```
+
+O `docs2txt.py` ampliou o escopo para além de abstracts científicos: PDFs, documentos Word e páginas HTML podiam agora ser convertidos e processados pelo mesmo fluxo — entrevistas, relatórios técnicos, conteúdo web. O menu interativo `menu_txt.py` foi criado apenas para coordenar a sequência de execução dos demais scripts.
+
+Quando foi necessário criar uma ferramenta só para medir a distância entre o output da IA e a intenção do pesquisador, o diagnóstico tornou-se inegável: o problema não era técnico. Era estrutural.
+
+## A insuficiência do modelo relacional
+
+À medida que a análise avançava, os dados deixaram de ser registros tabulares. Passaram a incluir cadeias semânticas:
+
+```
+A → influencia → B → habilita → C
+```
+
+A representação em banco relacional tornou-se artificial. A migração para um banco de grafos foi natural. Mas mesmo com armazenamento adequado, o problema persistia: a entrada continuava sendo texto frágil, não estrutura formal. O grafo era robusto; a linguagem que o alimentava, não.
+
+## A tensão entre automação e interpretação
+
+A análise gerada por IA era estruturada, mas rígida. A anotação humana era flexível, mas informal. Era necessário adicionar novos campos, registrar interpretações, revisar códigos, expandir cadeias, evoluir a ontologia. O sistema baseado em TAGs dificultava essa evolução: cada mudança estrutural exigia modificar o parsing, o armazenamento e frequentemente o prompt.
+
+O problema ficou claro: como integrar análise estruturada gerada por IA e anotação humana orgânica sem sacrificar consistência ou flexibilidade?
+
+## O insight: texto precisa de gramática
+
+A resposta não estava em melhorar o banco de dados. Nem em sofisticar o uso de REGEX. Era necessário introduzir sintaxe explícita, parsing formal, validação semântica e separação entre linguagem e configuração.
+
+Assim surgiu a ideia de transformar o formato de anotação em uma linguagem propriamente dita, uma linguagem de domínio específico (DSL):
+
+```synesis
+SOURCE @burke2018
+    descricao: Explores the relationship between renewable energy systems and political power distribution, examining energy democracy as a framework for energy transitions.
+    modelo_epistemico: Energy democracy, political power theory
+    metodo: Conceptual review
+END SOURCE
+
+ITEM @burke2018@
+    text: Distributed energy-politics posits that distributed energy sources and technologies enable and organize distributed political power and vice versa.
+
+    note: Distributed energy systems can reorganize political power structures
+
+    chain: Energy_System -> influences -> Governance
+END ITEM
+```
+
+Esta nova abordagem permitiu que 
+
+
+## Synesis como síntese
+
+Synesis não é uma camada intermediária entre IA e banco de dados.
+
+Ela é o ponto de convergência entre dois processos: geração estruturada e escalável por IA, e interpretação humana contextual e evolutiva. Ambos operam na mesma linguagem.
+
+A IA pode produzir anotações em Synesis. O pesquisador pode editar, expandir e reinterpretar essas anotações. O compilador garante consistência e rastreabilidade.
+
+A estrutura não elimina a interpretação. Ela a organiza.
+
+## O papel atual da Synesis
+
+Synesis responde a um problema contemporâneo: modelos de IA geram texto estruturado, mas texto não é estrutura confiável. Sem gramática, validação e ontologia controlada, a análise torna-se difícil de manter, versionar e auditar.
+
+Synesis formaliza essa estrutura sem impedir evolução.
+
+Ela nasceu de uma fricção prática — em um problema de pesquisa real, com dados reais, em um fluxo que cresceu até o ponto em que seus próprios remendos se tornaram o obstáculo. E continua evoluindo a partir dessa mesma fricção.

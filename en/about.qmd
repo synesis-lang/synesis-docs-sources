@@ -1,5 +1,120 @@
 ---
-title: "About"
+title: "About Synesis"
 ---
 
-About this site
+## About the Project
+
+**Synesis** is an open-source domain-specific language (DSL) for systematic consolidation of qualitative knowledge. Developed for researchers, knowledge professionals, and analysts who need to transform interpretations into auditable and technically interoperable structures.
+
+### Vision
+
+To eliminate the gap between the interpretive richness of the humanities and the structural rigor of data science, without sacrificing analytical depth or technical precision.
+
+### Design Principles
+
+1. **Template as Source of Truth**: All validation structure is derived from the template file (`.synt`) at runtime. No hardcoded fields.
+
+2. **Text-First & Interoperable**: Plain text files, versionable with Git, compilable to JSON/CSV/Excel, integrable with any tech stack.
+
+3. **Rigorous Semantic Validation**: The compiler validates conceptual consistency, bidirectional traceability, and compliance with defined ontologies.
+
+4. **Integrated Ecosystem**: Compiler, Language Server Protocol (LSP), VSCode extension, Neo4j pipeline, and Zotero plugin function as a cohesive system.
+
+---
+
+## Synesis Ecosystem
+
+The project consists of 7 integrated repositories:
+
+| Project | Description | Technology | Version |
+|---------|-------------|------------|---------|
+| [**synesis**](https://github.com/synesis-lang/synesis) | Core Compiler (LALR parser, semantic validator, exporters) | Python 3.10+ | 0.2.6 |
+| [**synesis-lsp**](https://github.com/synesis-lang/synesis-lsp) | Language Server Protocol (diagnostics, completions, hover) | Python 3.10+ | 0.14.6 |
+| [**synesis-explorer**](https://github.com/synesis-lang/synesis-explorer) | VSCode Extension (syntax highlighting, tree views, graph viewer) | TypeScript/Node | 0.5.2 |
+| [**synesis2neo4j**](https://github.com/synesis-lang/synesis2neo4j) | Neo4j Pipeline (GraphRAG, knowledge graphs) | Python 3.11+ | 0.1.2 |
+| [**zotero-synesis-export**](https://github.com/synesis-lang/zotero-synesis-export) | Zotero 7 Plugin (exports PDF annotations as `.syn`) | JavaScript | 0.1.4 |
+| [**synesis-docs-sources**](https://github.com/synesis-lang/synesis-docs-sources) | Documentation Sources (Quarto Publishing) | Quarto/QMD | — |
+| [**synesis-docs**](https://synesis-lang.github.io/synesis-docs) | Published Documentation (GitHub Pages) | HTML | — |
+
+---
+
+## License
+
+The Synesis ecosystem is free software distributed under **MIT** license (compiler, LSP, VSCode extension) and **MPL-2.0** (Zotero plugin), allowing commercial use, modification, and redistribution with proper attribution.
+
+Documentation is licensed under **Creative Commons BY 4.0**.
+
+---
+
+## How to Contribute
+
+Contributions are welcome! To report bugs, propose improvements, or submit code contributions:
+
+1. **Issues**: Open an issue in the specific repository
+2. **Pull Requests**: Fork the repository, create a branch, and send PR with clear description
+3. **Discussions**: For conceptual questions or feature proposals, use [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions)
+
+### Contribution Guidelines
+
+- Follow project code conventions (see `CONTRIBUTING.md` in each repository)
+- Add tests for new features
+- Document changes in `CHANGELOG.md` (`[Unreleased]` section)
+- Use semantic commits: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+
+---
+
+## Academic Citation
+
+If you use Synesis in academic research, cite as follows:
+
+### BibTeX
+
+```bibtex
+@software{synesis2026,
+  author = {De Britto, Márcio},
+  title = {Synesis: A Domain-Specific Language for Structured Qualitative Analysis},
+  year = {2026},
+  url = {https://github.com/synesis-lang/synesis},
+  version = {0.2.6},
+  note = {Open-source software for systematic qualitative knowledge consolidation}
+}
+```
+
+### APA 7
+
+De Britto, M. (2026). *Synesis: A Domain-Specific Language for Structured Qualitative Analysis* (Version 0.2.6) [Software]. https://github.com/synesis-lang/synesis
+
+---
+
+## Acknowledgments
+
+Synesis development was made possible thanks to:
+
+- **Lark Parser** (Erez Shinan) — Foundation for the LALR(1) parser
+- **pygls** (Open Law Library) — Language Server Protocol framework
+- **VSCode Extension API** (Microsoft) — Extension infrastructure
+- **Quarto** (Posit PBC) — Technical documentation system
+- **Open Source Community** — For tools, libraries, and inspiration
+
+---
+
+## Contact
+
+- **Official Documentation**: [synesis-lang.github.io/synesis-docs](https://synesis-lang.github.io/synesis-docs)
+- **Main Repository**: [github.com/synesis-lang/synesis](https://github.com/synesis-lang/synesis)
+- **Discussions**: [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions)
+- **Issues**: Report in specific repository
+
+---
+
+## Version History
+
+- **v0.2.6** (2026-02) — Compiler and LSP refinements
+- **v0.2.0** (2025-12) — Ontology support added (`.syno`)
+- **v0.1.0** (2025-09) — Initial release of compiler and VSCode extension
+
+For complete changelog, see `CHANGELOG.md` in each repository.
+
+---
+
+*This documentation follows [Diátaxis](https://diataxis.fr/) principles for systematic technical documentation.*

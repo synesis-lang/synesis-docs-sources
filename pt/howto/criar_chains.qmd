@@ -1,0 +1,407 @@
+---
+title: "Como Criar e Validar Chains"
+subtitle: "Guia prático para modelar relações causais estruturadas"
+---
+
+# Como Criar e Validar Chains
+
+Este guia mostra **como construir chains (cadeias causais)** para expressar relações entre conceitos de forma sistemática e auditável.
+
+**Você deve usar este guia se:**
+
+- Precisa expressar relações de causalidade, influência ou mediação
+- Quer construir mapas de relações entre códigos
+- Precisa validar a consistência lógica de suas chains
+- Quer extrair redes de relações para análise ou visualização
+
+---
+
+## O que é uma Chain?
+
+Uma **chain** (cadeia) é uma sequência de códigos conectados por relações, expressando como conceitos se influenciam mutuamente.
+
+### Sintaxe Básica
+
+```synesis
+chain: Código A -> RELAÇÃO -> Código B
+```
+
+**Exemplo:**
+```synesis
+chain: Custo Alto -> INIBE -> Adoção
+```
+
+Lê-se: "Custo Alto INIBE a Adoção"
+
+---
+
+## Como Criar Chains Simples
+
+### Chain de Dois Elementos
+
+A forma mais básica: um código influencia outro diretamente.
+
+```synesis
+ITEM @entrevista_01
+    quote: "O preço elevado desestimula a compra"
+    note: Barreira econômica identificada
+    chain: Preço Elevado -> INIBE -> Decisão de Compra
+END ITEM
+```
+
+**Quando usar:** Para relações diretas e não mediadas.
+
+### Chains com Múltiplas Relações
+
+Para expressar cadeias causais complexas:
+
+```synesis
+chain: Falta de Treinamento -> GERA -> Baixa Competência -> INIBE -> Adoção
+```
+
+Lê-se: "Falta de Treinamento GERA Baixa Competência, que INIBE Adoção"
+
+**Quando usar:** Para capturar mecanismos causais com elementos intermediários.
+
+---
+
+## Como Escolher Relações Apropriadas
+
+As relações devem estar **definidas na ontologia**. Tipos comuns:
+
+| Relação | Significado | Exemplo |
+|---------|-------------|---------|
+| `CAUSA` | X é causa direta de Y | `Erro de Software -> CAUSA -> Falha do Sistema` |
+| `INIBE` | X reduz ou impede Y | `Custo Alto -> INIBE -> Adoção` |
+| `FAVORECE` | X promove ou facilita Y | `Treinamento -> FAVORECE -> Usabilidade` |
+| `MEDIA` | X é intermediário entre A e Y | `Suporte Técnico -> MEDIA -> Satisfação` |
+| `CORRELACIONA` | X e Y ocorrem juntos (sem direção) | `Alta Rotatividade -> CORRELACIONA -> Baixo Engajamento` |
+
+**Defina relações na ontologia:**
+
+```synesis
+ONTOLOGY relations
+VERSION 1.0
+
+TOPIC "Relações Causais"
+    RELATION "CAUSA"
+        DEFINITION: "X é causa direta e necessária de Y"
+    END RELATION
+
+    RELATION "INIBE"
+        DEFINITION: "X reduz probabilidade ou intensidade de Y"
+    END RELATION
+END TOPIC
+
+END ONTOLOGY
+```
+
+---
+
+## Como Construir Chains Complexas
+
+### Chains Divergentes (Um Causa Vários)
+
+```synesis
+# Chain 1
+chain: Falta de Recursos -> INIBE -> Investimento em IA
+
+# Chain 2
+chain: Falta de Recursos -> INIBE -> Treinamento de Equipe
+
+# Chain 3
+chain: Falta de Recursos -> CAUSA -> Priorização de Curto Prazo
+```
+
+**Quando usar:** Para identificar causas de múltiplos efeitos.
+
+### Chains Convergentes (Vários Causam Um)
+
+```synesis
+# Chain 1
+chain: Facilidade de Uso -> FAVORECE -> Satisfação
+
+# Chain 2
+chain: Suporte Responsivo -> FAVORECE -> Satisfação
+
+# Chain 3
+chain: Custo Acessível -> FAVORECE -> Satisfação
+```
+
+**Quando usar:** Para identificar fatores múltiplos contribuindo para mesmo resultado.
+
+### Chains com Mediadores
+
+Quando há elementos intermediários:
+
+```synesis
+chain: Investimento em Capacitação -> AUMENTA -> Competência da Equipe -> FAVORECE -> Qualidade do Output
+```
+
+**Quando usar:** Para explicar "o porquê" de uma relação (mecanismo causal).
+
+---
+
+## Como Validar Chains
+
+### Validação Automática pelo Compilador
+
+Ao compilar, o Synesis valida automaticamente:
+
+1. ✅ Todos os códigos existem na ontologia
+2. ✅ Todas as relações existem na ontologia
+3. ✅ Estrutura sintática está correta
+
+```bash
+synesis check analysis.synp
+```
+
+**Erros comuns:**
+
+| Erro | Causa | Solução |
+|------|-------|---------|
+| `Code 'X' not found in ontology` | Código não definido | Adicione o código em `.syno` |
+| `Relation 'Y' not found` | Relação não definida | Adicione a relação em `.syno` |
+| `Invalid chain syntax` | Estrutura malformada | Verifique formato: `A -> REL -> B` |
+| `Chain must have odd number of elements` | Faltou código ou relação | Chains têm formato: `C -> R -> C -> R -> C` |
+
+### Validação Semântica Manual
+
+Perguntas para revisar suas chains:
+
+1. **Direcionalidade**: A ordem A → B faz sentido? Ou deveria ser B → A?
+2. **Tipo de relação**: "INIBE" é a relação correta, ou deveria ser "CAUSA"?
+3. **Completude**: Faltam elementos intermediários importantes?
+4. **Evidência**: A citação realmente suporta esta chain?
+
+---
+
+## Como Extrair e Analisar Chains
+
+Após compilar, as chains ficam disponíveis em:
+
+### CSV
+
+`output/chains.csv`:
+
+```csv
+source,item_id,chain_type,elements
+entrevista_01,1,qualified,"Custo Alto,INIBE,Adoção"
+entrevista_02,3,qualified,"Treinamento,FAVORECE,Competência,FAVORECE,Qualidade"
+```
+
+**Use para:** Análise quantitativa (contagem, frequência de relações).
+
+### JSON
+
+`output/analysis.json`:
+
+```json
+{
+  "chains": [
+    {
+      "codes": ["Custo Alto", "Adoção"],
+      "relations": ["INIBE"],
+      "source": "@entrevista_01",
+      "quote": "..."
+    }
+  ]
+}
+```
+
+**Use para:** Integração com ferramentas de visualização ou Neo4j.
+
+---
+
+## Como Visualizar Chains
+
+### Grafos no Synesis Explorer (VSCode)
+
+1. Abra projeto no VSCode com extensão Synesis Explorer instalada
+2. Pressione `Ctrl+Alt+G` (Show Relation Graph)
+3. Visualize grafo interativo Mermaid.js
+
+### Exportar para Neo4j
+
+Para análises avançadas de rede:
+
+```bash
+python synesis2neo4j.py --project analysis.synp --config neo4j.toml
+```
+
+Consulte [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd) para detalhes.
+
+---
+
+## Padrões Comuns de Chains
+
+### Padrão "Barreira-Inibição"
+
+```synesis
+chain: Barreira X -> INIBE -> Comportamento Desejado
+```
+
+**Exemplo:**
+```synesis
+chain: Falta de Informação -> INIBE -> Confiança -> INIBE -> Adoção
+```
+
+### Padrão "Facilitador-Promoção"
+
+```synesis
+chain: Facilitador X -> FAVORECE -> Comportamento Desejado
+```
+
+**Exemplo:**
+```synesis
+chain: Demonstração Prática -> FAVORECE -> Compreensão -> FAVORECE -> Adoção
+```
+
+### Padrão "Feedback Loop"
+
+Expresse ciclos usando múltiplas chains:
+
+```synesis
+# Chain 1: Ida
+chain: Alta Satisfação -> AUMENTA -> Engajamento
+
+# Chain 2: Volta
+chain: Alto Engajamento -> FAVORECE -> Satisfação
+```
+
+**Nota:** Chains individuais não podem ter ciclos diretos (A → B → A). Use chains separadas.
+
+### Padrão "Trade-off"
+
+```synesis
+# Chain 1
+chain: Automação Completa -> FAVORECE -> Eficiência
+
+# Chain 2
+chain: Automação Completa -> INIBE -> Flexibilidade
+```
+
+**Quando usar:** Para expressar dilemas ou tensões entre objetivos.
+
+---
+
+## Como Iterar Sobre Chains
+
+### Passo 1: Rascunho Inicial
+
+Na primeira leitura, crie chains exploratórias:
+
+```synesis
+ITEM @doc_01
+    quote: "A tecnologia ajuda, mas é cara"
+    chain: Tecnologia -> FAVORECE -> Eficiência
+    chain: Custo -> INIBE -> Adoção
+END ITEM
+```
+
+### Passo 2: Refinamento
+
+Após revisar várias fontes, consolide padrões recorrentes:
+
+```synesis
+# Versão refinada
+chain: Utilidade Percebida -> FAVORECE -> Intenção de Uso
+chain: Custo Percebido -> INIBE -> Intenção de Uso
+chain: Intenção de Uso -> ANTECEDE -> Comportamento de Adoção
+```
+
+### Passo 3: Validação Cruzada
+
+Compare chains extraídas de fontes diferentes:
+
+```synesis
+# Fonte A
+chain: Treinamento -> FAVORECE -> Competência -> FAVORECE -> Adoção
+
+# Fonte B
+chain: Mentoria -> FAVORECE -> Competência -> FAVORECE -> Adoção
+
+# Insight: "Competência" é mediador recorrente
+```
+
+---
+
+## Como Documentar Decisões sobre Chains
+
+Adicione notas explicativas:
+
+```synesis
+ITEM @policy_doc
+    quote: "Investimento em infraestrutura digital reduziu custos operacionais"
+    note: Relação causal direta confirmada por dados quantitativos (Tabela 3)
+    chain: Infraestrutura Digital -> REDUZ -> Custos Operacionais
+    # DECISÃO 2026-02-04: Escolhemos REDUZ em vez de CAUSA para
+    # refletir natureza gradual (não binária) do efeito
+END ITEM
+```
+
+---
+
+## Quando NÃO Usar Chains
+
+Chains não são apropriadas para:
+
+1. **Descrições simples**: Use `code` em vez de forçar uma chain
+   ```synesis
+   # ❌ Forçado
+   chain: Custo -> DESCREVE -> Entrevista
+
+   # ✅ Apropriado
+   code: Custo
+   ```
+
+2. **Relações ambíguas**: Se você não tem certeza da direção ou tipo, deixe como código isolado e anote sua incerteza no campo `note`.
+
+3. **Taxonomias**: Use `SUBCODE` na ontologia em vez de chains hierárquicas.
+
+---
+
+## Exercício Prático
+
+### Cenário
+
+Você tem esta citação:
+
+> "A falta de suporte técnico adequado gerou frustração na equipe, o que levou à baixa adesão ao novo sistema."
+
+### Tarefa
+
+Construa uma chain que capture esta relação causal.
+
+### Solução Proposta
+
+```synesis
+ITEM @entrevista_gerente
+    quote: "A falta de suporte técnico adequado gerou frustração na equipe, o que levou à baixa adesão ao novo sistema."
+    note: Cadeia causal clara: suporte insuficiente -> frustração -> baixa adoção
+    code: Suporte Técnico
+    code: Frustração
+    code: Adoção
+    chain: Suporte Técnico Inadequado -> GERA -> Frustração -> CAUSA -> Baixa Adesão
+END ITEM
+```
+
+**Validação:**
+- ✅ Três códigos, duas relações (estrutura válida)
+- ✅ Relações GERA e CAUSA devem estar na ontologia
+- ✅ Cadeia reflete sequência temporal da citação
+- ✅ Campo `note` explicita interpretação
+
+---
+
+## Referências
+
+Para informações complementares:
+
+- [Referência da Linguagem](../reference/guia_referencia.qmd) — Sintaxe formal de chains
+- [Como definir uma ontologia](definir_ontologia.qmd) — Criar relações reutilizáveis
+- [Tutorial Getting Started](../tutorials/getting-started.qmd) — Exemplos básicos de chains
+
+---
+
+**Ficou com dúvidas?** Consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou abra uma issue específica.

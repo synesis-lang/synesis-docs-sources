@@ -1,123 +1,545 @@
+/* ════════════════════════════════════════════════════════════
+   SYNESIS — Quarto Theme
+   Alinhado ao Visual Identity System (synesis-visual-identity.md)
+   Creative Direction: Pentagram — v2.0, February 2026
+════════════════════════════════════════════════════════════ */
+
 /*-- scss:defaults --*/
 
-// Paleta Synesis - Opção Logo (Estrutura + Fluidez)
-// Baseada na imagem: Tons de Azul Petróleo (Teal) e Prata/Ciano
-$primary: #145C63 !default; // Teal Petróleo: A cor sólida e escura das linhas principais do 'S'. Transmite seriedade e lógica.
-$accent:  #FFB74D !default; // Turquesa Metálico: Baseado nas áreas de brilho/gradiente do logo. Para destaque e ação.
+// ── Google Fonts ───────────────────────────────────────────
+// Newsreader (serif/display), IBM Plex Sans (corpo), IBM Plex Mono (técnico)
+// A mesma stack tipográfica da landing page.
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:ital,wght@0,400;1,400&display=swap');
 
+// ── Paleta oficial (synesis-visual-identity.md §4) ─────────
 
-// Configuração padrão de links do Quarto/Bootstrap
-$link-color: $primary !default;
-$link-hover-color: $accent !default;
+// Primárias
+$syn-navy:        #1A3A5C;   // Primary Navy — Intellectual Depth (Pantone 534 C)
+$syn-white-paper: #F7F4EF;   // Academic White — Clarity & Space (Pantone 9183 C)
+
+// Secundárias
+$syn-slate:       #3D5A7A;   // Scholarly Slate — hover, elementos secundários
+$syn-sage:        #4A6741;   // Manuscript Sage — sucesso, compilação válida
+$syn-terracotta:  #8B4A3C;   // Archive Terracotta — avisos, flags estruturais
+$syn-gold:        #A8905A;   // Vellum Gold — separadores decorativos, pull quotes
+
+// Neutros
+$syn-ink:         #1C1C1E;   // Deep Ink — texto primário, headings
+$syn-ink-mid:     #3A3A3C;   // Annotation Dark — corpo de texto
+$syn-ref-mid:     #6B6B70;   // Reference Mid — texto secundário, legendas
+$syn-doc-light:   #AEAEB2;   // Document Light — estados desabilitados
+$syn-paper-tint:  #E5E1DA;   // Paper Tint — divisores, bordas, backgrounds sutis
+
+// Acento
+$syn-amber:       #C8963A;   // Compiler Amber — CTAs, estados ativos (Pantone 7563 C)
+$syn-signal-blue: #2B6CB0;   // Signal Blue — links inline, botões secundários
+
+// ── Mapeamento para variáveis Bootstrap/Quarto ─────────────
+
+// Cores do sistema Bootstrap
+$primary:   $syn-navy       !default;
+$secondary: $syn-slate      !default;
+$success:   $syn-sage       !default;
+$warning:   $syn-amber      !default;
+$danger:    $syn-terracotta !default;
+$light:     $syn-white-paper !default;
+$dark:      $syn-ink        !default;
+
+// Cores do corpo e links
+$body-bg:         $syn-white-paper !default;
+$body-color:      $syn-ink-mid     !default;
+$link-color:      $syn-signal-blue !default;
+$link-hover-color: $syn-navy       !default;
+
+// ── Tipografia ─────────────────────────────────────────────
+
+// Stack de fontes
+// Newsreader como fonte base — editorial serif desenhada para leitura longa em tela
+// (cf. Visual Identity §5: "Body / Long-form → Newsreader Text, weight 400, 16–18px, leading 1.6")
+$font-family-sans-serif:  'Newsreader', Georgia, serif                 !default;
+$font-family-monospace:   'IBM Plex Mono', 'Courier New', monospace    !default;
+$headings-font-family:    'IBM Plex Sans', system-ui, sans-serif       !default;
+
+// Tamanho base e linha — calibrado para Newsreader em tela
+$font-size-base:        1.0625rem       !default;  // 17px — ligeiramente maior para serifa
+$line-height-base:      1.7             !default;  // generoso, como na landing (section__body)
+
+// Pesos dos headings — IBM Plex Sans SemiBold para escaneabilidade
+$headings-font-weight:  600             !default;
+$headings-line-height:  1.2             !default;
+$headings-color:        $syn-navy       !default;
+
+// Tamanhos dos headings (escala mais compacta para documentação)
+$h1-font-size:  2rem   !default;
+$h2-font-size:  1.5rem !default;
+$h3-font-size:  1.25rem !default;
+$h4-font-size:  1.1rem  !default;
+$h5-font-size:  1rem    !default;
+$h6-font-size:  0.9rem  !default;
+
+// ── Código ─────────────────────────────────────────────────
+$code-color:       $syn-navy                    !default;
+$code-bg:          rgba($syn-navy, 0.06)        !default;
+$pre-bg:           rgba(15, 25, 35, 0.97)       !default;
+$pre-color:        #C8D6E5                       !default;
+$pre-border-color: rgba($syn-navy, 0.2)         !default;
+
+// ── Bordas e raios ──────────────────────────────────────────
+$border-color:    $syn-paper-tint   !default;
+$border-radius:   4px               !default;  // radius-sm da landing
+
+// ── Navbar e Sidebar ───────────────────────────────────────
+$navbar-bg:       rgba($syn-white-paper, 0.92) !default;
+$navbar-fg:       $syn-ink-mid                 !default;
+
 
 /*-- scss:rules --*/
 
-// 1. Navegação e Sidebar
-// --------------------------------------------------------
-
-.sidebar-title {
-  color: $primary;
-  font-weight: 700;
+// ══════════════════════════════════════════════════════════
+// 0. Font smoothing e base
+// ══════════════════════════════════════════════════════════
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
 }
 
-// Estilização do item ativo na sidebar (onde o usuário está)
-div.sidebar-item-container .active {
-  font-weight: bold;
-  color: $accent !important; // Usa o Turquesa para indicar localização ativa
+body {
+  background-color: $syn-white-paper;
+  color: $syn-ink-mid;
 }
 
-// Estilização do índice lateral (Table of Contents)
-.sidebar nav[role=doc-toc] ul>li>a.active, 
-.sidebar nav[role=doc-toc] ul>li>ul>li>a.active {
-  font-weight: bold;
-  color: $accent;
-  border-left: 2px solid $accent; // Linha guia visual
-  padding-left: 10px;
-  transition: all 0.2s ease-in-out;
+// ══════════════════════════════════════════════════════════
+// 1. Tipografia — headings com Newsreader
+// ══════════════════════════════════════════════════════════
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: $syn-navy;
+  letter-spacing: -0.02em;
 }
 
-// Efeito suave nos links da sidebar
-.sidebar a {
-  transition: color 0.2s ease;
-}
-.sidebar a:hover {
-  color: $accent !important;
-}
-
-img.quarto-cover-image {
-  box-shadow: 0 .5rem 1rem rgba(0,0,0,.15);
-}
-
-// 2. Tipografia e Cabeçalhos
-// --------------------------------------------------------
-
+// Title block (título da página no topo do QMD)
 #title-block-header.quarto-title-block.default .quarto-title h1.title {
-  margin-bottom: 0.5rem;
-  color: $primary; // Título principal no Teal escuro
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: $syn-navy;
+  margin-bottom: 0.25rem;
 }
 
-h1, h2 {
-  color: $primary; // Subtítulos principais reforçam a identidade da marca
+#title-block-header.quarto-title-block.default .quarto-title .subtitle {
+  font-family: 'Newsreader', Georgia, serif;
+  font-optical-sizing: auto;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 1.125rem;
+  color: $syn-ref-mid;
+  margin-top: 0.25rem;
 }
+
+h1 { font-weight: 700; font-size: 2rem; letter-spacing: -0.03em; }
 
 h2 {
-  margin-top: 2rem;
-  margin-bottom: 1rem;
-  font-size: 1.4rem;
   font-weight: 600;
-  border-bottom: 1px solid rgba($primary, 0.2); // Separador sutil
-  padding-bottom: 0.3rem;
+  font-size: 1.4rem;
+  letter-spacing: -0.02em;
+  margin-top: 2.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba($syn-navy, 0.15);
 }
 
-h3 { margin-top: 1.5em; font-size: 1.2rem; font-weight: 500; color: #444; }
-h4 { margin-top: 1.5em; font-size: 1.1rem; }
-h5 { margin-top: 1.5em; font-size: 1rem; }
+h3 { font-weight: 600; font-size: 1.15rem; letter-spacing: -0.01em; margin-top: 2rem; color: $syn-ink; }
+h4 { font-weight: 500; font-size: 1rem; letter-spacing: 0; margin-top: 1.5rem; color: $syn-ink; }
+h5 { font-weight: 500; font-size: 0.9rem; letter-spacing: 0.02em; text-transform: uppercase; color: $syn-ref-mid; margin-top: 1.5rem; }
+h6 { font-weight: 400; font-size: 0.875rem; color: $syn-ref-mid; }
+
+// Numeradores de seção (1.2.3) — neutrais, não competem com o heading
+.header-section-number {
+  color: $syn-doc-light;
+  font-weight: 300;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.85em;
+  margin-right: 0.4em;
+}
 
 .quarto-section-identifier {
-  color: #6C6C6C; // Cinza neutro mantido, combina bem com o Teal
-  font-weight: normal;
+  color: $syn-doc-light;
+  font-weight: 300;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
-// 3. Blocos de Código e Elementos Técnicos
-// --------------------------------------------------------
+// Corpo do texto — Newsreader Text para leitura longa
+// IBM Plex Sans fica reservado para elementos de UI (sidebar, navbar, labels, botões)
+p, li {
+  font-family: 'Newsreader', Georgia, serif;
+  font-optical-sizing: auto;
+  font-size: 1.0625rem;   // 17px
+  line-height: 1.7;
+  color: $syn-ink-mid;
+}
 
-code {
-  color: #2F3335; // Cinza chumbo levemente azulado
-  background-color: rgba($primary, 0.08); // Fundo sutilmente azulado (Teal) para harmonizar
-  padding: 0.1em 0.3em;
-  border-radius: 4px;
+// Tabelas em IBM Plex Sans — contexto de UI / dados
+td, th {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: $syn-ink-mid;
+}
+
+// ══════════════════════════════════════════════════════════
+// 2. Links
+// ══════════════════════════════════════════════════════════
+a {
+  color: $syn-signal-blue;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: $syn-navy;
+  text-decoration: underline;
+  text-decoration-color: rgba($syn-amber, 0.5);
+}
+
+// ══════════════════════════════════════════════════════════
+// 3. Navbar
+// ══════════════════════════════════════════════════════════
+.navbar {
+  background-color: rgba($syn-white-paper, 0.92) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba($syn-paper-tint, 0.8);
+
+  .navbar-brand {
+    font-family: 'Newsreader', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: $syn-ink !important;
+  }
+
+  .nav-link {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: $syn-ink-mid !important;
+    transition: color 0.2s ease;
+
+    &:hover { color: $syn-navy !important; }
+    &.active { color: $syn-navy !important; font-weight: 500; }
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 4. TOC lateral direita — minimalista, no extremo da tela
+// ══════════════════════════════════════════════════════════
+
+// Coluna TOC: conteúdo alinhado à direita, espaço em branco vai para a esquerda
+// Quarto usa .sidebar.toc-sidebar para o painel direito com `toc-location: right`
+.sidebar.toc-sidebar {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding-left: 0;
+  padding-right: 0;
+
+  // nav interno: largura natural, alinhado à direita da coluna
+  nav[role=doc-toc] {
+    margin-left: auto;   // empurra o bloco para a direita
+    margin-right: 0;
+    width: fit-content;  // ocupa só o espaço necessário
+    max-width: 100%;
+  }
+}
+
+.sidebar-title {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: $syn-doc-light;
+  margin-bottom: 0.75rem;
+  text-align: right;  // título "On this page" alinhado à direita
+}
+
+// Links da TOC — discretos, não competem com o texto
+.sidebar nav[role=doc-toc] ul > li > a,
+.sidebar nav[role=doc-toc] ul > li > ul > li > a {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: $syn-doc-light;
+  padding: 0.15rem 0;
+  display: block;
+  transition: color 0.2s ease;
+
+  &:hover { color: $syn-ref-mid; text-decoration: none; }
+}
+
+// Item ativo — amber sutil, borda à direita (espelhada)
+.sidebar nav[role=doc-toc] ul > li > a.active,
+.sidebar nav[role=doc-toc] ul > li > ul > li > a.active {
+  font-weight: 500;
+  color: $syn-amber;
+  border-right: 2px solid $syn-amber;
+  padding-right: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+// Subnível — mais recuado (à direita) e menor
+.sidebar nav[role=doc-toc] ul > li > ul > li > a {
+  font-size: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+// ── Responsividade ──────────────────────────────────────────
+// < 992px (tablet/mobile): oculta a TOC para não ocupar espaço
+@media (max-width: 991.98px) {
+  .sidebar.toc-sidebar {
+    display: none !important;
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 5. Código
+// ══════════════════════════════════════════════════════════
+
+// Inline code
+code:not(pre code) {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875em;
+  color: $syn-navy;
+  background-color: rgba($syn-navy, 0.07);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+  border: none;
 }
 
 code a:any-link {
   text-decoration: underline;
-  text-decoration-color: $accent; // Sublinhado vibrante
+  text-decoration-color: $syn-amber;
 }
 
+// Blocos de código
 pre {
-  // Mantendo o gradiente neutro para legibilidade
-  background-image: linear-gradient(160deg,#f8f8f8 0,#f1f1f1 100%);
-  border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  background-color: rgba(13, 22, 34, 0.97);
+  color: #C8D6E5;
+  border: 1px solid rgba($syn-navy, 0.2);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  overflow-x: auto;
 }
 
-// Botões
-.btn-primary {
-  background-color: $primary;
-  border-color: $primary;
-  &:hover {
-    background-color: darken($primary, 5%);
+pre code {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: inherit;
+  color: inherit;
+  background: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+// Botão de copiar código
+.code-copy-button {
+  color: rgba($syn-white-paper, 0.5);
+  &:hover { color: $syn-amber; }
+}
+
+// ══════════════════════════════════════════════════════════
+// 6. Callouts (note, warning, tip, important, caution)
+// ══════════════════════════════════════════════════════════
+.callout {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  border-radius: 6px;
+  border-left-width: 3px;
+
+  .callout-title {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
   }
 }
 
-.btn-action {
-  background-color: $accent;
-  color: white; // Texto branco para contraste no turquesa
-  border-radius: 4px;
-  padding: 0.5em 1em;
-  text-decoration: none;
-  font-weight: bold;
+// Note → Navy
+.callout-note {
+  border-left-color: $syn-navy;
+  background-color: rgba($syn-navy, 0.04);
+  .callout-title { color: $syn-navy; }
+}
+
+// Tip → Sage (verde manuscrito)
+.callout-tip {
+  border-left-color: $syn-sage;
+  background-color: rgba($syn-sage, 0.05);
+  .callout-title { color: $syn-sage; }
+}
+
+// Warning → Amber
+.callout-warning {
+  border-left-color: $syn-amber;
+  background-color: rgba($syn-amber, 0.06);
+  .callout-title { color: darken($syn-amber, 10%); }
+}
+
+// Important → Amber mais saturado
+.callout-important {
+  border-left-color: $syn-amber;
+  background-color: rgba($syn-amber, 0.08);
+  .callout-title { color: darken($syn-amber, 10%); }
+}
+
+// Caution → Terracotta
+.callout-caution {
+  border-left-color: $syn-terracotta;
+  background-color: rgba($syn-terracotta, 0.05);
+  .callout-title { color: $syn-terracotta; }
+}
+
+// ══════════════════════════════════════════════════════════
+// 7. Tabelas
+// ══════════════════════════════════════════════════════════
+.table {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.9375rem;
+
+  thead th {
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: $syn-navy;
+    border-bottom: 2px solid $syn-paper-tint;
+    background-color: rgba($syn-navy, 0.03);
+  }
+
+  td { color: $syn-ink-mid; }
+
+  tbody tr:hover td {
+    background-color: rgba($syn-navy, 0.025);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 8. Botões
+// ══════════════════════════════════════════════════════════
+.btn-primary {
+  background-color: $syn-navy;
+  border-color: $syn-navy;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 500;
+
+  &:hover, &:focus {
+    background-color: $syn-slate;
+    border-color: $syn-slate;
+  }
+}
+
+.btn-secondary {
+  color: $syn-navy;
+  border-color: $syn-navy;
+  background-color: transparent;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 500;
+
   &:hover {
-    background-color: darken($accent, 10%); // Escurece um pouco no hover
-    color: white;
+    background-color: $syn-navy;
+    color: $syn-white-paper;
+  }
+}
+
+// Botão de ação amber (usado em CTAs)
+.btn-action {
+  background-color: $syn-amber;
+  color: #fff;
+  border: 1.5px solid $syn-amber;
+  border-radius: 4px;
+  padding: 0.6em 1.4em;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background-color: darken($syn-amber, 8%);
+    border-color: darken($syn-amber, 8%);
+    color: #fff;
+    transform: translateY(-1px);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// 9. Imagens
+// ══════════════════════════════════════════════════════════
+img.quarto-cover-image {
+  box-shadow: 0 8px 24px rgba($syn-navy, 0.12);
+  border-radius: 6px;
+}
+
+// Imagens dentro do conteúdo — borda sutil
+.quarto-figure img,
+article img:not(.quarto-cover-image) {
+  border-radius: 6px;
+  border: 1px solid $syn-paper-tint;
+  box-shadow: 0 4px 12px rgba($syn-navy, 0.06);
+}
+
+// ══════════════════════════════════════════════════════════
+// 10. Separador horizontal
+// ══════════════════════════════════════════════════════════
+hr {
+  border: none;
+  border-top: 1px solid $syn-paper-tint;
+  margin: 2.5rem 0;
+}
+
+// ══════════════════════════════════════════════════════════
+// 11. Citações (blockquote)
+// ══════════════════════════════════════════════════════════
+blockquote {
+  font-family: 'Newsreader', Georgia, serif;
+  font-optical-sizing: auto;
+  font-style: italic;
+  font-weight: 300;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  color: $syn-ref-mid;
+  border-left: 3px solid $syn-amber;
+  padding-left: 1.25rem;
+  margin-left: 0;
+}
+
+// ══════════════════════════════════════════════════════════
+// 12. Footer
+// ══════════════════════════════════════════════════════════
+.nav-footer {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  font-size: 0.875rem;
+  color: $syn-ref-mid;
+  border-top: 1px solid $syn-paper-tint;
+  background-color: $syn-white-paper;
+}
+
+// ══════════════════════════════════════════════════════════
+// 13. Mermaid diagrams — tema consistente
+// ══════════════════════════════════════════════════════════
+.mermaid {
+  background: transparent;
+}
+
+// ══════════════════════════════════════════════════════════
+// 14. Search
+// ══════════════════════════════════════════════════════════
+#quarto-search {
+  .aa-Input {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 0.9rem;
   }
 }

@@ -1,0 +1,272 @@
+---
+title: "Knowledge Graphs e GraphRAG"
+subtitle: "Por que grafos de conhecimento transformam pesquisa qualitativa"
+---
+
+# Knowledge Graphs e GraphRAG
+
+Quando você export suas anotações Synesis para Neo4j, você não está apenas "salvando dados em outro formato". Você está transformando **texto estruturado em conhecimento navegável** — uma mudança fundamental na forma como interagimos com análises qualitativas.
+
+---
+
+## O Que É um Knowledge Graph?
+
+Um **knowledge graph** (grafo de conhecimento) é uma representação de informação onde:
+
+- **Nós** (ou vértices) representam **entidades** (conceitos, códigos, anotações, fontes)
+- **Arestas** (ou relações) representam **conexões** entre essas entidades
+- **Propriedades** armazenam **atributos** de nós e arestas
+
+### Diferença Fundamental: Tabelas vs Grafos
+
+**Tabelas (CSV/Excel):**
+```
+| Código      | Frequência |
+|-------------|------------|
+| Custo       | 15         |
+| Adoção      | 23         |
+```
+
+Você sabe que "Custo" aparece 15 vezes, mas **não sabe como se relaciona com "Adoção"**.
+
+**Grafos (Neo4j):**
+```
+(Custo)-[INIBE {frequência: 8}]->(Adoção)
+```
+
+Você sabe não apenas que existem, mas **como se conectam** e **com qual intensidade**.
+
+---
+
+## Por Que Grafos Importam para Pesquisa Qualitativa
+
+### 1. Relações São Cidadãs de Primeira Classe
+
+Em tabelas, relações são implícitas (você precisa fazer JOINs mentalmente ou em SQL). Em grafos, relações são explícitas e navegáveis.
+
+**Exemplo prático:**
+
+Você quer saber: *"Quais códigos são afetados por 'Falta de Infraestrutura'?"*
+
+**Em CSV:** Você precisa:
+1. Abrir `chains.csv`
+2. Filtrar linhas onde `codigo_origem = "Falta de Infraestrutura"`
+3. Listar valores únicos da coluna `codigo_destino`
+4. Manualmente verificar se há chains transitivas
+
+**Em Neo4j:**
+```cypher
+MATCH (origem:Code {name: "Falta de Infraestrutura"})-[r*1..3]->(afetado:Code)
+RETURN DISTINCT afetado.name AS codigo_afetado, length(r) AS distancia
+ORDER BY distancia
+```
+
+**Resultado:** Neo4j encontra automaticamente não apenas conexões diretas, mas também indiretas (chains com até 3 saltos).
+
+### 2. Análise de Rede Revela Padrões Invisíveis
+
+Métricas de rede que são triviais em grafos (mas quase impossíveis em tabelas):
+
+| Métrica | O Que Revela | Aplicação em Pesquisa |
+|---------|--------------|----------------------|
+| **Degree Centralidade** | Quantas conexões um nó tem | Códigos mais "conectados" — candidatos para conceitos centrais na teoria |
+| **Betweenness Centralidade** | Quantas vezes um nó aparece em caminhos entre outros nós | Códigos que "fazem ponte" entre diferentes clusters temáticos |
+| **PageRank** | Importância baseada em conexões importantes | Códigos que não apenas têm muitas conexões, mas conexões com outros códigos importantes |
+| **Community Detection** | Grupos de nós densamente conectados | Clusters temáticos que emergem dos dados (temas, subdimensões) |
+
+**Insight prático:**
+
+Em uma análise sobre resistência à tecnologia, você pode descobrir:
+
+- **Degree alto**: "Confiança" tem 23 conexões → conceito central
+- **Betweenness alto**: "Letramento Digital" conecta clusters "Tecnologia" e "Exclusão Social" → mediador importante
+- **Mesma comunidade**: "Custo", "Infraestrutura" e "Acesso" formam cluster coeso → dimensão "Barreiras Estruturais"
+
+Esses padrões são **emergentes** — você não os programou, eles emergem da estrutura das suas anotações.
+
+---
+
+## GraphRAG: Grounding de IA com Grafos
+
+**RAG** (Retrieval-Augmented Generation) é uma técnica onde LLMs (como Claude, GPT-4) buscam informação em bancos de dados antes de responder perguntas. **GraphRAG** usa grafos em vez de texto puro.
+
+### Por Que GraphRAG É Mais Poderoso
+
+**RAG Tradicional (Vetorial):**
+- Busca textos semanticamente similares
+- Funciona bem para recuperação de documentos
+- **Limitação**: Não entende relações estruturais
+
+**GraphRAG:**
+- Busca relações explícitas entre conceitos
+- Pode seguir caminhos de raciocínio (A → B → C)
+- **Vantagem**: Respostas auditáveis e rastreáveis
+
+### Exemplo Concreto
+
+**Pergunta para o Claude Desktop (com MCP conectado ao Neo4j):**
+
+> "Por que 'Desconfiança Tecnológica' dificulta adoção de telemedicina?"
+
+**Resposta com GraphRAG:**
+
+> "De acordo com o grafo de conhecimento do seu projeto:
+>
+> 1. 'Desconfiança Tecnológica' aparece em 8 anotações
+> 2. Dessas, 6 estabelecem a relação: `Desconfiança -> INIBE -> Adoção`
+> 3. A anotação mais representativa é `@entrevista_dona_maria, item 1`:
+>    - Citação: *"Como ele vai saber o que eu tenho se não me tocar?"*
+>    - Memo: *"Participante associa qualidade diagnóstica à presença física"*
+>
+> Além disso, 'Desconfiança Tecnológica' co-ocorre frequentemente com:
+> - 'Preferência por Contato Presencial' (5 vezes)
+> - 'Falta de Informação' (3 vezes)
+>
+> Sugiro explorar se a desconfiança é amenizada quando há mediação de agentes de saúde locais (veja chain identificada em `@entrevista_sr_joao, item 3`)."
+
+**Observe:**
+- Resposta rastreável (cita fontes específicas)
+- Inclui frequências (quantificação sobre qualitativo)
+- Sugere análises adicionais baseadas em padrões do grafo
+- **Você pode verificar cada afirmação** clicando nos links ou executando a query Cypher
+
+Isso **não é possível** com RAG vetorial puro, que retornaria apenas trechos similares sem entender a estrutura relacional.
+
+---
+
+## Arquitetura de um Knowledge Graph Synesis
+
+Quando você exporta um projeto Synesis para Neo4j, a seguinte estrutura de grafo é criada:
+
+```
+(Source)-[:HAS_ITEM]->(Item)-[:HAS_CODE]->(Code)
+(Item)-[:REFERENCES]->(Source)
+(Code)-[:CHAIN_RELATION {type: "INIBE"}]->(Code)
+(Code)-[:BELONGS_TO_TOPIC]->(Topic)
+(Topic)-[:DEFINED_IN]->(Ontology)
+```
+
+### Nós Criados
+
+| Tipo | Propriedades Principais | Exemplo |
+|------|------------------------|---------|
+| `Source` | bibref, author, year, title | Entrevista, artigo, documento |
+| `Item` | quote, memo, context, source_location | Anotação individual |
+| `Code` | name, definition, topic | Conceito analítico |
+| `Topic` | name | Agrupamento temático |
+| `Ontology` | name, version | Vocabulário do projeto |
+| `Chain` | codes[], relations[] | Sequência causal |
+
+### Arestas Criadas
+
+| Tipo | Significado | Propriedades |
+|------|-------------|--------------|
+| `HAS_ITEM` | Source contém Item | order (posição) |
+| `HAS_CODE` | Item foi codificado com Code | - |
+| `CHAIN_RELATION` | Code relaciona-se com outro Code via chain | relation_type (INIBE, FAVORECE, etc.), chain_id |
+| `BELONGS_TO_TOPIC` | Code pertence a Topic | - |
+
+### Dinâmico vs Fixo
+
+**Crucial:** A estrutura do grafo é **derivada do template (.synt)**, não hardcoded. Se você adicionar um campo `FIELD context : TEXT`, o pipeline cria propriedades `context` nos nós `Item`. Isso significa que o mesmo código `synesis2neo4j` funciona para **qualquer domínio** (medicina, sociologia, engenharia de requisitos, análise literária).
+
+---
+
+## Quando Grafos NÃO São a Resposta
+
+Grafos não são panaceia. **Não use Neo4j se:**
+
+1. **Seu foco é análise quantitativa pura** (frequências, estatísticas descritivas)
+   - Use CSV + R/Python. Mais simples e rápido.
+
+2. **Você tem poucas relações explícitas** (códigos isolados, sem chains)
+   - Excel é suficiente. Grafo adiciona complexidade desnecessária.
+
+3. **Você precisa de análises longitudinais temporais complexas**
+   - Grafos temporais existem, mas bancos time-series (InfluxDB, TimescaleDB) são mais eficientes.
+
+4. **Você não tem conhecimento prévio de Cypher**
+   - Curva de aprendizado existe. Se é apenas para "ver bonitinho", use visualizadores de CSV (RAWGraphs, Flourish).
+
+**Use Neo4j quando:**
+
+- Você tem muitas chains (>20% das anotações têm chains)
+- Você quer calcular métricas de rede (centralidade, comunidades)
+- Você vai integrar com sistemas de IA (GraphRAG, MCP)
+- Você quer publicar visualizações interativas navegáveis
+
+---
+
+## Graph Data Science (GDS): Além das Queries
+
+Neo4j Graph Data Science é uma biblioteca de algoritmos de grafo otimizados. Alguns exemplos:
+
+### PathFinding (Encontrar Caminhos)
+
+```cypher
+// Qual é o caminho mais curto entre "Custo" e "Satisfação"?
+MATCH path = shortestPath((a:Code {name:"Custo"})-[*]-(b:Code {name:"Satisfação"}))
+RETURN path
+```
+
+**Insight:** Se há caminho direto ou indireto, você pode rastreá-lo conceitualmente.
+
+### Node Similarity (Similaridade)
+
+```cypher
+// Quais códigos são estruturalmente similares a "Confiança"?
+CALL gds.nodeSimilarity.stream('myGraph')
+YIELD node1, node2, similarity
+WHERE gds.util.asNode(node1).name = "Confiança"
+RETURN gds.util.asNode(node2).name AS codigo_similar, similarity
+ORDER BY similarity DESC
+LIMIT 10
+```
+
+**Insight:** Códigos com padrões de conexão similares podem ser candidatos para fusão ou categorias relacionadas.
+
+### Link Prediction
+
+```cypher
+// Baseado no grafo atual, quais relações *deveriam* existir mas não foram anotadas?
+CALL gds.linkPrediction.predict.stream('myGraph')
+YIELD node1, node2, probability
+WHERE probability > 0.8
+RETURN gds.util.asNode(node1).name AS codigo1,
+       gds.util.asNode(node2).name AS codigo2,
+       probability
+```
+
+**Uso:** Identificar gaps na análise. Se o algoritmo sugere que "Custo" deveria conectar-se a "Exclusão Digital" (mas você não anotou), isso pode indicar padrão implícito nos dados que você ainda não capturou.
+
+---
+
+## O Futuro: Grafos Multimodais
+
+Synesis atualmente trabalha com texto. Mas a arquitetura de grafos permite extensões futuras:
+
+- **Imagens**: Nós de `Image` conectados a `Item` (anotações sobre imagens em pesquisa visual)
+- **Áudio**: Nós de `AudioSegment` com timestamps (análise de entrevistas orais)
+- **Vídeo**: Nós de `VideoFrame` (análise de interações gravadas)
+- **Geo**: Propriedades `lat`, `lon` em `Source` para análises espaciais
+
+A estrutura de grafo acomoda naturalmente essas extensões — você adiciona novos tipos de nós, mas as relações permanecem consistentes.
+
+---
+
+## Aprender Mais
+
+### Conceitos de Grafos
+- [Neo4j Graph Academy](https://graphacademy.neo4j.com/) — Cursos gratuitos de Cypher
+- [The Practitioner's Guide to Graph Data](https://neo4j.com/graph-data-book/) — Livro gratuito
+
+### GraphRAG
+- [Model Context Protocol](https://modelcontextprotocol.io/) — Conectar Claude com Neo4j
+- [Microsoft GraphRAG](https://www.microsoft.com/en-us/research/project/graphrag/) — Paper original
+
+### Como Exportar (Prático)
+- [Como exportar para Neo4j](../howto/exportar_neo4j.qmd) — Guia hands-on
+
+---
+
+**Reflexão final:** Grafos não substituem pensamento analítico — eles **amplificam** padrões que já existem implicitamente nos seus dados. Assim como o Synesis não substitui interpretação (ele a torna rastreável), Neo4j não substitui análise (ele a torna navegável).

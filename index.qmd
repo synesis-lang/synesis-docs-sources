@@ -14,10 +14,10 @@ format:
       navigator.userLanguage ||
       "en";
     language = language.toLowerCase();
-    var target = language.indexOf("pt") === 0 ? "./pt/" : "./en/";
+    var target = language.indexOf("pt") === 0 ? "./landing/pt/" : "./landing/";
     window.location.replace(target);
   })();
 </script>
 
 Redirecting... If you are not redirected,
-[Portuguese](./pt/) or [English](./en/).
+[Português](./landing/pt/) or [English](./landing/).

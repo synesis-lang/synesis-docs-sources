@@ -13,7 +13,8 @@ format:
     code-copy: true
     code-overflow: wrap
     toc: true
-    toc-depth: 4
+    toc-depth: 3
+    toc-location: right
     number-sections: true
     highlight-style: github
     syntax-definitions:
@@ -30,28 +31,32 @@ website:
     left:
       - href: index.qmd
         text: Introduction
-      - text: Guides
+      - text: "Tutorials"
         menu:
-          - href: guide/guia_pesquisadores.qmd
-            text: Researchers
-          - href: guide/guia_profissionais.qmd
-            text: Professionals
-          - href: guide/guia_sincero.qmd
-            text: Honest guide
-      - text: Reference
+          - href: tutorials/guia_pesquisadores.qmd
+            text: Guide for Researchers
+          - href: tutorials/synesis_explorer_tutorial.qmd
+            text: Synesis Explorer
+      - text: "How-to Guides"
+        menu:
+          - href: howto/guia_profissionais.qmd
+            text: Guide for Professionals
+          - href: howto/exportar_neo4j.qmd
+            text: Export to Neo4j
+      - text: "Reference"
         menu:
           - href: reference/guia_referencia.qmd
-            text: Reference
+            text: Language Reference
           - href: reference/synesis_load.qmd
-            text: Synesis API          
-          - href: reference/ideas.qmd
-            text: Ideas
-      - text: Ecosystem
+            text: Synesis API
+      - text: "Explanation"
         menu:
-          - href: ecossistema/guia_synesis_explorer.qmd
-            text: Synesis Explorer
-          - href: ecossistema/synesis2neo4j_en.qmd
-            text: Synesis To Neo4j Graph Database            
+          - href: explanation/guia_sincero.qmd
+            text: Why not Excel?
+          - href: explanation/knowledge_graphs.qmd
+            text: Knowledge Graphs & GraphRAG
+          - href: explanation/ideas.qmd
+            text: Roadmap & Ideas
       - href: about.qmd
         text: About
     right:
@@ -62,21 +67,4 @@ website:
           - text: "🇬🇧 English"
             href: ../en/
 
-  sidebar:
-    style: "docked"
-    contents:
-      - index.qmd
-      - section: "Guides by Audience"
-        contents:
-          - guide/guia_pesquisadores.qmd
-          - guide/guia_profissionais.qmd
-          - guide/guia_sincero.qmd
-      - section: "Reference"
-        contents:
-          - reference/guia_referencia.qmd
-          - reference/synesis_load.qmd             
-          - reference/ideas.qmd
-      - section: "Ecosystem"
-        contents:
-          - ecossistema/guia_synesis_explorer.qmd
-          - ecossistema/synesis2neo4j_en.qmd
+  sidebar: false

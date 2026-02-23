@@ -12,18 +12,36 @@ Human knowledge is inherently intricate, full of nuances and deep connections. T
 Unlike traditional tools, Synesis acts as a compiler for your analytical thinking: it receives your interpretations and annotations in plain text files, validates logical consistency between them, and transforms them into canonical and rigorous knowledge structures.
 
 Often, it is believed that technical rigor stifles creativity. Synesis proves the opposite: **discipline is the true form of freedom.** By delegating logical organization to a canonical structure, your mind is free for what truly matters: interpretation, nuance, and *insight*.
-The result is true *sýnesis*: the convergence of information fragments into an intelligible, auditable, and technically structured whole.
 
-## The Origin of the Name
+## What do you need today?
 
-From the Greek *σύνεσις* (sýnesis):
+### Learn Synesis
+**New here?** Start with our hands-on tutorials that guide you step by step.
 
->**Etymology**: **σῠνῑ́ημῐ** (*sŭnī́ēmĭ*, "to bring together", "to make converge") + suffix **-σῐς** (*-sĭs*).
+- [Guide for Researchers](tutorials/guia_pesquisadores.qmd) — Introduction to qualitative research
+- [Synesis Explorer Tutorial](tutorials/synesis_explorer_tutorial.qmd) — Set up your VSCode environment
 
-**Meanings:**
-1.  Confluence; union; convergence.
-2.  Understanding; intelligence.
-3.  [cite_start]Consciousness.
+### Solve a specific problem
+**Know what you want to do?** See our practical guides for common tasks.
+
+- [Guide for Professionals](howto/guia_profissionais.qmd) — Apply Synesis in organizational contexts
+- [Export to Neo4j](howto/exportar_neo4j.qmd) — Create knowledge graphs
+
+### Consult technical specifications
+**Need technical details?** Access the complete language and API reference.
+
+- [Language Reference](reference/guia_referencia.qmd) — Complete Synesis v1.1 syntax
+- [Synesis API](reference/synesis_load.qmd) — Python integration (`synesis.load()`)
+
+### Understand concepts
+**Want to understand the "why"?** Read our explanations about philosophy and architecture.
+
+- [Why Structured Annotations Matter](explanation/por_que_estrutura_importa.qmd) — Reflection on rigor and freedom
+- [Why not Excel?](explanation/guia_sincero.qmd) — When Synesis makes sense (and when it doesn't)
+- [Knowledge Graphs & GraphRAG](explanation/knowledge_graphs.qmd) — Why graphs transform qualitative research
+- [Roadmap & Ideas](explanation/ideas.qmd) — Future of the language
+
+---
 
 ## How it works
 
@@ -35,46 +53,30 @@ The entire process is orchestrated by a project file (`.synp`), which connects i
 * **Interpretive Annotations (`.syn`)**: Your insights, standardized by templates (`.synt`).
 * **Ontologies (`.syno`)**: The major differentiator — files that formally define your analysis categories and logical interrelations.
 
-### Syntax Example
+### The Compilation Flow
 
-You identify a knowledge source and create semantic blocks that connect segments from the original source with your systematic interpretation:
-
-```synesis
-SOURCE @interview_01
-END SOURCE
-
-ITEM @interview_01
-    quote: "The cost is too high for me"
-    note: Economic barrier to adoption
-    chain: Cost -> INHIBITS -> Adoption
-END ITEM
-```
-
-This approach elevates your annotations to the level of structured data. Daily writing is intuitive and you don't need to be a programmer to annotate; basic coding logic is only needed if you decide to build your own analysis structures (*templates*). Think of the *template* file as a contract, an agreement you establish for your annotations and the compiler. You can revise/expand/update this contract as your research progresses.
-
-## The Compilation Flow
-When compiling these files, Synesis verifies concept consistency and generates universal outputs.
+When compiling these files, Synesis validates concept consistency and generates universal outputs.
 
 ```{mermaid}
 flowchart LR
-    %% --- COLOR DEFINITION (Synesis 2.0 Palette) ---
+    %% --- COLOR DEFINITIONS (Synesis 2.0 Palette) ---
     %% Primary: #084C54 (Deep Teal)
     %% Accent: #00BFA5 (Mint/Cyan)
     %% Background: #FFFFFF (Pure white for contrast)
 
     %% --- NODE STYLES ---
-    %% Compiler: Double circle, Strong Border, White Background
+    %% Compiler: Double circle, Strong border, White background
     classDef compiler fill:#fff,stroke:#084C54,stroke-width:4px,color:#084C54,font-weight:bold;
 
-    %% High Value: Mint Border, Very Light Cyan Background, Teal Text
+    %% High Value: Mint border, Light cyan background, Teal text
     classDef highValue fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54;
 
     %% Default Nodes (Inputs/Outputs): Light gray background, Soft border
-    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C54;
+    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
 
     %% --- DIAGRAM STRUCTURE ---
 
-    subgraph Input ["Working Environment"]
+    subgraph Input ["Work Environment"]
         direction TB
         E["Ontology (.syno)"]:::defaultNode
         D["Template (.synt)"]:::defaultNode
@@ -85,7 +87,7 @@ flowchart LR
     %% The Central Engine
     C((("Synesis Compiler\nValidation & Logic"))):::compiler
 
-    subgraph Output ["Interchange Formats"]
+    subgraph Output ["Exchange Formats"]
         direction TB
         F["Structured JSON"]:::defaultNode
         G["CSV/Excel Tables"]:::defaultNode
@@ -99,8 +101,8 @@ flowchart LR
         K["Data Science & Dashboards\nR, Jupyter Labs"]:::highValue
     end
 
-    %% --- FORCE SUBGROUP STYLES (Main Fix) ---
-    %% Using 'style' directly by subgraph ID to ensure transparency
+    %% --- FORCE SUBGROUP STYLE (Main Fix) ---
+    %% Use 'style' directly by subgraph ID to ensure transparency
     style Input fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
     style Output fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
     style Ecosystem fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray: 5 5,color:#084C54
@@ -120,52 +122,31 @@ flowchart LR
     F -. "Quantitative Analysis" .-> K
     G -. "Quantitative Analysis" .-> K
 
-    %% Line Styles
+    %% Line Style
     linkStyle default stroke:#64748B,stroke-width:1px;
 ```
 
 ### The Power of Integration
 
-The result of Synesis compilation goes far beyond static documents. The compiler transforms your definitions into universal interchange formats (JSON, Excel, CSV), making your knowledge integrable with any technology stack:
+The result of Synesis compilation goes far beyond static documents. The compiler transforms your definitions into universal exchange formats (JSON, Excel, CSV), making your knowledge integrable with any tech stack:
 
 * **Graph Databases**: Natively feed Neo4j or Memgraph to visualize the complex topology of your concepts.
 
-* **Data Science**: Provide structured datasets for rigorous statistical analysis in R or visualizations in Jupyter Labs.
+* **Data Science**: Provide structured datasets for rigorous statistical analyses in R or visualizations in Jupyter Labs.
 
-* **AI Ready**: Through the MCP protocol (Model Context Protocol), connect your data to assistants like Claude Desktop, enabling natural language interactions with 100% traceable responses based on your "source of truth".
+* **AI Ready**: Through the MCP (Model Context Protocol), connect your data to assistants like Claude Desktop, enabling natural language interactions with 100% traceable responses based on your "source of truth".
 
-## Who is Synesis for?
+---
 
-:::{.callout-tip}
-## Humanities Researchers
-Perfect for complex qualitative research where interpretive precision is critical. See our introduction guide without technical jargon.
+## The Origin of the Name
 
-See the [Researcher's Guide](guide/guia_pesquisadores.qmd) — an introduction without technical jargon.
-:::
+From the Greek *σύνεσις* (sýnesis):
 
-:::{.callout-note}
-## Decision Makers
-Ideal for knowledge system documentation and scenarios that require traceability and scalability.
+>**Etymology**: **σῠνῑ́ημῐ** (*sŭnī́ēmĭ*, "to bring together", "to make converge") + suffix **-σῐς** (*-sĭs*).
 
-See the [Manager's Guide](guide/guia_profissionais.qmd) — focus on organizational value.
-:::
+**Meanings:**
+1. Confluence; union; convergence.
+2. Understanding; intelligence.
+3. Consciousness.
 
-:::{.callout-warning}
-## Unsure if you need Synesis?
-
-Read [Why not use Excel?](guide/guia_sincero.qmd) — an honest answer.
-:::
-
-## What Synesis is NOT
-
-* **It's not Software Programming**: Although it uses engineering concepts, you don't need to "know how to program". Synesis is a **declarative** language: you describe *what* you know, not *how* the computer should process it. It's knowledge markup, not app development.
-* **It's not a Notepad**: Note-taking tools prioritize capture speed and visual flexibility. Synesis prioritizes **logical consistency and canonical structure**. While notes accept contradictions, Synesis validates and resolves them.
-* **It's not a "Walled Garden"**: CAQDAS software packages are excellent, but often lock your data in proprietary formats. Synesis is **"Code-First" and interoperable**: your data are open text files, versionable (Git) and compilable to any other system.
-
-## Synesis Place in Your Stack
-
-Synesis was designed to be the **missing link** between qualitative research and data science, without trying to replace specialized tools:
-
-* **It doesn't analyze statistics, it feeds them:** Synesis doesn't calculate regressions, but generates structured datasets (`.csv`, `.json`) that allow R or Python to perform quantitative analysis on qualitative data with absolute precision.
-* **It's not an AI "Black Box":** Unlike AIs that magically summarize texts (and hallucinate), Synesis offers *grounding*. It is the manual truth structure that serves as backing for AI to operate safely.
-* **It doesn't replace human reading:** It is a formalization tool. The interpretation remains yours; Synesis ensures that this interpretation is systematic and auditable.
+The result is true *sýnesis*: the convergence of information fragments into an intelligible, auditable, and technically structured whole.

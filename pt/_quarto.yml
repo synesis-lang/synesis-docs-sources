@@ -13,7 +13,8 @@ format:
     code-copy: true
     code-overflow: wrap
     toc: true
-    toc-depth: 4
+    toc-depth: 3
+    toc-location: right
     number-sections: true
     highlight-style: github
     syntax-definitions:
@@ -30,28 +31,44 @@ website:
     left:
       - href: index.qmd
         text: Introdução
-      - text: Guias
+      - text: "Tutorials"
         menu:
-          - href: guide/guia_pesquisadores.qmd
-            text: Pesquisadores
-          - href: guide/guia_profissionais.qmd
-            text: Profissionais
-          - href: guide/guia_sincero.qmd
-            text: Guia sincero
-      - text: Referência
+          - href: tutorials/getting-started.qmd
+            text: Getting Started
+          - href: tutorials/guia_pesquisadores.qmd
+            text: Guia para Pesquisadores
+          - href: tutorials/synesis_explorer_tutorial.qmd
+            text: Synesis Explorer
+      - text: "How-to Guides"
+        menu:
+          - href: howto/guia_profissionais.qmd
+            text: Guia para Profissionais
+          - href: howto/definir_ontologia.qmd
+            text: Como Definir uma Ontologia
+          - href: howto/criar_chains.qmd
+            text: Como Criar e Validar Chains
+          - href: howto/exportar_neo4j.qmd
+            text: Exportar para Neo4j
+      - text: "Reference"
         menu:
           - href: reference/guia_referencia.qmd
-            text: Referência
+            text: Referência da Linguagem
           - href: reference/synesis_load.qmd
-            text: API Synesis            
-          - href: reference/ideas.qmd
-            text: Ideias
-      - text: Ecossistema
+            text: API Synesis
+      - text: "Explanation"
         menu:
-          - href: ecossistema/guia_synesis_explorer.qmd
-            text: Synesis Explorer
-          - href: ecossistema/synesis2neo4j_pt.qmd
-            text: Synesis e Banco de Grafos Neo4j            
+          - href: explanation/posicionamento_arquitetural.qmd
+            text: Posicionamento Arquitetural
+          - href: explanation/por_que_estrutura_importa.qmd
+            text: Por Que Estrutura Importa
+          - href: explanation/guia_sincero.qmd
+            text: Por que não Excel?
+          - href: explanation/synesis_escrituras.qmd
+            text: Sinesis e as Escrituras
+          - href: explanation/knowledge_graphs.qmd
+            text: Knowledge Graphs & GraphRAG
+          - href: explanation/ideas.qmd
+            text: Roadmap & Ideias
       - href: about.qmd
         text: Sobre
     right:
@@ -62,21 +79,4 @@ website:
           - text: "🇬🇧 English"
             href: ../en/
 
-  sidebar:
-    style: "docked"
-    contents:
-      - index.qmd
-      - section: "Guias por Audiência"
-        contents:
-          - guide/guia_pesquisadores.qmd
-          - guide/guia_profissionais.qmd
-          - guide/guia_sincero.qmd
-      - section: "Referência"
-        contents:
-          - reference/guia_referencia.qmd
-          - reference/synesis_load.qmd          
-          - reference/ideas.qmd
-      - section: "Ecossistema"
-        contents:
-          - ecossistema/guia_synesis_explorer.qmd
-          - ecossistema/synesis2neo4j_pt.qmd
+  sidebar: false
