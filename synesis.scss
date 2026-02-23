@@ -325,11 +325,12 @@ code a:any-link {
 // Blocos de código
 pre {
   font-family: 'IBM Plex Mono', monospace;
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   line-height: 1.7;
   background-color: rgba(13, 22, 34, 0.97);
   color: #C8D6E5;
-  border: 1px solid rgba($syn-navy, 0.2);
+  border: 1px solid rgba($syn-navy, 0.15);
+  border-left: 3px solid $syn-amber;
   border-radius: 8px;
   padding: 1.25rem 1.5rem;
   overflow-x: auto;

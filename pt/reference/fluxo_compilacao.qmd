@@ -1,0 +1,89 @@
+# O Fluxo de Compilação
+
+A compilação no Synesis ocorre em múltiplas fases, assegurando a integridade formal e conceitual do corpo de conhecimento.
+
+Na fase sintática, o compilador verifica se os comandos de abertura e fechamento de blocos estão corretamente declarados, se os nomes dos campos correspondem ao padrão definido e se a sequência estrutural dos elementos respeita o template (*.synt*). Essa etapa garante conformidade gramatical com a linguagem.
+
+Em seguida, ocorre a validação estrutural e de vínculos. O compilador verifica se:
+
+* Os itens estão corretamente associados às fontes declaradas;
+* A ordem dos campos nos blocos segue o padrão estabelecido;
+* As palavras-chave (códigos) utilizadas nos itens correspondem às categorias previamente definidas na ontologia;
+* As relações declaradas são semanticamente válidas dentro das regras configuradas.
+
+Todos esses critérios — nomes de campos, tipagem, obrigatoriedade, sequência e regras de relacionamento — são definidos no arquivo de template, que pode ser adaptado pelo usuário conforme seus próprios parâmetros metodológicos.
+
+Esse processo em camadas garante que os arquivos de saída sejam estruturalmente íntegros e que o corpo de conhecimento permaneça logicamente consistente e computacionalmente confiável.
+
+```{mermaid}
+flowchart TB
+    %% --- CORES (Paleta Synesis 2.0) ---
+    classDef compiler fill:#fff,stroke:#084C54,stroke-width:3px,color:#084C54,font-weight:bold;
+    classDef highValue fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54;
+    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
+    classDef bridge fill:#F1F5F9,stroke:#00BFA5,stroke-width:1px,color:#084C54,font-weight:600;
+
+    %% --- CAMADA 1: ENTRYPOINT ---
+    P["Projeto (.synp)<br/>entrypoint do projeto"]:::defaultNode
+
+    %% --- CAMADA 2: INPUTS HORIZONTAIS ---
+    subgraph Input ["Arquivos de Entrada"]
+        direction LR
+        D["Template<br/>(.synt)"]:::defaultNode
+        A["Fontes<br/>(.bib)"]:::defaultNode
+        B["Anotações<br/>(.syn)"]:::defaultNode
+        E["Ontologia<br/>(.syno)"]:::defaultNode
+    end
+
+    %% --- CAMADA 3: COMPILADOR ---
+    C["Compilador Synesis<br/>• Parsing • Vínculos <br/>• Validação • Exportação ."]:::compiler
+
+    %% --- CAMADA 4: OUTPUTS HORIZONTAIS ---
+    subgraph Output ["Formatos de Intercâmbio"]
+        direction LR
+        F["JSON"]:::defaultNode
+        G["CSV/Excel"]:::defaultNode
+        H["DOCX/REFI-QDA"]:::defaultNode
+    end
+
+    %% --- CAMADA 5: API/BRIDGE ---
+    subgraph Bridge ["Camada de Interface"]
+        direction LR
+        API["API do Compilador ."]:::bridge
+        S["Connector para Grafos"]:::bridge
+    end
+
+    %% --- CAMADA 6: ECOSSISTEMA ---
+    subgraph Ecosystem ["Ecossistema de Aplicação"]
+        direction LR
+        I["Bancos de Grafos<br/>Neo4j • Memgraph"]:::highValue
+        J["Agentes de IA<br/>MCP"]:::highValue
+        K["Data Science<br/>R • Python • Jupyter"]:::highValue
+    end
+
+    %% --- ESTILO DOS SUBGRAPHS ---
+    style Input fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Output fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Bridge fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Ecosystem fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+
+    %% --- FLUXO VERTICAL PRINCIPAL ---
+    P ==> Input
+    Input ==> C
+    C ==> Output
+    C ==> API
+    API --> S
+
+    %% --- CONEXÕES INTERNAS CAMADA 2 ---
+    D -. "define estrutura" .-> B
+    D -. "define estrutura" .-> E
+    A -. "referenciadas em" .-> B
+
+    %% --- CONSUMO DO ECOSSISTEMA ---
+    Output -.-> K
+    S --> I
+    I --> J
+    API --> K
+
+    linkStyle default stroke:#64748B,stroke-width:1.5px;
+```

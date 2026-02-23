@@ -28,6 +28,7 @@ lang: pt-BR
 website:
   title: "Synesis Language"
   navbar:
+    title-href: "../../landing/pt/"
     left:
       - href: index.qmd
         text: Introdução
@@ -55,6 +56,8 @@ website:
             text: Referência da Linguagem
           - href: reference/synesis_load.qmd
             text: API Synesis
+          - href: reference/fluxo_compilacao.qmd
+            text: O fluxo de compilação            
       - text: "Explanation"
         menu:
           - href: explanation/posicionamento_arquitetural.qmd

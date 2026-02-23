@@ -28,6 +28,7 @@ lang: en
 website:
   title: "Synesis Language"
   navbar:
+    title-href: "../../landing/"
     left:
       - href: index.qmd
         text: Introduction
