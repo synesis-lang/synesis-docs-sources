@@ -28,7 +28,7 @@ Não se preocupe! Vamos explicar cada comando claramente. Se você ficar travado
 
 ---
 
-## Passo 1: Instalação do Compilador
+## Passo 1: Instalação do Compilador e ambiente de trabalho
 
 Primeiro, vamos instalar o compilador Synesis. Abra seu terminal e execute:
 
@@ -51,6 +51,19 @@ synesis, version 0.2.6
 ## Checkpoint ✓
 Se você vê o número da versão, parabéns! O compilador está instalado corretamente. Se não, veja [Troubleshooting](#troubleshooting).
 :::
+
+
+Agora, vamos instalar o *Language Server Protocol* (LSP). Com ele é possível editar códigos em linguagem Synesis com verificação automática em tempo real. 
+
+Para instalar, digite em seu terminal e execute:
+
+```bash
+pip install synesis-lsp
+```
+
+Por fim, instale o editor de código VSCode e a extensão Synesis. Veja instruções aqui: 
+
+- [Tutorial Synesis Explorer](tutorials/synesis_explorer_tutorial.qmd) — Configurar o ambiente VSCode
 
 ---
 

@@ -64,11 +64,13 @@ No século III, Orígenes já produzia suas *Hexapla*, obra de organização e c
 
 Com a Reforma e a proliferação das traduções vernáculas, novas ferramentas se tornaram necessárias. Em 1550, John Marbeck publicou a primeira concordância completa em inglês. Mas foi nos séculos XIX e XX que o projeto de organização temática das Escrituras atingiu sua maior sofisticação:
 
-**Treasury of Scripture Knowledge** (1836) — compilada por R. A. Torrey a partir de trabalhos anteriores, reúne mais de 500.000 referências cruzadas, organizadas versículo por versículo. Permanece até hoje uma das obras de referência mais densas já produzidas para o estudo bíblico.
-
 **Nave's Topical Bible** (1896) — o Rev. Orville James Nave levou 23 anos compilando esta obra durante seu serviço como capelão militar. Organizada por tópicos em vez de por versículos, ela lista mais de 20.000 temas e subtemas com as respectivas passagens, totalizando mais de 100.000 referências.
 
+![Nave's Topical Bible em linguagem Synesis.](../../images/nave_topics.png)
+
 **Thompson Chain-Reference Bible** (1908) — o Dr. Frank Charles Thompson desenvolveu um sistema diferente dos anteriores: em vez de obras separadas, integrou as referências diretamente nas margens da Bíblia, organizadas em cadeias temáticas numeradas que conduzem o leitor de versículo em versículo ao longo de todo o cânon.
+
+![Thompson Chain-Reference Bible em linguagem Synesis.](../../images/thompson_chain_references.png)
 
 O que estas obras têm em comum é o problema que tentam resolver: as Escrituras formam uma rede densa de relações temáticas, tipológicas e teológicas que nenhum leitor consegue mapear integralmente de memória. Cada sistema representa uma solução manual para esse problema — e cada um carrega as limitações do suporte em que foi construído. Um livro impresso não pode ser consultado por múltiplos critérios simultaneamente, não pode ser atualizado sem uma nova edição, e não pode ser integrado a outros sistemas de análise.
 
@@ -82,7 +84,14 @@ As anotações geradas podem ser exportadas em diferentes formatos e utilizadas 
 
 É interessante observar que tanto as concordâncias, quanto a codificação qualitativa moderna respondem ao mesmo desafio epistemológico: como extrair padrões de um corpus textual extenso e heterogêneo, preservando a ligação entre o padrão identificado e o texto de origem. 
 
-Em ambos os casos, o pesquisador precisa: **(1)** ler o texto, **(2)** identificar unidades de significado, **(3)** atribuir categorias a essas unidades, e **(4)** recuperar posteriormente todos os trechos associados a uma categoria. A estrutura do processo é idêntica.
+Em ambos os casos, o pesquisador precisa: 
+
+* **(1)** ler o texto, 
+* **(2)** identificar unidades de significado, 
+* **(3)** atribuir categorias a essas unidades, e 
+* **(4)** recuperar posteriormente todos os trechos associados a uma categoria. 
+
+A estrutura do processo é idêntica.
 
 A codificação qualitativa e a organização sistemática das Escrituras compartilham uma estrutura profunda comum: identificar unidades de significado em um corpus textual, atribuir categorias e recuperar conexões. 
 
@@ -108,16 +117,16 @@ Em Synesis, ambas as obras podem ser adaptadas para compartilhar o mesmo modelo 
 A teologia sistemática trabalha com relações entre conceitos doutrinários — e Synesis tem primitivas formais para representá-las:
 
 ```synesis
-SOURCE @teologia_sistematica
+SOURCE @teologia_sistematica2026
     descricao: "Relações doutrinárias fundamentais"
 END SOURCE
 
-ITEM @teologia_sistematica
+ITEM @teologia_sistematica2026
     memo: Relação entre graça, fé e justificação na soteriologia paulina
     chain: Graca -> PRODUZ -> Fe -> PRODUZ -> Justificacao
 END ITEM
 
-ITEM @teologia_sistematica
+ITEM @teologia_sistematica2026
     memo: Tensão estrutural entre os paradigmas da Lei e do Evangelho
     chain: Lei -> CONTRASTA_COM -> Evangelho
 END ITEM
@@ -152,15 +161,15 @@ SOURCE @calvino_institutes
     descricao: "Institutas da Religião Cristã, João Calvino"
 END SOURCE
 
-SOURCE @arminius_works
-    descricao: "Obras Completas, Jacó Armínio"
-END SOURCE
-
 ITEM @calvino_institutes
     quote: "Jo 6:37 — Tudo o que o Pai me dá virá a mim"
     memo: Prova da soberania divina na eleição incondicional
     chain: Soberania_Divina -> PRODUZ -> Eleicao_Incondicional
 END ITEM
+
+SOURCE @arminius_works
+    descricao: "Obras Completas, Jacó Armínio"
+END SOURCE
 
 ITEM @arminius_works
     quote: "Jo 6:37 — Tudo o que o Pai me dá virá a mim"
@@ -169,8 +178,7 @@ ITEM @arminius_works
 END ITEM
 ```
 
-A mesma passagem, dois sistemas teológicos, dados estruturados e comparáveis. O debate doutrinário deixa de ser apenas narrativo e passa a ser analítico.
-
+A mesma passagem, dois sistemas teológicos, dados estruturados e comparáveis.
 ---
 
 *Synesis não transforma o texto sagrado em dado — transforma o **trabalho humano inspirado de interpretação** em dado. O Thompson e o Nave são a camada de indexação. O que se constrói acima — comentários, relações doutrinárias, tradições interpretativas — é onde a linguagem revela seu potencial pleno*.
