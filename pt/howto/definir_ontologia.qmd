@@ -10,121 +10,134 @@ Este guia mostra **como criar e organizar ontologias** (`.syno`) para estruturar
 **Você deve usar este guia se:**
 
 - Precisa definir códigos conceituais reutilizáveis
-- Quer organizar códigos em hierarquias temáticas
-- Precisa documentar relações causais padronizadas
+- Quer organizar códigos por grupos temáticos
 - Quer garantir consistência terminológica no projeto
 
 ---
 
 ## Estrutura Básica de uma Ontologia
 
-Uma ontologia Synesis tem três elementos principais:
-
-1. **TOPIC**: Agrupa códigos relacionados por tema
-2. **CODE**: Define um conceito analítico com definição obrigatória
-3. **RELATION**: Define tipos de relação para uso em chains
+Uma ontologia Synesis é um conjunto de blocos `ONTOLOGY`, cada um definindo um conceito. Os campos disponíveis em cada bloco dependem do template do projeto — tipicamente `descricao` (definição textual) e `grupo` (categoria temática).
 
 ### Exemplo Mínimo
 
 ```synesis
-ONTOLOGY minha_ontologia
-VERSION 1.0
-
-TOPIC "Tema Principal"
-    CODE "Conceito A"
-        DEFINITION: "Descrição clara do que significa Conceito A"
-    END CODE
-END TOPIC
-
+ONTOLOGY conceito_a
+    descricao: "Descrição clara do que significa este conceito"
+    grupo: tema_principal
 END ONTOLOGY
 ```
 
----
-
-## Como Adicionar Códigos Conceituais
-
-### Códigos Simples
-
-Para adicionar um código, defina-o dentro de um `TOPIC`:
-
-```synesis
-TOPIC "Barreiras à Adoção"
-    CODE "Custo"
-        DEFINITION: "Fatores relacionados a preço, orçamento e viabilidade econômica"
-    END CODE
-
-    CODE "Complexidade Técnica"
-        DEFINITION: "Percepção de dificuldade de uso ou necessidade de expertise"
-    END CODE
-END TOPIC
-```
-
-### Códigos com Sinônimos (Aliases)
-
-Se você precisa de variações terminológicas:
-
-```synesis
-CODE "Resistência Organizacional"
-    DEFINITION: "Oposição cultural ou estrutural à mudança"
-    ALIAS: "Inércia Institucional"
-    ALIAS: "Resistência à Mudança"
-END CODE
-```
-
-**Quando usar:** Quando diferentes fontes ou colaboradores podem usar termos diferentes para o mesmo conceito.
-
-### Códigos Hierárquicos (Subcódigos)
-
-Para criar taxonomias:
-
-```synesis
-TOPIC "Fatores Tecnológicos"
-    CODE "Infraestrutura"
-        DEFINITION: "Recursos técnicos disponíveis"
-
-        SUBCODE "Hardware"
-            DEFINITION: "Equipamentos físicos necessários"
-        END SUBCODE
-
-        SUBCODE "Software"
-            DEFINITION: "Aplicações e sistemas de suporte"
-        END SUBCODE
-
-        SUBCODE "Conectividade"
-            DEFINITION: "Capacidade de rede e banda larga"
-        END SUBCODE
-    END CODE
-END TOPIC
-```
-
-**Quando usar:** Quando há relação "é-um-tipo-de" entre conceitos.
+Cada bloco define **um único conceito**, identificado por um nome em snake_case (sem espaços ou acentos).
 
 ---
 
-## Como Organizar Códigos em TOPICs
+## Como Adicionar Conceitos
+
+### Conceitos Simples
+
+Para adicionar conceitos ao vocabulário do projeto:
+
+```synesis
+ONTOLOGY custo
+    descricao: "Fatores relacionados a preço, orçamento e viabilidade econômica"
+    grupo: barreiras_a_adocao
+END ONTOLOGY
+
+ONTOLOGY complexidade_tecnica
+    descricao: "Percepção de dificuldade de uso ou necessidade de expertise"
+    grupo: barreiras_a_adocao
+END ONTOLOGY
+```
+
+### Conceitos com Variações Terminológicas
+
+Quando diferentes fontes usam termos diferentes para o mesmo conceito, documente isso no campo `descricao` e unifique sob um único nome canônico:
+
+```synesis
+ONTOLOGY resistencia_organizacional
+    descricao: "Oposição cultural ou estrutural à mudança. Também referida como 'inércia institucional' ou 'resistência à mudança' nas fontes."
+    grupo: fatores_contextuais
+END ONTOLOGY
+```
+
+**Quando usar:** Quando colaboradores ou fontes diferentes usam termos distintos para o mesmo fenômeno. O nome canônico é o que aparece em `code:` e `chain:` nas anotações.
+
+### Conceitos Hierárquicos
+
+Para expressar relações "é-um-tipo-de", use o campo `grupo` para agrupar subcategorias e nomeie os conceitos de forma que a hierarquia seja legível:
+
+```synesis
+ONTOLOGY infraestrutura
+    descricao: "Recursos técnicos disponíveis para operação do sistema"
+    grupo: fatores_tecnologicos
+END ONTOLOGY
+
+ONTOLOGY infraestrutura_hardware
+    descricao: "Equipamentos físicos necessários"
+    grupo: fatores_tecnologicos
+END ONTOLOGY
+
+ONTOLOGY infraestrutura_software
+    descricao: "Aplicações e sistemas de suporte"
+    grupo: fatores_tecnologicos
+END ONTOLOGY
+
+ONTOLOGY infraestrutura_conectividade
+    descricao: "Capacidade de rede e banda larga"
+    grupo: fatores_tecnologicos
+END ONTOLOGY
+```
+
+**Quando usar:** Quando há relação de subtipo entre conceitos. O prefixo compartilhado (`infraestrutura_`) torna a hierarquia explícita sem exigir nesting sintático.
+
+---
+
+## Como Organizar Conceitos por Grupos
+
+O campo `grupo` é o mecanismo central de organização. Use valores consistentes para agrupar conceitos relacionados.
 
 ### Por Dimensão Analítica
 
 ```synesis
-TOPIC "Dimensão Econômica"
-    CODE "Custo Inicial"
-        DEFINITION: "Investimento necessário para implementação"
-    END CODE
+ONTOLOGY custo_inicial
+    descricao: "Investimento necessário para implementação"
+    grupo: dimensao_economica
+END ONTOLOGY
 
-    CODE "ROI Esperado"
-        DEFINITION: "Expectativa de retorno sobre investimento"
-    END CODE
-END TOPIC
+ONTOLOGY roi_esperado
+    descricao: "Expectativa de retorno sobre investimento"
+    grupo: dimensao_economica
+END ONTOLOGY
 
-TOPIC "Dimensão Social"
-    CODE "Aceitação da Equipe"
-        DEFINITION: "Grau de adesão dos colaboradores"
-    END CODE
+ONTOLOGY aceitacao_da_equipe
+    descricao: "Grau de adesão dos colaboradores à mudança"
+    grupo: dimensao_social
+END ONTOLOGY
 
-    CODE "Pressão de Pares"
-        DEFINITION: "Influência de colegas na decisão"
-    END CODE
-END TOPIC
+ONTOLOGY pressao_de_pares
+    descricao: "Influência de colegas na decisão de adotar"
+    grupo: dimensao_social
+END ONTOLOGY
+```
+
+Exemplo de ontologia complexa:
+
+```synesis
+ONTOLOGY Public_Acceptance
+    topic: Social
+    aspect: 10 Social
+    dimension: 1 Social-Political
+    confidence: HIGH
+
+    reasoning: Aspect 10 (Social) reflects community and collective dynamics central to acceptance. Primarily enables deployment and constrains policy/CCS implementation, functioning as facilitator and barrier. Co-occurs with stakeholder engagement, transparency, and trust-building. Dimension 1 (Community Acceptance) reflects residents and local stakeholders requiring transparent communication. High frequency (20) across 11 sources indicates robust centrality.
+
+    description: The degree to which local communities, residents, and stakeholders support or oppose energy transition technologies and infrastructure projects. Shaped by transparent communication, environmental impact assessments, and trust-building efforts. Critical for technology deployment, requiring careful stakeholder engagement and alignment with sustainability values to overcome resistance and enable implementation.
+
+    rgt_element_a: High_Public_Acceptance
+    rgt_element_b: Low_Public_Acceptance
+    theoretical_significance: 0
+END ONTOLOGY
 ```
 
 **Quando usar:** Para análises multi-dimensionais (econômico, social, técnico, político).
@@ -132,23 +145,20 @@ END TOPIC
 ### Por Fase do Processo
 
 ```synesis
-TOPIC "Pré-Adoção"
-    CODE "Conscientização"
-        DEFINITION: "Conhecimento sobre existência da tecnologia"
-    END CODE
-END TOPIC
+ONTOLOGY conscientizacao
+    descricao: "Conhecimento sobre existência da tecnologia"
+    grupo: pre_adocao
+END ONTOLOGY
 
-TOPIC "Decisão"
-    CODE "Avaliação de Alternativas"
-        DEFINITION: "Comparação entre opções disponíveis"
-    END CODE
-END TOPIC
+ONTOLOGY avaliacao_de_alternativas
+    descricao: "Comparação entre opções disponíveis"
+    grupo: decisao
+END ONTOLOGY
 
-TOPIC "Pós-Adoção"
-    CODE "Satisfação"
-        DEFINITION: "Percepção de atendimento de expectativas"
-    END CODE
-END TOPIC
+ONTOLOGY satisfacao
+    descricao: "Percepção de atendimento de expectativas após adoção"
+    grupo: pos_adocao
+END ONTOLOGY
 ```
 
 **Quando usar:** Para análises processuais ou longitudinais.
@@ -156,17 +166,15 @@ END TOPIC
 ### Por Stakeholder
 
 ```synesis
-TOPIC "Perspectiva de Gestores"
-    CODE "Alinhamento Estratégico"
-        DEFINITION: "Compatibilidade com objetivos organizacionais"
-    END CODE
-END TOPIC
+ONTOLOGY alinhamento_estrategico
+    descricao: "Compatibilidade com objetivos organizacionais"
+    grupo: perspectiva_gestores
+END ONTOLOGY
 
-TOPIC "Perspectiva de Usuários Finais"
-    CODE "Usabilidade"
-        DEFINITION: "Facilidade de operação cotidiana"
-    END CODE
-END TOPIC
+ONTOLOGY usabilidade
+    descricao: "Facilidade de operação cotidiana"
+    grupo: perspectiva_usuarios_finais
+END ONTOLOGY
 ```
 
 **Quando usar:** Para análises multi-perspectiva ou estudos de stakeholders.
@@ -175,34 +183,28 @@ END TOPIC
 
 ## Como Definir Relações Causais
 
-Use `RELATION` para padronizar tipos de vínculos em chains:
+Relações usadas em `chain:` são declaradas no **template do projeto** (`.synt`), não na ontologia. Veja [Como Criar Chains](criar_chains.qmd) para detalhes.
+
+No template:
 
 ```synesis
-TOPIC "Relações Causais"
-    RELATION "CAUSA"
-        DEFINITION: "X é causa direta de Y"
-    END RELATION
-
-    RELATION "INIBE"
-        DEFINITION: "X reduz ou impede Y"
-    END RELATION
-
-    RELATION "FAVORECE"
-        DEFINITION: "X promove ou facilita Y"
-    END RELATION
-
-    RELATION "MEDIA"
-        DEFINITION: "X é intermediário entre A e Y"
-    END RELATION
-END RELATION
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Cadeia causal entre conceitos
+    RELATIONS
+        CAUSA: X é causa direta de Y
+        INIBE: X reduz ou impede Y
+        FAVORECE: X promove ou facilita Y
+        MEDIA: X é intermediário entre A e Y
+    END RELATIONS
+END FIELD
 ```
 
-**Uso em chains:**
+Nas anotações, use as relações declaradas:
 
 ```synesis
-# Na anotação .syn
-chain: Custo Alto -> INIBE -> Adoção
-chain: Treinamento -> MEDIA -> Usabilidade -> FAVORECE -> Adoção
+chain: custo_alto -> INIBE -> adocao
+chain: treinamento -> MEDIA -> usabilidade -> FAVORECE -> adocao
 ```
 
 ---
@@ -219,77 +221,73 @@ synesis check ontology/minha_ontologia.syno
 
 | Erro | Causa | Solução |
 |------|-------|---------|
-| `CODE 'X' already defined` | Código duplicado | Remova duplicata ou use ALIAS |
-| `DEFINITION required` | Falta definição | Adicione `DEFINITION: "..."` |
-| `Invalid TOPIC name` | Nome vazio ou inválido | Use nome entre aspas: `TOPIC "Nome"` |
+| `Concept 'X' already defined` | Conceito duplicado | Remova a duplicata ou escolha nome diferente |
+| `descricao required` | Falta definição | Adicione `descricao: "..."` ao bloco |
+| `Invalid concept name` | Nome com espaços ou acentos | Use snake_case: `nome_do_conceito` |
 
 ---
 
-## Como Referenciar Códigos nas Anotações
+## Como Referenciar Conceitos nas Anotações
 
 Após definir na ontologia, use em `.syn`:
 
 ```synesis
 ITEM @fonte_01
     quote: "O preço é muito alto"
-    code: Custo  # Deve estar definido na ontologia
+    code: custo  # Deve estar definido na ontologia
 END ITEM
 ```
 
-**Regra:** Todo código usado em anotações **deve** existir na ontologia, caso contrário o compilador rejeitará.
+**Regra:** Todo conceito usado em `code:` ou `chain:` **deve** existir na ontologia. O compilador rejeitará conceitos não definidos.
 
 ---
 
 ## Como Evoluir Ontologias ao Longo do Projeto
 
-### Adicionar Novo Código
+### Adicionar Novo Conceito
 
 1. Abra `ontology/codes.syno`
-2. Localize o `TOPIC` apropriado
-3. Adicione o novo `CODE` com `DEFINITION`
-4. Valide: `synesis check ontology/codes.syno`
-5. Re-compile o projeto
+2. Adicione um novo bloco `ONTOLOGY conceito / descricao: / grupo: / END ONTOLOGY`
+3. Valide: `synesis check ontology/codes.syno`
+4. Re-compile o projeto
 
-### Renomear Código Existente
+### Renomear Conceito Existente
 
-**Opção 1: Manter compatibilidade com ALIAS**
+Não há mecanismo automático de alias — renomear exige atualização manual:
 
-```synesis
-CODE "Novo Nome"
-    DEFINITION: "..."
-    ALIAS: "Nome Antigo"
-END CODE
-```
-
-Anotações antigas usando "Nome Antigo" continuarão funcionando.
-
-**Opção 2: Renomeação breaking**
-
-1. Renomeie o `CODE` na ontologia
-2. Use "Find & Replace" em todos os arquivos `.syn`
+1. Renomeie o bloco `ONTOLOGY` na ontologia
+2. Use "Find & Replace" em todos os arquivos `.syn` para atualizar `code:` e `chain:`
 3. Valide tudo: `synesis check analysis.synp`
 
-### Dividir Código Amplo
+:::{.callout-tip}
+## Estratégia de renomeação segura
+Antes de renomear, compile e exporte para CSV. O arquivo `codes.csv` lista todas as ocorrências do conceito — use-o para identificar quais anotações precisam ser atualizadas.
+:::
 
-Se um código se tornou ambíguo, divida:
+### Dividir Conceito Amplo
+
+Se um conceito se tornou ambíguo, crie conceitos mais específicos:
 
 ```synesis
-# Antes
-CODE "Custo"
-    DEFINITION: "Todos os fatores econômicos"
-END CODE
+# Antes: um único conceito amplo
+ONTOLOGY custo
+    descricao: "Todos os fatores econômicos"
+    grupo: fatores_economicos
+END ONTOLOGY
 
-# Depois
-CODE "Custo de Aquisição"
-    DEFINITION: "Preço de compra inicial"
-END CODE
+# Depois: dois conceitos específicos
+ONTOLOGY custo_de_aquisicao
+    descricao: "Preço de compra inicial"
+    grupo: fatores_economicos
+END ONTOLOGY
 
-CODE "Custo de Manutenção"
-    DEFINITION: "Despesas recorrentes de operação"
-END CODE
+ONTOLOGY custo_de_manutencao
+    descricao: "Despesas recorrentes de operação"
+    grupo: fatores_economicos
+END ONTOLOGY
 ```
 
-**Atenção:** Revise manualmente anotações antigas que usavam o código original.
+**Atenção:** Revise manualmente as anotações que usavam o conceito original e decida qual dos novos conceitos mais específicos se aplica a cada caso.
 
 ---
 
@@ -298,132 +296,109 @@ END CODE
 ### Pesquisa Qualitativa (Análise Temática)
 
 ```synesis
-ONTOLOGY tematic_analysis
-VERSION 1.0
+ONTOLOGY experiencia_vivida
+    descricao: "Relatos diretos de vivências pessoais"
+    grupo: temas_descritivos
+END ONTOLOGY
 
-TOPIC "Temas Descritivos"
-    CODE "Experiência Vivida"
-        DEFINITION: "Relatos diretos de vivências pessoais"
-    END CODE
+ONTOLOGY contexto_social
+    descricao: "Fatores socioculturais envolvidos na experiência relatada"
+    grupo: temas_descritivos
+END ONTOLOGY
 
-    CODE "Contexto Social"
-        DEFINITION: "Fatores socioculturais envolvidos"
-    END CODE
-END TOPIC
+ONTOLOGY padrao_emergente
+    descricao: "Regularidade identificada entre casos"
+    grupo: temas_analiticos
+END ONTOLOGY
 
-TOPIC "Temas Analíticos"
-    CODE "Padrão Emergente"
-        DEFINITION: "Regularidade identificada entre casos"
-    END CODE
-
-    CODE "Contradição Aparente"
-        DEFINITION: "Tensão entre perspectivas diferentes"
-    END CODE
-END TOPIC
-
+ONTOLOGY contradicao_aparente
+    descricao: "Tensão entre perspectivas diferentes sobre o mesmo fenômeno"
+    grupo: temas_analiticos
 END ONTOLOGY
 ```
 
 ### Análise de Políticas Públicas
 
 ```synesis
-ONTOLOGY policy_analysis
-VERSION 1.0
+ONTOLOGY formulador
+    descricao: "Agente que propõe ou desenha a política"
+    grupo: atores
+END ONTOLOGY
 
-TOPIC "Atores"
-    CODE "Formulador"
-        DEFINITION: "Agente que propõe ou desenha a política"
-    END CODE
+ONTOLOGY implementador
+    descricao: "Agente responsável por executar a política"
+    grupo: atores
+END ONTOLOGY
 
-    CODE "Implementador"
-        DEFINITION: "Agente responsável por executar"
-    END CODE
+ONTOLOGY beneficiario
+    descricao: "População-alvo da política"
+    grupo: atores
+END ONTOLOGY
 
-    CODE "Beneficiário"
-        DEFINITION: "População-alvo da política"
-    END CODE
-END TOPIC
+ONTOLOGY eficacia
+    descricao: "Grau de alcance dos objetivos declarados"
+    grupo: dimensoes_de_avaliacao
+END ONTOLOGY
 
-TOPIC "Dimensões de Avaliação"
-    CODE "Eficácia"
-        DEFINITION: "Grau de alcance dos objetivos declarados"
-    END CODE
+ONTOLOGY eficiencia
+    descricao: "Relação entre recursos empregados e resultados obtidos"
+    grupo: dimensoes_de_avaliacao
+END ONTOLOGY
 
-    CODE "Eficiência"
-        DEFINITION: "Relação entre recursos empregados e resultados"
-    END CODE
-
-    CODE "Equidade"
-        DEFINITION: "Distribuição justa entre grupos"
-    END CODE
-END TOPIC
-
+ONTOLOGY equidade
+    descricao: "Distribuição justa dos benefícios entre grupos"
+    grupo: dimensoes_de_avaliacao
 END ONTOLOGY
 ```
 
 ### Análise de Requisitos (Engenharia de Software)
 
 ```synesis
-ONTOLOGY requirements
-VERSION 1.0
+ONTOLOGY funcionalidade_core
+    descricao: "Capacidade essencial do sistema"
+    grupo: requisitos_funcionais
+END ONTOLOGY
 
-TOPIC "Requisitos Funcionais"
-    CODE "Funcionalidade Core"
-        DEFINITION: "Capacidade essencial do sistema"
-    END CODE
+ONTOLOGY integracao
+    descricao: "Comunicação com sistemas externos"
+    grupo: requisitos_funcionais
+END ONTOLOGY
 
-    CODE "Integração"
-        DEFINITION: "Comunicação com sistemas externos"
-    END CODE
-END TOPIC
+ONTOLOGY performance
+    descricao: "Tempo de resposta e throughput"
+    grupo: requisitos_nao_funcionais
+END ONTOLOGY
 
-TOPIC "Requisitos Não-Funcionais"
-    CODE "Performance"
-        DEFINITION: "Tempo de resposta e throughput"
-    END CODE
-
-    CODE "Segurança"
-        DEFINITION: "Proteção de dados e autenticação"
-    END CODE
-END TOPIC
-
-TOPIC "Relações de Dependência"
-    RELATION "REQUER"
-        DEFINITION: "Requisito X depende de Y estar implementado"
-    END RELATION
-
-    RELATION "CONFLITA_COM"
-        DEFINITION: "Requisito X é incompatível com Y"
-    END RELATION
-END TOPIC
-
+ONTOLOGY seguranca
+    descricao: "Proteção de dados e autenticação"
+    grupo: requisitos_nao_funcionais
 END ONTOLOGY
 ```
+
+:::{.callout-note}
+## Relações de dependência entre requisitos
+Relações como `REQUER` e `CONFLITA_COM` são declaradas no template, não na ontologia. Veja [Como Criar Chains](criar_chains.qmd).
+:::
 
 ---
 
 ## Como Documentar Decisões Ontológicas
 
-Adicione notas no próprio arquivo `.syno`:
+Use comentários (`#`) diretamente nos arquivos `.syno`:
 
 ```synesis
-ONTOLOGY codes
-VERSION 1.0
+# DECISÃO 2026-02-04: Separamos "custo" em dois conceitos após
+# identificar ambiguidade nas anotações das entrevistas 15-20
 
-# DECISÃO 2026-02-04: Separamos "Custo" em dois códigos após
-# identificar ambiguidade nas anotações de entrevistas 15-20
+ONTOLOGY custo_de_aquisicao
+    descricao: "Investimento inicial para implementar"
+    grupo: fatores_economicos
+END ONTOLOGY
 
-TOPIC "Fatores Econômicos"
-    CODE "Custo de Aquisição"
-        DEFINITION: "Investimento inicial para implementar"
-    END CODE
-
-    CODE "Custo Operacional"
-        DEFINITION: "Despesas recorrentes de manutenção"
-        # NOTA: Inclui treinamento, suporte técnico e licenças
-    END CODE
-END TOPIC
-
+ONTOLOGY custo_operacional
+    # NOTA: Inclui treinamento, suporte técnico e licenças recorrentes
+    descricao: "Despesas recorrentes de manutenção e operação"
+    grupo: fatores_economicos
 END ONTOLOGY
 ```
 
@@ -431,14 +406,13 @@ END ONTOLOGY
 
 ## Quando Criar Múltiplas Ontologias
 
-Para projetos grandes, divida por domínio:
+Para projetos grandes, divida por domínio em arquivos separados:
 
 ```
 ontology/
 ├── codes_actors.syno          # Atores sociais
 ├── codes_processes.syno       # Processos organizacionais
-├── codes_outcomes.syno        # Resultados e impactos
-└── relations.syno             # Relações causais compartilhadas
+└── codes_outcomes.syno        # Resultados e impactos
 ```
 
 **No arquivo `.synp`:**
@@ -446,15 +420,17 @@ ontology/
 ```synesis
 PROJECT my_analysis
 
-ONTOLOGY ontology/codes_actors.syno
-ONTOLOGY ontology/codes_processes.syno
-ONTOLOGY ontology/codes_outcomes.syno
-ONTOLOGY ontology/relations.syno
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "references.bib"
+INCLUDE ANNOTATIONS "annotations/"
+INCLUDE ONTOLOGY "ontology/codes_actors.syno"
+INCLUDE ONTOLOGY "ontology/codes_processes.syno"
+INCLUDE ONTOLOGY "ontology/codes_outcomes.syno"
 
-# ... resto do projeto
+END PROJECT
 ```
 
-**Quando usar:** Quando há mais de 50 códigos ou equipes trabalhando em domínios diferentes.
+**Quando usar:** Quando há mais de 50 conceitos ou equipes trabalhando em domínios diferentes.
 
 ---
 
@@ -464,7 +440,7 @@ Para sintaxe completa de ontologias, consulte:
 
 - [Referência da Linguagem](../reference/guia_referencia.qmd) — Especificação formal de `.syno`
 - [Tutorial Getting Started](../tutorials/getting-started.qmd) — Criar primeira ontologia
-- [Como criar chains](criar_chains.qmd) — Usar relações definidas na ontologia
+- [Como criar chains](criar_chains.qmd) — Declarar relações no template
 
 ---
 

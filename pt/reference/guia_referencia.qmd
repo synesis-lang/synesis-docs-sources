@@ -213,14 +213,13 @@ END ONTOLOGY FIELDS
 
 FIELD description TYPE TEXT
     SCOPE ONTOLOGY
-    DESCRIPTION Tópico ou domínio temático do conceito (categoria hierárquica superior dinâmica)
+    DESCRIPTION Definição textual do conceito
 END FIELD
 
 FIELD topic TYPE TOPIC
     SCOPE ONTOLOGY
     DESCRIPTION Tópico ou domínio temático do conceito (categoria hierárquica superior dinâmica)
 END FIELD
-
 ```
 
 ---
@@ -313,7 +312,7 @@ END FIELD
 | DATE       | SOURCE    | Data com formato especificado |
 | SCALE      | qualquer  | Valor numérico em intervalo [min..max] |
 | ENUMERATED | qualquer  | Valor de lista fechada sem hierarquia |
-| ORDERED    | ONTOLOGY  | Valor de lista com hierarquia ordinal indexada |
+| ORDERED    | qualquer  | Valor de lista com hierarquia ordinal indexada |
 | TOPIC      | ONTOLOGY  | Categoria hierárquica superior (agrupamento dinâmico) |
 
 ### Distinção: Linguagem vs Template

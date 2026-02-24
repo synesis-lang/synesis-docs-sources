@@ -30,7 +30,8 @@ Um **knowledge graph** (grafo de conhecimento) é uma representação de informa
 Você sabe que "Custo" aparece 15 vezes, mas **não sabe como se relaciona com "Adoção"**.
 
 **Grafos (Neo4j):**
-```
+
+```cypher
 (Custo)-[INIBE {frequência: 8}]->(Adoção)
 ```
 
@@ -138,7 +139,7 @@ Isso **não é possível** com RAG vetorial puro, que retornaria apenas trechos 
 
 Quando você exporta um projeto Synesis para Neo4j, a seguinte estrutura de grafo é criada:
 
-```
+```cypher
 (Source)-[:HAS_ITEM]->(Item)-[:HAS_CODE]->(Code)
 (Item)-[:REFERENCES]->(Source)
 (Code)-[:CHAIN_RELATION {type: "INIBE"}]->(Code)

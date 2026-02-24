@@ -64,12 +64,16 @@ Descoberta causal tradicional trabalha com um único conjunto de dados. Não con
 - Identifique quais fatores (oportunidades de carreira, clareza de visão, trabalho em equipe) causam quais resultados (motivação, satisfação, retenção)
 - Recomende iniciativas com base em evidências documentadas
 
-```
-Exemplo de registro:
-- Fonte: Pesquisa de Engajamento Q4/2024, Departamento Comercial
-- Observação: "Sinto que não tenho oportunidades de crescimento aqui"
-- Interpretação: Funcionário expressa frustração com limitação de carreira
-- Relação identificada: Falta de Oportunidades → REDUZ → Motivação
+```synesis
+SOURCE @pesquisa_engajamento_q4_2024_comercial
+    access_date: 2024-12-15
+END SOURCE
+
+ITEM @pesquisa_engajamento_q4_2024_comercial
+    quote: "Sinto que não tenho oportunidades de crescimento aqui"
+    memo: Funcionário expressa frustração com limitação de carreira; associa falta de progressão à queda de motivação.
+    chain: falta_de_oportunidades_de_carreira -> INIBE -> motivacao
+END ITEM
 ```
 
 ### Análise de Falhas e Incidentes
@@ -81,12 +85,16 @@ Exemplo de registro:
 - Documente cada incidente com a cadeia causal identificada
 - Construa uma base de conhecimento que acelere diagnósticos futuros
 
-```
-Exemplo de registro:
-- Fonte: Relatório de Incidente #2024-0892
-- Observação: Desconexão intermitente durante download de arquivos
-- Interpretação: Padrão consistente com erro de configuração de MAC
-- Relação identificada: Erro de Configuração → CAUSA → Desconexão
+```synesis
+SOURCE @relatorio_incidente_2024_0892
+    access_date: 2024-11-10
+END SOURCE
+
+ITEM @relatorio_incidente_2024_0892
+    quote: "Desconexão intermitente durante download de arquivos"
+    memo: Padrão consistente com erro de configuração de MAC; comportamento reproduzível sob as mesmas condições de rede.
+    chain: erro_de_configuracao_de_mac -> INIBE -> conectividade_estavel
+END ITEM
 ```
 
 ### Análise de Mercado e Negociações
@@ -98,12 +106,16 @@ Exemplo de registro:
 - Identifique padrões causais entre ações e resultados
 - Combine com dados de engajamento para entender como fatores internos afetam performance externa
 
-```
-Exemplo de registro:
-- Fonte: Análise de Negociação #2024-156 (Sucesso)
-- Observação: Cliente mencionou confiança na equipe técnica
-- Interpretação: Demonstração de competência técnica influenciou decisão
-- Relação identificada: Competência Técnica → INFLUENCIA → Confiança → INFLUENCIA → Fechamento
+```synesis
+SOURCE @analise_negociacao_2024_156
+    access_date: 2024-10-22
+END SOURCE
+
+ITEM @analise_negociacao_2024_156
+    quote: "Cliente mencionou confiança na equipe técnica como fator decisivo"
+    memo: Demonstração de competência técnica durante a proposta influenciou a percepção de confiança, que por sua vez viabilizou o fechamento.
+    chain: competencia_tecnica -> FAVORECE -> confianca_do_cliente -> FAVORECE -> fechamento_da_negociacao
+END ITEM
 ```
 
 ---
@@ -115,6 +127,7 @@ Exemplo de registro:
 ```synesis
 SOURCE @pesquisa_engajamento_2024
     access_date: 2024-12-15
+END SOURCE
 ```
 
 Todo conhecimento é rastreável até sua origem — um documento, uma entrevista, um relatório.
@@ -122,11 +135,11 @@ Todo conhecimento é rastreável até sua origem — um documento, uma entrevist
 ### 2. Você registra observações e interpretações
 
 ```synesis
-ITEM
+ITEM @pesquisa_engajamento_2024
     quote: "Não sei para onde a empresa está indo"
-    note: Funcionário expressa falta de clareza sobre direção estratégica
-    chain: Falta de Clareza → REDUZ → Engajamento
-END
+    memo: Funcionário expressa falta de clareza sobre direção estratégica
+    chain: falta_de_clareza_estrategica -> INIBE -> engajamento
+END ITEM
 ```
 
 Cada item conecta a evidência textual à sua interpretação e à relação causal identificada.
@@ -134,10 +147,15 @@ Cada item conecta a evidência textual à sua interpretação e à relação cau
 ### 3. Você define seu vocabulário conceitual
 
 ```synesis
-ONTOLOGY Engajamento
-    topic: Comportamento Organizacional
-    description: Nível de comprometimento e conexão emocional do funcionário
-END
+ONTOLOGY engajamento
+    descricao: "Nível de comprometimento e conexão emocional do funcionário com a organização."
+    grupo: resultados_organizacionais
+END ONTOLOGY
+
+ONTOLOGY falta_de_clareza_estrategica
+    descricao: "Ausência de comunicação clara sobre direção, objetivos ou visão da organização."
+    grupo: fatores_organizacionais
+END ONTOLOGY
 ```
 
 Conceitos são definidos explicitamente, garantindo consistência ao longo do projeto.

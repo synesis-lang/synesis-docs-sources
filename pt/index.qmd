@@ -61,6 +61,7 @@ Synesis não é apenas um sistema de organização, mas uma infraestrutura de tr
 - [Por Que Estrutura Importa](explanation/por_que_estrutura_importa.qmd) — Reflexão sobre rigor e liberdade
 - [Por que não Excel?](explanation/guia_sincero.qmd) — Quando Synesis faz sentido (e quando não faz)
 - [Knowledge Graphs & GraphRAG](explanation/knowledge_graphs.qmd) — Por que grafos transformam pesquisa qualitativa
+- [Synesis para pesquisa teológica](explanation/synesis_escrituras.qmd) - Como utilizar Synesis em pesquisa teológica
 - [Roadmap & Ideias](explanation/ideas.qmd) — Futuro da linguagem
 
 ---
@@ -161,37 +162,37 @@ O resultado da compilação Synesis vai muito além de documentos estruturados. 
 
 Mais do que exportar dados, Synesis transforma conhecimento estruturado em infraestrutura computacional.
 
-* Graph Databases
+#### Graph Databases
 
 Integração nativa com Neo4j e Memgraph, permitindo materializar a topologia conceitual do seu conhecimento em grafos navegáveis, consultáveis e visualmente exploráveis.
 
 ![Neo4j Dektop with Synesis generated data.](../images/neo4jFactors.png)
 
-* AI-Ready
+#### AI-Ready
 
 Por meio do protocolo MCP (Model Context Protocol), seus dados podem ser conectados a assistentes como Claude Desktop, viabilizando interações em linguagem natural com respostas rastreáveis e fundamentadas diretamente em bancos de grafos Neo4j/Memgraph — sua fonte formal de verdade.
 
 ![Acesso a dados compilados via chat com linguagem natural.](../images/claude_mcp_pt.png)
 
-* Data Science
+#### Data Science
 
 Geração de datasets estruturados prontos para análises estatísticas em R, exploração computacional em Python ou visualizações interativas em Jupyter Lab.
 
 ![Conexão com Jupyter Labs.](../images/jupyter_labs.png)
 
-* Extensão para VS Code (LSP)
+#### Extensão para VS Code (LSP)
 
 Através de um Language Server Protocol (LSP), o editor reconhece a sintaxe Synesis e realiza validações em tempo real. O ambiente oferece navegação estruturada, inspeção de vínculos e visualizações gráficas básicas para apoio analítico.
 
 ![Fluxo completo (arquivo aberto + explorer + viewer).](../images/10_full_view.png)
 
-* Plugin para Zotero
+#### Plugin para Zotero
 
 Permite exportar bibliografias e anotações destacadas diretamente para o formato Synesis, integrando pesquisa acadêmica ao fluxo de compilação.
 
 ![Configuração para exportação no Zotero.](../images/zotero_preferences.png)
 
-* Bible Coder
+#### Bible Coder
 
 Extensão VSCode para codificação exegética do texto bíblico completo, com suporte a relações semânticas em cadeia (ex: Palavra → POSSIBILITA → Criação). Destacamentos do texto canônico podem ser agregados via compilador com anotações de corpus clássicos, filosóficos ou patrísticos, gerando grafos integrados de redes conceituais.
 

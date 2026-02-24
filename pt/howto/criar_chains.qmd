@@ -23,15 +23,15 @@ Uma **chain** (cadeia) é uma sequência de códigos conectados por relações, 
 ### Sintaxe Básica
 
 ```synesis
-chain: Código A -> RELAÇÃO -> Código B
+chain: conceito_a -> RELACAO -> conceito_b
 ```
 
 **Exemplo:**
 ```synesis
-chain: Custo Alto -> INIBE -> Adoção
+chain: custo_alto -> INIBE -> adocao
 ```
 
-Lê-se: "Custo Alto INIBE a Adoção"
+Lê-se: "custo_alto INIBE adocao"
 
 ---
 
@@ -44,8 +44,8 @@ A forma mais básica: um código influencia outro diretamente.
 ```synesis
 ITEM @entrevista_01
     quote: "O preço elevado desestimula a compra"
-    note: Barreira econômica identificada
-    chain: Preço Elevado -> INIBE -> Decisão de Compra
+    memo: Barreira econômica identificada
+    chain: preco_elevado -> INIBE -> decisao_de_compra
 END ITEM
 ```
 
@@ -56,10 +56,10 @@ END ITEM
 Para expressar cadeias causais complexas:
 
 ```synesis
-chain: Falta de Treinamento -> GERA -> Baixa Competência -> INIBE -> Adoção
+chain: falta_de_treinamento -> CAUSA -> baixa_competencia -> INIBE -> adocao
 ```
 
-Lê-se: "Falta de Treinamento GERA Baixa Competência, que INIBE Adoção"
+Lê-se: "Falta de Treinamento CAUSA Baixa Competência, que INIBE Adoção"
 
 **Quando usar:** Para capturar mecanismos causais com elementos intermediários.
 
@@ -67,33 +67,30 @@ Lê-se: "Falta de Treinamento GERA Baixa Competência, que INIBE Adoção"
 
 ## Como Escolher Relações Apropriadas
 
-As relações devem estar **definidas na ontologia**. Tipos comuns:
+As relações devem estar **declaradas no template do projeto** (campo `chain`). Tipos comuns:
 
 | Relação | Significado | Exemplo |
 |---------|-------------|---------|
-| `CAUSA` | X é causa direta de Y | `Erro de Software -> CAUSA -> Falha do Sistema` |
-| `INIBE` | X reduz ou impede Y | `Custo Alto -> INIBE -> Adoção` |
-| `FAVORECE` | X promove ou facilita Y | `Treinamento -> FAVORECE -> Usabilidade` |
-| `MEDIA` | X é intermediário entre A e Y | `Suporte Técnico -> MEDIA -> Satisfação` |
-| `CORRELACIONA` | X e Y ocorrem juntos (sem direção) | `Alta Rotatividade -> CORRELACIONA -> Baixo Engajamento` |
+| `CAUSA` | X é causa direta de Y | `erro_de_software -> CAUSA -> falha_do_sistema` |
+| `INIBE` | X reduz ou impede Y | `custo_alto -> INIBE -> adocao` |
+| `FAVORECE` | X promove ou facilita Y | `treinamento -> FAVORECE -> usabilidade` |
+| `MEDIA` | X é intermediário entre A e Y | `suporte_tecnico -> MEDIA -> satisfacao` |
+| `CORRELACIONA` | X e Y ocorrem juntos (sem direção) | `alta_rotatividade -> CORRELACIONA -> baixo_engajamento` |
 
-**Defina relações na ontologia:**
+**Declare relações no template do projeto:**
 
 ```synesis
-ONTOLOGY relations
-VERSION 1.0
-
-TOPIC "Relações Causais"
-    RELATION "CAUSA"
-        DEFINITION: "X é causa direta e necessária de Y"
-    END RELATION
-
-    RELATION "INIBE"
-        DEFINITION: "X reduz probabilidade ou intensidade de Y"
-    END RELATION
-END TOPIC
-
-END ONTOLOGY
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Cadeia causal entre conceitos
+    RELATIONS
+        CAUSA: X é causa direta e necessária de Y
+        INIBE: X reduz probabilidade ou intensidade de Y
+        FAVORECE: X promove ou facilita Y
+        MEDIA: X é elemento intermediário entre A e Y
+        CORRELACIONA: X e Y ocorrem juntos, sem direção causal definida
+    END RELATIONS
+END FIELD
 ```
 
 ---
@@ -104,13 +101,13 @@ END ONTOLOGY
 
 ```synesis
 # Chain 1
-chain: Falta de Recursos -> INIBE -> Investimento em IA
+chain: falta_de_recursos -> INIBE -> investimento_em_ia
 
 # Chain 2
-chain: Falta de Recursos -> INIBE -> Treinamento de Equipe
+chain: falta_de_recursos -> INIBE -> treinamento_de_equipe
 
 # Chain 3
-chain: Falta de Recursos -> CAUSA -> Priorização de Curto Prazo
+chain: falta_de_recursos -> CAUSA -> priorizacao_de_curto_prazo
 ```
 
 **Quando usar:** Para identificar causas de múltiplos efeitos.
@@ -119,13 +116,13 @@ chain: Falta de Recursos -> CAUSA -> Priorização de Curto Prazo
 
 ```synesis
 # Chain 1
-chain: Facilidade de Uso -> FAVORECE -> Satisfação
+chain: facilidade_de_uso -> FAVORECE -> satisfacao
 
 # Chain 2
-chain: Suporte Responsivo -> FAVORECE -> Satisfação
+chain: suporte_responsivo -> FAVORECE -> satisfacao
 
 # Chain 3
-chain: Custo Acessível -> FAVORECE -> Satisfação
+chain: custo_acessivel -> FAVORECE -> satisfacao
 ```
 
 **Quando usar:** Para identificar fatores múltiplos contribuindo para mesmo resultado.
@@ -135,7 +132,7 @@ chain: Custo Acessível -> FAVORECE -> Satisfação
 Quando há elementos intermediários:
 
 ```synesis
-chain: Investimento em Capacitação -> AUMENTA -> Competência da Equipe -> FAVORECE -> Qualidade do Output
+chain: investimento_em_capacitacao -> FAVORECE -> competencia_da_equipe -> FAVORECE -> qualidade_do_output
 ```
 
 **Quando usar:** Para explicar "o porquê" de uma relação (mecanismo causal).
@@ -226,10 +223,10 @@ entrevista_02,3,qualified,"Treinamento,FAVORECE,Competência,FAVORECE,Qualidade"
 Para análises avançadas de rede:
 
 ```bash
-python synesis2neo4j.py --project analysis.synp --config neo4j.toml
+python synesis2graph.py --project analysis.synp --config neo4j.toml
 ```
 
-Consulte [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd) para detalhes.
+Consulte [Como exportar para Neo4j](../howto/exportar_neo4j.qmd) para detalhes.
 
 ---
 
@@ -238,23 +235,23 @@ Consulte [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd) para de
 ### Padrão "Barreira-Inibição"
 
 ```synesis
-chain: Barreira X -> INIBE -> Comportamento Desejado
+chain: barreira_x -> INIBE -> comportamento_desejado
 ```
 
 **Exemplo:**
 ```synesis
-chain: Falta de Informação -> INIBE -> Confiança -> INIBE -> Adoção
+chain: falta_de_informacao -> INIBE -> confianca -> INIBE -> adocao
 ```
 
 ### Padrão "Facilitador-Promoção"
 
 ```synesis
-chain: Facilitador X -> FAVORECE -> Comportamento Desejado
+chain: facilitador_x -> FAVORECE -> comportamento_desejado
 ```
 
 **Exemplo:**
 ```synesis
-chain: Demonstração Prática -> FAVORECE -> Compreensão -> FAVORECE -> Adoção
+chain: demonstracao_pratica -> FAVORECE -> compreensao -> FAVORECE -> adocao
 ```
 
 ### Padrão "Feedback Loop"
@@ -263,10 +260,10 @@ Expresse ciclos usando múltiplas chains:
 
 ```synesis
 # Chain 1: Ida
-chain: Alta Satisfação -> AUMENTA -> Engajamento
+chain: alta_satisfacao -> FAVORECE -> engajamento
 
 # Chain 2: Volta
-chain: Alto Engajamento -> FAVORECE -> Satisfação
+chain: alto_engajamento -> FAVORECE -> satisfacao
 ```
 
 **Nota:** Chains individuais não podem ter ciclos diretos (A → B → A). Use chains separadas.
@@ -275,10 +272,10 @@ chain: Alto Engajamento -> FAVORECE -> Satisfação
 
 ```synesis
 # Chain 1
-chain: Automação Completa -> FAVORECE -> Eficiência
+chain: automacao_completa -> FAVORECE -> eficiencia
 
 # Chain 2
-chain: Automação Completa -> INIBE -> Flexibilidade
+chain: automacao_completa -> INIBE -> flexibilidade
 ```
 
 **Quando usar:** Para expressar dilemas ou tensões entre objetivos.
@@ -294,8 +291,8 @@ Na primeira leitura, crie chains exploratórias:
 ```synesis
 ITEM @doc_01
     quote: "A tecnologia ajuda, mas é cara"
-    chain: Tecnologia -> FAVORECE -> Eficiência
-    chain: Custo -> INIBE -> Adoção
+    chain: tecnologia -> FAVORECE -> eficiencia
+    chain: custo -> INIBE -> adocao
 END ITEM
 ```
 
@@ -305,9 +302,9 @@ Após revisar várias fontes, consolide padrões recorrentes:
 
 ```synesis
 # Versão refinada
-chain: Utilidade Percebida -> FAVORECE -> Intenção de Uso
-chain: Custo Percebido -> INIBE -> Intenção de Uso
-chain: Intenção de Uso -> ANTECEDE -> Comportamento de Adoção
+chain: utilidade_percebida -> FAVORECE -> intencao_de_uso
+chain: custo_percebido -> INIBE -> intencao_de_uso
+chain: intencao_de_uso -> FAVORECE -> comportamento_de_adocao
 ```
 
 ### Passo 3: Validação Cruzada
@@ -316,12 +313,12 @@ Compare chains extraídas de fontes diferentes:
 
 ```synesis
 # Fonte A
-chain: Treinamento -> FAVORECE -> Competência -> FAVORECE -> Adoção
+chain: treinamento -> FAVORECE -> competencia -> FAVORECE -> adocao
 
 # Fonte B
-chain: Mentoria -> FAVORECE -> Competência -> FAVORECE -> Adoção
+chain: mentoria -> FAVORECE -> competencia -> FAVORECE -> adocao
 
-# Insight: "Competência" é mediador recorrente
+# Insight: "competencia" é mediador recorrente
 ```
 
 ---
@@ -333,9 +330,12 @@ Adicione notas explicativas:
 ```synesis
 ITEM @policy_doc
     quote: "Investimento em infraestrutura digital reduziu custos operacionais"
-    note: Relação causal direta confirmada por dados quantitativos (Tabela 3)
-    chain: Infraestrutura Digital -> REDUZ -> Custos Operacionais
-    # DECISÃO 2026-02-04: Escolhemos REDUZ em vez de CAUSA para
+
+    memo: Relação causal direta confirmada por dados quantitativos (Tabela 3)
+
+    chain: infraestrutura_digital -> INIBE -> custos_operacionais
+
+    # DECISÃO 2026-02-04: Escolhemos INIBE em vez de CAUSA para
     # refletir natureza gradual (não binária) do efeito
 END ITEM
 ```
@@ -355,9 +355,9 @@ Chains não são apropriadas para:
    code: Custo
    ```
 
-2. **Relações ambíguas**: Se você não tem certeza da direção ou tipo, deixe como código isolado e anote sua incerteza no campo `note`.
+2. **Relações ambíguas**: Se você não tem certeza da direção ou tipo, deixe como código isolado e anote sua incerteza no campo `MEMO`.
 
-3. **Taxonomias**: Use `SUBCODE` na ontologia em vez de chains hierárquicas.
+3. **Taxonomias**: Use `TOPIC` na ontologia em vez de chains hierárquicas.
 
 ---
 
@@ -378,19 +378,22 @@ Construa uma chain que capture esta relação causal.
 ```synesis
 ITEM @entrevista_gerente
     quote: "A falta de suporte técnico adequado gerou frustração na equipe, o que levou à baixa adesão ao novo sistema."
-    note: Cadeia causal clara: suporte insuficiente -> frustração -> baixa adoção
-    code: Suporte Técnico
-    code: Frustração
-    code: Adoção
-    chain: Suporte Técnico Inadequado -> GERA -> Frustração -> CAUSA -> Baixa Adesão
+
+    memo: Cadeia causal clara: suporte insuficiente -> frustração -> baixa adoção
+
+    code: suporte_tecnico_inadequado
+    code: frustracao
+    code: baixa_adesao
+
+    chain: suporte_tecnico_inadequado -> CAUSA -> frustracao -> INIBE -> adesao_ao_sistema
 END ITEM
 ```
 
 **Validação:**
 - ✅ Três códigos, duas relações (estrutura válida)
-- ✅ Relações GERA e CAUSA devem estar na ontologia
+- ✅ Relações CAUSA e INIBE declaradas no template
 - ✅ Cadeia reflete sequência temporal da citação
-- ✅ Campo `note` explicita interpretação
+- ✅ Campo `memo` explicita interpretação
 
 ---
 

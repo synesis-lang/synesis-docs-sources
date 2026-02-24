@@ -56,8 +56,6 @@ END ITEM
 
 ## Uma tradição de séculos
 
-![By Pvasiliadis - Own work, CC BY-SA 3.0.](https://upload.wikimedia.org/wikipedia/commons/9/99/Tetragrammaton_Lat_JOVA_Hexapla_Prov_3_19.JPG)
-
 A necessidade de organizar e conectar as Escrituras tematicamente não nasceu com o Dr. Thompson. Ela acompanha a história da hermenêutica cristã desde os primeiros séculos, e produziu ao longo do tempo instrumentos cada vez mais sofisticados.
 
 No século III, Orígenes já produzia suas *Hexapla*, obra de organização e comparação textual que pressupunha um trabalho sistemático de identificação de paralelos e variantes. Jerônimo, no século IV, e os monges medievais que desenvolveram as *Concordantiae* — índices alfabéticos de palavras das Escrituras — continuaram essa tradição. A primeira concordância completa da Vulgata latina é atribuída a Hugo de São Caro, no século XIII, produzida com o auxílio de centenas de copistas.
@@ -82,78 +80,97 @@ As anotações geradas podem ser exportadas em diferentes formatos e utilizadas 
 
 ## Um problema comum
 
-É interessante observar que tanto as concordâncias, quanto a codificação qualitativa moderna respondem ao mesmo desafio epistemológico: como extrair padrões de um corpus textual extenso e heterogêneo, preservando a ligação entre o padrão identificado e o texto de origem. Em ambos os casos, o pesquisador precisa **(1)** ler o texto, **(2)** identificar unidades de significado, **(3)** atribuir categorias a essas unidades, e **(4)** recuperar posteriormente todos os trechos associados a uma categoria. A estrutura do processo é idêntica.
+É interessante observar que tanto as concordâncias, quanto a codificação qualitativa moderna respondem ao mesmo desafio epistemológico: como extrair padrões de um corpus textual extenso e heterogêneo, preservando a ligação entre o padrão identificado e o texto de origem. 
 
-A codificação qualitativa e a organização sistemática das Escrituras compartilham uma estrutura profunda comum: identificar unidades de significado em um corpus textual, atribuir categorias e recuperar conexões. Synesis não aplica métodos de pesquisa a um domínio novo — reconhece uma continuidade que sempre existiu entre essas duas tradições e oferece um instrumento formal para ambas.
+Em ambos os casos, o pesquisador precisa: **(1)** ler o texto, **(2)** identificar unidades de significado, **(3)** atribuir categorias a essas unidades, e **(4)** recuperar posteriormente todos os trechos associados a uma categoria. A estrutura do processo é idêntica.
 
+A codificação qualitativa e a organização sistemática das Escrituras compartilham uma estrutura profunda comum: identificar unidades de significado em um corpus textual, atribuir categorias e recuperar conexões. 
 
-
-
-# Treasure of Scripture Knowledge
-
-Um arquivo em formato digital pode ser obtido gratuitamente aqui: https://godrules.net/downloads.htm
-A obra está em Domínio Público
-
-*---* NOVO
-
-Qual o real potencial da lingyagem Synesis para a teologia?
-Essa pergunta vai além da técnica — é sobre o que o formato torna possível pensar. Deixa eu raciocinar a partir do que já foi construído aqui.
-
-O que a linguagem Synesis habilita para a teologia
-1. Convergência de fontes heterogêneas
-O que fizemos nesta sessão já demonstra isso: Nave's (concordância temática), Thompson Chain Reference (cadeia temática com subtemas), e futuramente textos bíblicos de traduções distintas — tudo no mesmo formato interoperável.
-
-O potencial real: um teólogo poderia perguntar "quais versículos o Nave's e o Thompson concordam sobre Fé?" — isso nunca foi possível sem programação manual, porque as fontes estavam em silos incompatíveis.
-
-2. O campo CHAIN como ferramenta de teologia sistemática
-O tipo CHAIN da linguagem Synesis modela relações qualificadas entre conceitos:
+Synesis não aplica métodos de pesquisa a um domínio novo — reconhece uma continuidade que sempre existiu entre essas duas tradições e oferece um instrumento formal para ambas.
 
 
-chain: Fé -> PRESSUPÕE -> Graça -> PRODUZ -> Justificação
-chain: Lei -> CONTRASTA_COM -> Evangelho
-chain: Arrependimento -> PRECEDE -> Batismo
-Isso é exatamente o vocabulário da teologia sistemática — e o Synesis tem primitivas para representá-lo formalmente. Nenhuma ferramenta bíblica existente (Logos, Accordance, BibleWorks) tem um modelo de dados capaz de expressar encadeamento relacional entre conceitos teológicos.
+# Concordâncias em linguagem Synesis
 
-3. O modelo ONTOLOGY como vocabulário teológico controlado
-As ONTOLOGIAs do Thompson e do Nave são embrionárias, mas revelam algo maior: um vocabulário teológico controlado (thesaurus). Com o campo TOPIC hierárquico, seria possível organizar:
+O [repositório de estudos de caso do projeto](https://github.com/synesis-lang/case-studies/tree/main/Theology) contém versões prontas para uso da **Thompson Chain-Reference Bible** e do **Nave's Topical Concordance** em linguagem Synesis — duas das mais importantes obras de referência da hermenêutica cristã, agora em formato interoperável e consultável programaticamente. Ambas as obras estão em domínio público; versões digitais originais podem ser obtidas gratuitamente em [Crosswire.org](https://crosswire.org/sword/modules/ModDisp.jsp?modType=Dictionaries).
 
+## O potencial da linguagem Synesis para a teologia
 
-ONTOLOGY Justificação
-    topic: Soteriologia
-    topic: Teologia_Paulina
+A pergunta relevante não é técnica — é sobre o que o formato torna possível pensar.
 
-ONTOLOGY Santificação
-    topic: Soteriologia
-    topic: Teologia_Prática
-Isso permite navegação hierárquica: "mostre todos os conceitos de Soteriologia" — algo que sistemas de indexação bíblica nunca ofereceram de forma estruturada.
+### Convergência de fontes heterogêneas
 
-4. Tensões doutrinárias como dados
-O potencial mais provocativo: diferentes tradições teológicas interpretam os mesmos versículos de formas divergentes. Com Synesis, seria possível modelar isso explicitamente:
+O Nave's e o Thompson nasceram como projetos paralelos, desenvolvidos por autores diferentes, com estruturas diferentes, em décadas diferentes. Em texto impresso, não era tão simples perguntar: *quais versículos o Nave's e o Thompson concordam sobre Fé?* — porque as fontes estavam em silos diferentes.
 
+Em Synesis, ambas as obras podem ser adaptadas para compartilhar o mesmo modelo de dados. Assim, uma consulta como essa se torna trivial.
 
-SOURCE @calvino
-SOURCE @arminio
+### O campo `chain` como ferramenta de teologia sistemática
 
-ITEM @calvino
-    passage: Jhn 6:37
-    entry: Eleição_Incondicional
-    note: Prova da soberania divina na salvação
+A teologia sistemática trabalha com relações entre conceitos doutrinários — e Synesis tem primitivas formais para representá-las:
 
-ITEM @arminio
-    passage: Jhn 6:37
-    entry: Preconhecimento_Divino
-    note: Deus elege aqueles que prevê que creem
-A mesma passagem, dois sistemas teológicos, dados comparáveis. Isso transforma debate doutrinário em análise estruturada.
+```synesis
+SOURCE @teologia_sistematica
+    descricao: "Relações doutrinárias fundamentais"
+END SOURCE
 
-5. O que ainda falta para o potencial pleno
-Capacidade	Status
-Concordâncias temáticas (Nave, Thompson)	✅ Implementado
-Texto dos versículos com anotação temática	🔲 Fase seguinte
-Comentários teológicos estruturados	🔲 Requer modelagem
-Vocabulário ontológico hierárquico (TOPIC)	🔲 Requer curadoria
-Cadeias relacionais (CHAIN) entre conceitos	🔲 Requer modelagem manual
-Comparação interconfessional	🔲 Requer múltiplas fontes
-Síntese
-O Synesis tem potencial para ser o que a teologia nunca teve: uma infraestrutura de conhecimento que trata conceitos doutrinários com o mesmo rigor que a linguística computacional trata textos — onde referências, relações, hierarquias e fontes são cidadãos de primeira classe, não metadados numa planilha.
+ITEM @teologia_sistematica
+    memo: Relação entre graça, fé e justificação na soteriologia paulina
+    chain: Graca -> PRODUZ -> Fe -> PRODUZ -> Justificacao
+END ITEM
 
-O Thompson e o Nave que construímos são a camada de indexação. O que vem acima — comentários, relações, tradições — é onde a linguagem mostra seu potencial pleno.
+ITEM @teologia_sistematica
+    memo: Tensão estrutural entre os paradigmas da Lei e do Evangelho
+    chain: Lei -> CONTRASTA_COM -> Evangelho
+END ITEM
+```
+
+Synesis é uma ferramenta única ao oferecer um modelo de dados capaz de expressar encadeamento relacional entre conceitos teológicos com essa precisão e facilidade de anotação, com dados abertos e rastreáveis.
+
+### Vocabulário teológico controlado
+
+As ontologias permitem construir um thesaurus teológico estruturado, com navegação hierárquica por área da teologia:
+
+```synesis
+ONTOLOGY Justificacao
+    descricao: "Ato pelo qual Deus declara o pecador justo com base na obra de Cristo"
+    grupo: Soteriologia
+END ONTOLOGY
+
+ONTOLOGY Santificacao
+    descricao: "Processo progressivo de conformação à imagem de Cristo"
+    grupo: Soteriologia
+END ONTOLOGY
+```
+
+Isso permite perguntas que sistemas de indexação bíblica nunca ofereceram de forma estruturada: *mostre todos os conceitos mapeados em Soteriologia*, ou *quais passagens do Nave's tratam de conceitos desse grupo?*
+
+### Tensões doutrinárias como dados comparáveis
+
+O potencial mais significativo está na modelagem de divergências interpretativas. Diferentes tradições teológicas atribuem sentidos distintos aos mesmos textos. Com Synesis, isso pode ser representado explicitamente:
+
+```synesis
+SOURCE @calvino_institutes
+    descricao: "Institutas da Religião Cristã, João Calvino"
+END SOURCE
+
+SOURCE @arminius_works
+    descricao: "Obras Completas, Jacó Armínio"
+END SOURCE
+
+ITEM @calvino_institutes
+    quote: "Jo 6:37 — Tudo o que o Pai me dá virá a mim"
+    memo: Prova da soberania divina na eleição incondicional
+    chain: Soberania_Divina -> PRODUZ -> Eleicao_Incondicional
+END ITEM
+
+ITEM @arminius_works
+    quote: "Jo 6:37 — Tudo o que o Pai me dá virá a mim"
+    memo: A eleição é fundada no preconhecimento divino da fé futura
+    chain: Preconhecimento_Divino -> PRODUZ -> Eleicao_Condicional
+END ITEM
+```
+
+A mesma passagem, dois sistemas teológicos, dados estruturados e comparáveis. O debate doutrinário deixa de ser apenas narrativo e passa a ser analítico.
+
+---
+
+*Synesis não transforma o texto sagrado em dado — transforma o **trabalho humano inspirado de interpretação** em dado. O Thompson e o Nave são a camada de indexação. O que se constrói acima — comentários, relações doutrinárias, tradições interpretativas — é onde a linguagem revela seu potencial pleno*.

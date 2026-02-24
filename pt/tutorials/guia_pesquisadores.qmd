@@ -42,10 +42,10 @@ mkdir analise-telemedicina
 cd analise-telemedicina
 ```
 
-Agora, crie um arquivo `referencias.bib` com suas entrevistas:
+Agora, crie um arquivo texto chamado `referencias.bib` com as referências de suas entrevistas:
 
 ```bibtex
-@interview{entrevista_dona_maria,
+@interview{entrevista_dona_maria2026,
   author = {Maria da Silva},
   title = {Entrevista sobre acesso à saúde},
   year = {2026},
@@ -54,7 +54,7 @@ Agora, crie um arquivo `referencias.bib` com suas entrevistas:
   duration = {45 minutos}
 }
 
-@interview{entrevista_sr_joao,
+@interview{entrevista_sr_joao2026,
   author = {João Santos},
   title = {Entrevista sobre tecnologia e saúde},
   year = {2026},
@@ -63,7 +63,7 @@ Agora, crie um arquivo `referencias.bib` com suas entrevistas:
   duration = {60 minutos}
 }
 
-@interview{entrevista_dra_ana,
+@interview{entrevista_dra_ana2026,
   author = {Ana Costa},
   title = {Entrevista - perspectiva profissional},
   year = {2026},
@@ -90,32 +90,69 @@ Vamos criar um template adaptado para análise qualitativa. Crie `template.synt`
 
 ```synesis
 TEMPLATE analise_qualitativa
-VERSION 1.0
-DESCRIPTION: "Template para análise temática de entrevistas"
+# VERSION 1.0
+# DESCRIPTION: "Template para análise temática de entrevistas"
 
-BLOCK SOURCE
-    FIELD bibref : BIBREF REQUIRED
-        DESCRIPTION: "Referência bibliográfica da fonte"
-END BLOCK
+# ============================================
+# CAMPOS DE SOURCE
+# ============================================
 
-BLOCK ITEM
+SOURCE FIELDS
+    REQUIRED tipo_ref
+END SOURCE    
+
+FIELD tipo_ref TYPE ENUMERATED
     SCOPE SOURCE
+    DESCRIPTION: "Tipo de referência"
+    VALUES
+        PRIM: Fonte primária, entrevistas
+        SEC: Fonte secundária, páginas da WEB
+        REF: Fonte referêncial, especialistas
+    END VALUES
+END FIELD
 
-    FIELD quote : TEXT REQUIRED
-        DESCRIPTION: "Citação literal do participante"
+# ============================================
+# CAMPOS DE ITEM
+# ============================================
 
-    FIELD memo : TEXT OPTIONAL
-        DESCRIPTION: "Memo analítico: reflexões sobre o trecho"
+ITEM FIELDS
+    REQUIRED quote, memo, chain, context
+END ITEM FIELDS
 
-    FIELD code : CODE OPTIONAL MULTIPLE
-        DESCRIPTION: "Códigos conceituais atribuídos"
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído das entrevistas
+END FIELD
 
-    FIELD chain : CHAIN OPTIONAL
-        DESCRIPTION: "Relações causais identificadas"
+FIELD memo TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Memo analítico explicando a interpretação e mecanismo causal identificado
+END FIELD
 
-    FIELD context : TEXT OPTIONAL
-        DESCRIPTION: "Contexto da fala (situação, emoção, hesitação)"
-END BLOCK
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Cadeia causal/relacional entre conceitos da ontologia
+    RELATIONS
+        MEDIA: Condição facilitadora (A facilita que B ocorra)
+        FAVORECE: Efeito causal direto (A afeta positivamente B)
+        INIBE: Limita ou restringe (A reduz opções ou viabilidade de B)
+        HABILITA: Torna possível ou cria condição para (A viabiliza B)
+    END RELATIONS
+END FIELD
+
+FIELD context TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Nuances qualitativas do momento da fala: tom, emoção, linguagem corporal, hesitações
+END FIELD
+
+# ============================================
+# ONTOLOGIA
+# ============================================
+
+ONTOLOGY FIELDS
+    REQUIRED descricao, grupo
+END ONTOLOGY FIELDS
 ```
 
 **Observe:** Adicionamos o campo `context` — isso é útil para registrar nuances qualitativas (como hesitações, emoções, mudanças de tom).
@@ -136,55 +173,64 @@ Deve retornar: `✓ Template is valid`
 Agora vamos definir os códigos conceituais. Em pesquisa qualitativa, esses códigos emergem dos dados, mas vamos criar alguns iniciais baseados em leitura prévia. Crie `ontologia.syno`:
 
 ```synesis
-ONTOLOGY codigos_telemedicina
-VERSION 1.0
+ONTOLOGY desconfianca_tecnologica
+    descricao: "Receio ou incredulidade em relação à eficácia de tecnologias médicas remotas. Ex.: dúvida sobre capacidade diagnóstica sem exame físico presencial."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-TOPIC "Barreiras à Adoção"
-    CODE "Desconfiança Tecnológica"
-        DEFINITION: "Receio ou incredulidade em relação à eficácia de tecnologias médicas remotas"
-    END CODE
+ONTOLOGY falta_de_infraestrutura
+    descricao: "Ausência ou precariedade de internet, equipamentos ou eletricidade que inviabilizam o uso de telemedicina."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-    CODE "Falta de Infraestrutura"
-        DEFINITION: "Ausência ou precariedade de internet, equipamentos ou eletricidade"
-    END CODE
+ONTOLOGY preferencia_por_contato_presencial
+    descricao: "Valorização do encontro face-a-face com o profissional de saúde, associando qualidade do atendimento à presença física."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-    CODE "Preferência por Contato Presencial"
-        DEFINITION: "Valorização do encontro face-a-face com o profissional de saúde"
-    END CODE
+ONTOLOGY letramento_digital_baixo
+    descricao: "Dificuldade ou falta de familiaridade com uso de tecnologias digitais, gerando dependência de suporte externo para uso."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-    CODE "Letramento Digital Baixo"
-        DEFINITION: "Dificuldade ou falta de familiaridade com uso de tecnologias digitais"
-    END CODE
-END TOPIC
+ONTOLOGY necessidade_urgente
+    descricao: "Situação de emergência ou falta de alternativas viáveis presenciais que impulsiona a aceitação da telemedicina."
+    grupo: facilitadores
+END ONTOLOGY
 
-TOPIC "Facilitadores"
-    CODE "Necessidade Urgente"
-        DEFINITION: "Situação de emergência ou falta de alternativas viáveis presenciais"
-    END CODE
+ONTOLOGY apoio_comunitario
+    descricao: "Suporte de vizinhos, familiares ou agentes de saúde que media o acesso de pacientes com baixo letramento digital."
+    grupo: facilitadores
+END ONTOLOGY
 
-    CODE "Apoio Comunitário"
-        DEFINITION: "Suporte de vizinhos, familiares ou agentes de saúde no uso da tecnologia"
-    END CODE
-END TOPIC
+ONTOLOGY adocao_de_telemedicina
+    descricao: "Decisão ou disposição do paciente de utilizar serviços médicos mediados por tecnologia remota."
+    grupo: desfechos
+END ONTOLOGY
 
-TOPIC "Relações Causais"
-    RELATION "GERA"
-        DEFINITION: "Um fator produz ou resulta em outro"
-    END RELATION
+ONTOLOGY acesso_a_telemedicina
+    descricao: "Capacidade concreta de conectar-se e utilizar serviços de telemedicina, condicionada à infraestrutura disponível."
+    grupo: desfechos
+END ONTOLOGY
 
-    RELATION "INIBE"
-        DEFINITION: "Um fator dificulta, impede ou reduz outro"
-    END RELATION
+ONTOLOGY uso_de_telemedicina
+    descricao: "Utilização efetiva de consultas ou serviços médicos remotos, seja autônoma ou mediada por terceiros."
+    grupo: desfechos
+END ONTOLOGY
 
-    RELATION "FAVORECE"
-        DEFINITION: "Um fator promove, facilita ou aumenta outro"
-    END RELATION
+ONTOLOGY aceitacao_de_telemedicina
+    descricao: "Aprovação ou receptividade do paciente à telemedicina após experiência direta ou percepção de necessidade."
+    grupo: desfechos
+END ONTOLOGY
 
-    RELATION "MEDIA"
-        DEFINITION: "Um fator age como intermediário entre dois outros"
-    END RELATION
-END TOPIC
+ONTOLOGY uso_efetivo_de_telemedicina
+    descricao: "Realização de consultas ou atendimentos remotos com sucesso técnico e clínico, dependente de conectividade estável."
+    grupo: desfechos
+END ONTOLOGY
 
+ONTOLOGY diagnostico_aprofundado
+    descricao: "Processo diagnóstico que requer exame físico presencial, identificado como contexto de uso inapropriado para telemedicina."
+    grupo: desfechos
 END ONTOLOGY
 ```
 
@@ -196,7 +242,7 @@ synesis check ontologia.syno
 
 :::{.callout-note}
 ## Checkpoint ✓
-Você agora tem 6 códigos conceituais definidos. À medida que analisar os dados, você pode adicionar mais.
+Você agora tem 12 conceitos definidos na ontologia, organizados em 3 grupos (`barreiras_a_adocao`, `facilitadores`, `desfechos`). À medida que analisar os dados, você pode adicionar mais.
 :::
 
 ---
@@ -206,23 +252,21 @@ Você agora tem 6 códigos conceituais definidos. À medida que analisar os dado
 Agora vem a parte principal: vamos anotar trechos das entrevistas. Crie `anotacoes.syn`:
 
 ```synesis
-SOURCE @entrevista_dona_maria
+SOURCE @entrevista_dona_maria2026
+    tipo_ref: PRIM
 END SOURCE
 
-ITEM @entrevista_dona_maria
+ITEM @entrevista_dona_maria2026
     quote: "Eu não confio nessas coisas de conversar com médico pelo computador. Como ele vai saber o que eu tenho se não me tocar, não me examinar?"
     memo: Participante expressa desconfiança na eficácia diagnóstica da telemedicina. Associa qualidade do atendimento à presença física e ao exame clínico presencial. Fala com tom de incredulidade.
-    code: Desconfiança Tecnológica
-    code: Preferência por Contato Presencial
-    chain: Desconfiança Tecnológica -> INIBE -> Adoção de Telemedicina
+    chain: desconfianca_tecnologica -> INIBE -> adocao_de_telemedicina
     context: Disse isso logo no início da conversa, antes mesmo de eu perguntar diretamente sobre telemedicina
 END ITEM
 
-ITEM @entrevista_dona_maria
+ITEM @entrevista_dona_maria2026
     quote: "Aqui a internet cai toda hora. Às vezes fica dois, três dias sem. Como vou marcar consulta se nem WiFi tenho direito?"
     memo: Infraestrutura precária como barreira concreta. Frustração evidente na fala. O termo "nem WiFi tenho direito" sugere percepção de exclusão ou injustiça.
-    code: Falta de Infraestrutura
-    chain: Falta de Infraestrutura -> INIBE -> Acesso à Telemedicina
+    chain: falta_de_infraestrutura -> INIBE -> acesso_a_telemedicina
     context: Falou com voz mais alta, demonstrando irritação
 END ITEM
 ```
@@ -230,23 +274,21 @@ END ITEM
 **Agora é sua vez!** Continue anotando. Vamos adicionar trechos da segunda entrevista:
 
 ```synesis
-SOURCE @entrevista_sr_joao
+SOURCE @entrevista_sr_joao2026
+    tipo_ref: PRIM
 END SOURCE
 
-ITEM @entrevista_sr_joao
+ITEM @entrevista_sr_joao2026
     quote: "Eu tentei usar uma vez que minha neta me ajudou. Foi bom, resolvi sem sair de casa. Mas sozinho eu não consigo não, preciso de alguém pra mexer no celular pra mim."
     memo: Experiência positiva quando mediada por familiar. Reconhece benefício (evitar deslocamento) mas identifica dependência de suporte técnico informal. Dicotomia entre percepção de utilidade e capacidade de uso autônomo.
-    code: Letramento Digital Baixo
-    code: Apoio Comunitário
-    chain: Apoio Comunitário -> MEDIA -> Letramento Digital Baixo -> FAVORECE -> Uso de Telemedicina
+    chain: apoio_comunitario -> MEDIA -> letramento_digital_baixo -> FAVORECE -> uso_de_telemedicina
     context: Falou com gratidão ao mencionar a neta, mas com resignação ao admitir a dependência
 END ITEM
 
-ITEM @entrevista_sr_joao
+ITEM @entrevista_sr_joao2026
     quote: "Quando meu filho ficou internado na capital, a médica daqui falou com o médico de lá pelo vídeo. Foi uma bênção, porque ela pôde explicar o caso dele direitinho."
     memo: Exemplo concreto de uso bem-sucedido entre profissionais (comunicação inter-hospitalar). Contextualiza telemedicina como ferramenta para continuidade de cuidado, não apenas para primeira consulta. Termo religioso ("bênção") indica forte impacto emocional positivo.
-    code: Necessidade Urgente
-    chain: Necessidade Urgente -> FAVORECE -> Aceitação de Telemedicina
+    chain: necessidade_urgente -> FAVORECE -> aceitacao_de_telemedicina
     context: Única vez na entrevista em que sorriu ao falar do tema
 END ITEM
 ```
@@ -263,21 +305,21 @@ Observe como o campo `context` captura nuances qualitativas importantes (tom de 
 Agora vamos adicionar a perspectiva da profissional de saúde:
 
 ```synesis
-SOURCE @entrevista_dra_ana
+SOURCE @entrevista_dra_ana2026
+    tipo_ref: REF
 END SOURCE
 
-ITEM @entrevista_dra_ana
+ITEM @entrevista_dra_ana2026
     quote: "Os pacientes têm dificuldade, mas é mais a internet do que a vontade. Quando funciona, eles gostam. O problema é que nem sempre funciona."
     memo: Profissional identifica infraestrutura como barreira principal, não resistência cultural. Reconhece aceitação dos pacientes quando condições técnicas são adequadas. Importante contraponto à narrativa de "resistência ao novo".
-    code: Falta de Infraestrutura
-    chain: Falta de Infraestrutura -> INIBE -> Uso Efetivo de Telemedicina
+    chain: falta_de_infraestrutura -> INIBE -> uso_efetivo_de_telemedicina
     context: Disse isso com frustração visível, gesticulando ao mencionar a internet
 END ITEM
 
-ITEM @entrevista_dra_ana
+ITEM @entrevista_dra_ana2026
     quote: "Eu prefiro presencial quando posso, porque consigo ver coisas que não aparecem na tela. Mas para retorno, para tirar dúvida rápida, telemedicina é perfeita."
     memo: Profissional diferencia contextos de uso apropriado vs inapropriado. Nuança importante: não é rejeição binária, mas uso contextualizado. Sugere que telemedicina complementa, não substitui presencial.
-    code: Preferência por Contato Presencial
+    chain: preferencia_por_contato_presencial -> HABILITA -> diagnostico_aprofundado
     context: Tom pragmático, não emotivo. Fala de quem avalia prós e contras tecnicamente
 END ITEM
 ```
@@ -300,7 +342,7 @@ Agora vamos conectar tudo. Crie `analise.synp`:
 
 ```synesis
 PROJECT analise_telemedicina_rural
-VERSION 1.0
+# VERSION 1.0
 
 TEMPLATE "template.synt"
 
@@ -313,13 +355,13 @@ DESCRIPTION
     à adoção de telemedicina em comunidades rurais.
     Abordagem: Análise temática
     Período: Janeiro-Fevereiro 2026
-END
+END DESCRIPTION
 
 METADATA
     researcher: "Seu Nome"
     institution: "Sua Universidade"
     ethics_approval: "CEP-2025-XXX"
-END
+END METADATA
 
 END PROJECT
 ```
@@ -354,16 +396,21 @@ Abra `analise.xlsx`. Você verá:
 **Aba "Codes":**
 | Código | Frequência | Fontes |
 |--------|------------|--------|
-| Falta de Infraestrutura | 3 | dona_maria, sr_joao, dra_ana |
-| Desconfiança Tecnológica | 1 | dona_maria |
-| Preferência por Contato Presencial | 2 | dona_maria, dra_ana |
+| falta_de_infraestrutura | 2 | dona_maria, dra_ana |
+| desconfianca_tecnologica | 1 | dona_maria |
+| preferencia_por_contato_presencial | 1 | dra_ana |
+| apoio_comunitario | 1 | sr_joao |
+| necessidade_urgente | 1 | sr_joao |
 | ... | ... | ... |
 
 **Aba "Chains":**
-| Relação | Código A | Código B | Frequência |
-|---------|----------|----------|------------|
-| INIBE | Desconfiança Tecnológica | Adoção de Telemedicina | 1 |
-| INIBE | Falta de Infraestrutura | Acesso à Telemedicina | 2 |
+| Relação | Conceito A | Conceito B | Frequência |
+|---------|------------|------------|------------|
+| INIBE | desconfianca_tecnologica | adocao_de_telemedicina | 1 |
+| INIBE | falta_de_infraestrutura | acesso_a_telemedicina | 1 |
+| INIBE | falta_de_infraestrutura | uso_efetivo_de_telemedicina | 1 |
+| FAVORECE | necessidade_urgente | aceitacao_de_telemedicina | 1 |
+| HABILITA | preferencia_por_contato_presencial | diagnostico_aprofundado | 1 |
 | ... | ... | ... | ... |
 
 :::{.callout-tip}
@@ -382,9 +429,10 @@ Agora que você viu os padrões iniciais, volte aos dados. Você pode:
 Se você identifica um padrão recorrente, adicione à ontologia:
 
 ```synesis
-CODE "Percepção de Exclusão Digital"
-    DEFINITION: "Sentimento de estar à margem devido a falta de acesso tecnológico"
-END CODE
+ONTOLOGY percepcao_de_exclusao_digital
+    descricao: "Sentimento de estar à margem da sociedade devido à falta de acesso ou domínio de tecnologias digitais."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 ```
 
 ### 8.2 Refinar Códigos Existentes
@@ -393,16 +441,21 @@ Se um código está ambíguo, divida:
 
 ```synesis
 # Antes:
-CODE "Desconfiança Tecnológica"
+ONTOLOGY desconfianca_tecnologica
+    descricao: "Receio ou incredulidade em relação à eficácia de tecnologias médicas remotas."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-# Depois:
-CODE "Desconfiança na Eficácia Diagnóstica"
-    DEFINITION: "Dúvida sobre capacidade de diagnóstico sem exame físico"
-END CODE
+# Depois (dividido em dois):
+ONTOLOGY desconfianca_na_eficacia_diagnostica
+    descricao: "Dúvida sobre a capacidade de diagnóstico sem exame físico presencial."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 
-CODE "Desconfiança na Segurança de Dados"
-    DEFINITION: "Receio sobre privacidade e vazamento de informações médicas"
-END CODE
+ONTOLOGY desconfianca_na_seguranca_de_dados
+    descricao: "Receio sobre privacidade e vazamento de informações médicas em plataformas digitais."
+    grupo: barreiras_a_adocao
+END ONTOLOGY
 ```
 
 ### 8.3 Adicionar Mais Anotações
@@ -431,10 +484,10 @@ Para criar um grafo visual das relações:
 Ou exporte para Neo4j para análise de rede:
 
 ```bash
-python synesis2neo4j.py --project analise.synp --config neo4j_config.toml
+python synesis2graph.py --project analise.synp --config neo4j_config.toml
 ```
 
-Consulte [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd) para detalhes.
+Consulte [Como exportar para Neo4j](../howto/exportar_neo4j.qmd) para detalhes.
 
 ---
 
@@ -492,15 +545,14 @@ Compartilhe seu arquivo `.syno` (ontologia) com colegas. Peça para eles:
 
 ### Análise Temática
 - Defina temas iniciais (dedutivos) ou deixe emergir (indutivos)
-- Use `CODE` para temas e subtemas
-- Use `TOPIC` na ontologia para agrupar temas
+- Use `ONTOLOGY` para temas e subtemas, agrupando pelo campo `grupo`
 - Campo `memo` para reflexões sobre temas recorrentes
 
 ### Análise de Conteúdo
 - Template mais rígido, com campos predefinidos
 - Ontologia criada a priori baseada em literatura
 - Foco em frequência (use output CSV para quantificação)
-- Menos uso de `chain`, mais uso de `code`
+- Menos uso de `chain`, mais uso de conceitos de `ONTOLOGY`
 
 ### Análise Crítica do Discurso
 - Use `context` extensivamente (prosódia, hesitações, silêncios)
@@ -531,7 +583,7 @@ Agora que você domina o básico, experimente:
 
 1. **Projeto com múltiplos tipos de fonte**: Combine entrevistas + documentos + observações
 2. **Análise longitudinal**: Anote dados coletados em diferentes momentos
-3. **Análise comparativa**: Use `TOPIC` na ontologia para separar subcasos
+3. **Análise comparativa**: Use o campo `grupo` na ontologia para separar subcasos e comparar distribuições entre grupos
 4. **Integração com Zotero**: Use o plugin [zotero-synesis-export](https://github.com/synesis-lang/zotero-synesis-export) para exportar highlights de PDFs diretamente como `.syn`
 
 ---

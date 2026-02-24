@@ -108,29 +108,47 @@ code template.synt  # se você tem VSCode
 
 ```synesis
 TEMPLATE analysis
-VERSION 1.0
+version: "1.0"
 
-BLOCK SOURCE
-    FIELD bibref : BIBREF REQUIRED
-END BLOCK
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL memo
+    OPTIONAL code
+    OPTIONAL chain
+END ITEM FIELDS
 
-BLOCK ITEM
-    SCOPE SOURCE
-    FIELD quote : TEXT REQUIRED
-    FIELD note : TEXT OPTIONAL
-    FIELD code : CODE OPTIONAL MULTIPLE
-    FIELD chain : CHAIN OPTIONAL
-END BLOCK
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Citação literal extraída da fonte
+END FIELD
+
+FIELD memo TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Sua interpretação e análise do trecho
+END FIELD
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Código conceitual da ontologia
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Relação causal entre conceitos
+    RELATIONS
+        INIBE: Um fator reduz ou impede outro
+        FAVORECE: Um fator promove ou facilita outro
+    END RELATIONS
+END FIELD
 ```
 
 **O que isso significa?**
 
-- `BLOCK SOURCE`: Define um bloco para identificar fontes bibliográficas
-- `BLOCK ITEM`: Define um bloco para anotações individuais
-- `FIELD quote : TEXT REQUIRED`: Campo obrigatório para citações literais
-- `FIELD note : TEXT OPTIONAL`: Campo opcional para suas interpretações
-- `FIELD code : CODE OPTIONAL MULTIPLE`: Campo para códigos conceituais (pode ter vários)
-- `FIELD chain : CHAIN OPTIONAL`: Campo para relações causais
+- `ITEM FIELDS`: Declara quais campos o bloco ITEM aceita e se são obrigatórios ou opcionais
+- `FIELD quote TYPE QUOTATION`: Campo obrigatório para citações literais
+- `FIELD memo TYPE MEMO`: Campo para sua interpretação analítica
+- `FIELD code TYPE CODE`: Campo para códigos conceituais (pode aparecer várias vezes no mesmo ITEM)
+- `FIELD chain TYPE CHAIN`: Campo para relações causais, com as relações válidas declaradas
 
 :::{.callout-important}
 ## Regra de Ouro
@@ -150,33 +168,24 @@ code ontology/codes.syno  # ou seu editor preferido
 **Substitua o conteúdo por:**
 
 ```synesis
-ONTOLOGY codes
-VERSION 1.0
+ONTOLOGY custo
+    descricao: "Fatores econômicos relacionados ao preço e investimento necessário"
+    grupo: fatores_de_adocao
+END ONTOLOGY
 
-TOPIC "Fatores de Adoção"
-    CODE "Custo"
-        DEFINITION: "Fatores econômicos relacionados ao preço e investimento"
-    END CODE
+ONTOLOGY facilidade_de_uso
+    descricao: "Percepção de complexidade ou simplicidade da tecnologia"
+    grupo: fatores_de_adocao
+END ONTOLOGY
 
-    CODE "Facilidade de Uso"
-        DEFINITION: "Percepção de complexidade ou simplicidade da tecnologia"
-    END CODE
+ONTOLOGY utilidade_percebida
+    descricao: "Crença de que a tecnologia trará benefícios práticos"
+    grupo: fatores_de_adocao
+END ONTOLOGY
 
-    CODE "Utilidade Percebida"
-        DEFINITION: "Crença de que a tecnologia trará benefícios práticos"
-    END CODE
-END TOPIC
-
-TOPIC "Relações Causais"
-    RELATION "INIBE"
-        DEFINITION: "Um fator reduz ou impede outro"
-    END RELATION
-
-    RELATION "FAVORECE"
-        DEFINITION: "Um fator promove ou facilita outro"
-    END RELATION
-END TOPIC
-
+ONTOLOGY adocao_de_ia
+    descricao: "Decisão de incorporar inteligência artificial nos processos da organização"
+    grupo: desfechos
 END ONTOLOGY
 ```
 
@@ -206,7 +215,7 @@ code references.bib
 **Adicione:**
 
 ```bibtex
-@interview{entrevista_joao,
+@interview{entrevista_joao2026,
   author = {João Silva},
   title = {Entrevista sobre adoção de IA},
   year = {2026},
@@ -214,7 +223,7 @@ code references.bib
   note = {Gerente de TI, empresa de médio porte}
 }
 
-@interview{entrevista_maria,
+@interview{entrevista_maria2026,
   author = {Maria Santos},
   title = {Entrevista sobre resistência tecnológica},
   year = {2026},
@@ -238,33 +247,33 @@ code annotations/entrevistas.syn
 **Digite o seguinte:**
 
 ```synesis
-SOURCE @entrevista_joao
+SOURCE @entrevista_joao2026
 END SOURCE
 
-ITEM @entrevista_joao
+ITEM @entrevista_joao2026
     quote: "O custo inicial é proibitivo para nossa escala de operação"
-    note: Entrevistado expressa barreira econômica clara à adoção de IA
-    code: Custo
-    chain: Custo -> INIBE -> Adoção de IA
+    memo: Entrevistado expressa barreira econômica clara à adoção de IA
+    code: custo
+    chain: custo -> INIBE -> adocao_de_ia
 END ITEM
 
-ITEM @entrevista_joao
+ITEM @entrevista_joao2026
     quote: "Parece muito complexo, não temos expertise interna"
-    note: Falta de capacitação técnica percebida como obstáculo
-    code: Facilidade de Uso
-    chain: Facilidade de Uso -> INIBE -> Adoção de IA
+    memo: Falta de capacitação técnica percebida como obstáculo
+    code: facilidade_de_uso
+    chain: facilidade_de_uso -> INIBE -> adocao_de_ia
 END ITEM
 
-SOURCE @entrevista_maria
+SOURCE @entrevista_maria2026
 END SOURCE
 
-ITEM @entrevista_maria
+ITEM @entrevista_maria2026
     quote: "Se fosse mais barato, a gente testaria. A tecnologia parece boa"
-    note: Reconhecimento de utilidade, mas custo como fator limitante
-    code: Custo
-    code: Utilidade Percebida
-    chain: Utilidade Percebida -> FAVORECE -> Adoção de IA
-    chain: Custo -> INIBE -> Adoção de IA
+    memo: Reconhecimento de utilidade, mas custo como fator limitante
+    code: custo
+    code: utilidade_percebida
+    chain: utilidade_percebida -> FAVORECE -> adocao_de_ia
+    chain: custo -> INIBE -> adocao_de_ia
 END ITEM
 ```
 
@@ -274,7 +283,7 @@ END ITEM
 ## Observe o padrão
 Cada `ITEM` conecta:
 1. Uma citação literal (`quote`)
-2. Sua interpretação (`note`)
+2. Sua interpretação (`memo`)
 3. Códigos conceituais (`code`)
 4. Relações causais (`chain`)
 
@@ -350,10 +359,10 @@ Agora você pode fazer análises quantitativas sobre dados qualitativos!
 Vamos praticar! Abra novamente `annotations/entrevistas.syn` e adicione:
 
 ```synesis
-ITEM @entrevista_maria
+ITEM @entrevista_maria2026
     quote: "A interface é intuitiva, mas precisaríamos de treinamento"
-    note: Reconhece facilidade de uso, mas identifica necessidade de capacitação
-    code: Facilidade de Uso
+    memo: Reconhece facilidade de uso, mas identifica necessidade de capacitação
+    code: facilidade_de_uso
 END ITEM
 ```
 
@@ -426,11 +435,11 @@ Agora que você domina o básico, explore:
 ### Resolver Problemas Específicos
 - [Como definir uma ontologia complexa](../howto/definir_ontologia.qmd)
 - [Como criar chains qualificadas](../howto/criar_chains.qmd)
-- [Como exportar para Neo4j](../ecossistema/synesis2neo4j_pt.qmd)
+- [Como exportar para Neo4j](../howto/exportar_neo4j.qmd)
 
 ### Entender Conceitos
 - [Por que não Excel?](../explanation/guia_sincero.qmd)
-- [Template como Fonte da Verdade](../explanation/template_philosophy.qmd)
+- [Template como Fonte da Verdade](../reference/guia_referencia.qmd)
 
 ---
 
@@ -463,7 +472,7 @@ pwd  # Deve mostrar o caminho do projeto
 
 **Solução:**
 1. Abra `ontology/codes.syno`
-2. Adicione o código faltante dentro de um `TOPIC`
+2. Adicione um bloco `ONTOLOGY conceito_novo ... END ONTOLOGY` com `descricao:` e `grupo:`
 3. Salve e valide novamente
 
 ### Erro: `Bibref '@abc' not found in bibliography`

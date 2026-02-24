@@ -64,8 +64,8 @@ Quando você escreve:
 ITEM @entrevista_01
     quote: "O preço é muito alto"
     note: Entrevistado expressa barreira econômica à adoção
-    code: Custo de Aquisição
-    chain: Custo de Aquisição -> INIBE -> Decisão de Adoção
+    code: Custo_de_Aquisição
+    chain: Custo_de_Aquisição -> INIBE -> Decisão_de_Adoção
 END ITEM
 ```
 
@@ -95,25 +95,27 @@ O compilador Synesis valida que:
 
 Com Synesis, você pode responder instantaneamente:
 
-- **Dado um código**, quais são todas as citações que o suportam?
+- **Dado um conceito**, quais são todas as citações que o suportam?
   ```bash
-  # No CSV gerado
-  grep "Custo de Aquisição" output/codes.csv
+  # No items.csv: filtra linhas onde o conceito aparece nas chains
+  grep "Custo_de_Aquisição" output/items.csv
   ```
 
-- **Dada uma citação**, quais códigos e relações foram atribuídos?
+- **Dada uma citação**, quais relações causais foram atribuídas?
   ```bash
-  # No JSON gerado
-  jq '.items[] | select(.quote | contains("preço"))' output/analysis.json
+  # No chains.csv: filtra as triplas vinculadas àquela fonte
+  grep "@entrevista_01" output/chains.csv
   ```
 
 - **Dada uma relação causal**, qual é a evidência original?
   ```bash
-  # No CSV gerado
-  grep "INIBE" output/chains.csv
+  # No chains.csv: filtra todas as triplas com relação INIBE
+  grep ",INIBE," output/chains.csv
   ```
 
-**Isso não é mágica, é estrutura.**Quando você nomeia campos (`quote`, `code`, `chain`), você cria índices naturais que ferramentas podem explorar.
+Se você prefere uma interface visual, a extensão **Synesis Explorer para VSCode** oferece rastreabilidade bidirecional com um clique: selecione um conceito no editor e veja instantaneamente todas as citações e relações associadas, sem precisar de linha de comando.
+
+**Isso não é mágica, é estrutura.** Quando você nomeia campos (`quote`, `code`, `chain`), você cria índices naturais que ferramentas podem explorar.
 
 ---
 
@@ -232,6 +234,8 @@ A crise de reprodutibilidade não é só nas ciências experimentais — existe 
 ```
 
 Qualquer um pode verificar: "Esta interpretação é justificada por estas três evidências". Isso é **transparência metodológica**.
+
+O JSON exportado pode ser consumido diretamente por scripts Python, R ou pipelines de Ciência de Dados — ou reprocessado por ferramentas de IA. Para fluxos mais tradicionais, o compilador também exporta os mesmos dados em **CSV** (tabelas separadas por tipo: `items.csv`, `chains.csv`, `ontologies.csv`) e **Excel** (abas organizadas por tipo de bloco), prontos para uso em planilhas, dashboards ou softwares estatísticos.
 
 ---
 

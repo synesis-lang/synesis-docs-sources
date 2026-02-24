@@ -42,7 +42,7 @@ pip install synesis pandas
 
 ```python
 import synesis
-print(synesis.__version__)  # 0.2.0
+print(synesis.__version__)  # e.g. 0.2.0
 ```
 
 ---
@@ -55,15 +55,22 @@ import synesis
 # Conteúdos em memória
 template = """
 TEMPLATE Minimal
+
 SOURCE FIELDS
     OPTIONAL date
 END SOURCE FIELDS
+
 ITEM FIELDS
     REQUIRED quote
 END ITEM FIELDS
-FIELD date TYPE DATE SCOPE SOURCE END FIELD
-FIELD quote TYPE QUOTATION SCOPE ITEM END FIELD
-END TEMPLATE
+
+FIELD date TYPE DATE 
+    SCOPE SOURCE 
+END FIELD
+
+FIELD quote TYPE QUOTATION 
+    SCOPE ITEM 
+END FIELD
 """
 
 project = """
@@ -76,11 +83,11 @@ annotations = {
     "sample.syn": """
 SOURCE @ref2024
     date: 2024-06-15
-
-    ITEM
-        quote: A tecnologia mostra resultados promissores.
-    END ITEM
 END SOURCE
+
+ITEM @ref2024
+    quote: A tecnologia mostra resultados promissores.
+END ITEM
 """
 }
 
@@ -176,11 +183,26 @@ result = synesis.load(
             OPTIONAL topic
         END ONTOLOGY FIELDS
 
-        FIELD date TYPE DATE SCOPE SOURCE END FIELD
-        FIELD country TYPE TEXT SCOPE SOURCE END FIELD
-        FIELD quote TYPE QUOTATION SCOPE ITEM END FIELD
-        FIELD note TYPE MEMO SCOPE ITEM END FIELD
-        FIELD code TYPE CODE SCOPE ITEM END FIELD
+        FIELD date TYPE DATE 
+            SCOPE SOURCE 
+        END FIELD
+
+        FIELD country TYPE TEXT 
+            SCOPE SOURCE 
+        END FIELD
+
+        FIELD quote TYPE QUOTATION 
+            SCOPE ITEM 
+        END FIELD
+
+        FIELD note TYPE MEMO 
+            SCOPE ITEM 
+        END FIELD
+
+        FIELD code TYPE CODE 
+            SCOPE ITEM 
+        END FIELD
+
         FIELD chain TYPE CHAIN
             SCOPE ITEM
             ARITY >= 2
@@ -189,29 +211,33 @@ result = synesis.load(
                 ENABLES: Relação de habilitação
             END RELATIONS
         END FIELD
-        FIELD description TYPE TEXT SCOPE ONTOLOGY END FIELD
-        FIELD topic TYPE TOPIC SCOPE ONTOLOGY END FIELD
 
-        END TEMPLATE
+        FIELD description TYPE TEXT 
+            SCOPE ONTOLOGY 
+        END FIELD
+
+        FIELD topic TYPE TOPIC 
+            SCOPE ONTOLOGY 
+        END FIELD
     """,
     annotation_contents={
         "interviews.syn": """
             SOURCE @silva2024
                 date: 2024-03-15
                 country: Brasil
-
-                ITEM
-                    quote: O custo é uma barreira significativa.
-                    note: Entrevistado identifica fator econômico
-                    chain: Cost -> INFLUENCES -> Adoption
-                END ITEM
-
-                ITEM
-                    quote: A aceitação pública facilita a implementação.
-                    note: Relação entre fatores sociais e técnicos
-                    chain: Public Acceptance -> ENABLES -> Implementation
-                END ITEM
             END SOURCE
+
+            ITEM @silva2024
+                quote: O custo é uma barreira significativa.
+                note: Entrevistado identifica fator econômico
+                chain: Cost -> INFLUENCES -> Adoption
+            END ITEM
+
+            ITEM @silva2024
+                quote: A aceitação pública facilita a implementação.
+                note: Relação entre fatores sociais e técnicos
+                chain: Public_Acceptance -> ENABLES -> Implementation
+            END ITEM
         """
     },
     ontology_contents={
@@ -221,9 +247,9 @@ result = synesis.load(
                 topic: Economics
             END ONTOLOGY
 
-            ONTOLOGY Public Acceptance
+            ONTOLOGY Public_Acceptance
                 description: Aceitação da comunidade
-                topic: Social Factors
+                topic: Social_Factors
             END ONTOLOGY
 
             ONTOLOGY Adoption
@@ -560,25 +586,25 @@ annotations = {
     "data.syn": """
 SOURCE @study2024
     date: 2024-01-10
-
-    ITEM
-        quote: O alto custo inicial dificulta a adoção.
-        note: Barreira econômica identificada
-        chain: Cost -> INHIBITS -> Adoption
-    END ITEM
-
-    ITEM
-        quote: O suporte governamental acelera a implementação.
-        note: Fator institucional positivo
-        chain: Government Support -> ENABLES -> Implementation
-    END ITEM
-
-    ITEM
-        quote: A falta de conhecimento técnico limita o uso.
-        note: Barreira de capacitação
-        chain: Technical Knowledge -> INFLUENCES -> Usage
-    END ITEM
 END SOURCE
+
+ITEM @study2024
+    quote: O alto custo inicial dificulta a adoção.
+    note: Barreira econômica identificada
+    chain: Cost -> INHIBITS -> Adoption
+END ITEM
+
+ITEM @study2024
+    quote: O suporte governamental acelera a implementação.
+    note: Fator institucional positivo
+    chain: Government_Support -> ENABLES -> Implementation
+END ITEM
+
+ITEM @study2024
+    quote: A falta de conhecimento técnico limita o uso.
+    note: Barreira de capacitação
+    chain: Technical_Knowledge -> INFLUENCES -> Usage
+END ITEM
 """
 }
 
@@ -592,7 +618,7 @@ ONTOLOGY Adoption
     description: Processo de adoção tecnológica
 END ONTOLOGY
 
-ONTOLOGY Government Support
+ONTOLOGY Government_Support
     description: Apoio de políticas públicas
 END ONTOLOGY
 
@@ -600,7 +626,7 @@ ONTOLOGY Implementation
     description: Execução técnica do projeto
 END ONTOLOGY
 
-ONTOLOGY Technical Knowledge
+ONTOLOGY Technical_Knowledge
     description: Conhecimento técnico necessário
 END ONTOLOGY
 
@@ -690,20 +716,18 @@ import synesis
 nodes = synesis.compile_string("""
 SOURCE @ref2024
     date: 2024-05-20
-
-    ITEM
-        quote: Texto de exemplo.
-    END ITEM
 END SOURCE
+
+ITEM @ref2024
+    quote: Texto de exemplo.
+END ITEM
 """)
 
 # Acessar nós AST
-source = nodes[0]
+source = nodes[0]   # SourceNode
+item = nodes[1]     # ItemNode
 print(f"Bibref: {source.bibref}")
-print(f"Items: {len(source.items)}")
-
-for item in source.items:
-    print(f"  Quote: {item.quote}")
+print(f"Quote: {item.quote}")
 ```
 
 ### Tipos de Nós Retornados
@@ -807,4 +831,4 @@ else:
 
 ---
 
-*Documentação gerada para Synesis v0.2.0*
+*Synesis: importe conhecimento compilado diretamente em notebooks Jupyter*

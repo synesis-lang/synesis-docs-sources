@@ -55,19 +55,19 @@ Se retornar a mensagem, está funcionando!
 
 ---
 
-## Passo 2: Instalar synesis2neo4j
+## Passo 2: Instalar synesis2graph
 
 ```bash
-pip install synesis2neo4j
+pip install synesis2graph
 ```
 
 Verifique a instalação:
 
 ```bash
-synesis2neo4j --version
+synesis2graph --version
 ```
 
-Deve retornar: `synesis2neo4j version 0.1.2`
+Deve retornar: `synesis2graph version 0.1.2`
 
 ---
 
@@ -83,14 +83,6 @@ uri = "bolt://localhost:7687"
 user = "neo4j"
 password = "SuaSenhaAqui"
 database = "neo4j"  # ou nome customizado
-
-[sync]
-mode = "replace"  # Opções: replace, merge, append
-batch_size = 1000
-
-[metrics]
-native = true       # Métricas básicas (Cypher)
-gds = false         # Graph Data Science (requer plugin)
 ```
 
 ### Para Neo4j AuraDB:
@@ -101,14 +93,6 @@ uri = "neo4j+s://xxxxx.databases.neo4j.io"  # Copie da suas credenciais
 user = "neo4j"
 password = "SuaSenhaAuraDB"
 database = "neo4j"
-
-[sync]
-mode = "replace"
-batch_size = 500  # Menor para conexão cloud
-
-[metrics]
-native = true
-gds = false  # GDS não disponível em AuraDB Free
 ```
 
 :::{.callout-warning}
@@ -124,7 +108,7 @@ echo "neo4j_config.toml" >> .gitignore
 ## Passo 4: Executar a Exportação
 
 ```bash
-synesis2neo4j --project meu_projeto.synp --config neo4j_config.toml
+synesis2graph --project meu_projeto.synp --config neo4j_config.toml
 ```
 
 **Output esperado:**
@@ -133,7 +117,7 @@ synesis2neo4j --project meu_projeto.synp --config neo4j_config.toml
 🔍 Carregando projeto Synesis...
 ✓ Projeto válido: meu_projeto
 ✓ Template carregado: template.synt
-✓ Ontologia carregada: 15 códigos, 4 relações
+✓ Ontologia carregada: 15 conceitos, 4 relações
 
 🔗 Conectando ao Neo4j...
 ✓ Conectado: bolt://localhost:7687
@@ -248,7 +232,7 @@ Se você adicionar novas anotações ao seu projeto Synesis:
 
 ```bash
 # Apaga tudo e recria
-synesis2neo4j --project meu_projeto.synp --config neo4j_config.toml
+synesis2graph --project meu_projeto.synp --config neo4j_config.toml
 ```
 
 ### Modo Merge (Atualização Incremental)
@@ -263,7 +247,7 @@ mode = "merge"  # Atualiza apenas o que mudou
 Execute novamente:
 
 ```bash
-synesis2neo4j --project meu_projeto.synp --config neo4j_config.toml
+synesis2graph --project meu_projeto.synp --config neo4j_config.toml
 ```
 
 **Quando usar cada modo:**
@@ -443,4 +427,4 @@ Para Cypher Query Language:
 
 ---
 
-**Ficou com dúvidas?** Abra uma issue no [repositório synesis2neo4j](https://github.com/synesis-lang/synesis2neo4j) ou consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions).
+**Ficou com dúvidas?** Abra uma issue no [repositório synesis2graph](https://github.com/synesis-lang/synesis2graph) ou consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions).
