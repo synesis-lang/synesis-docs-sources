@@ -94,6 +94,16 @@ Aqui está a proposta de apêndice formatada para o seu Guia de Referência, uti
 
 ---
 
+## Conversores de anotações Bíblicas Logos Software para Synesis
+
+Há um conversor de anotações do formato proprietário Logos para textos Markdown: 
+
+- [Conversor de anotações Logos Bible Softwara para Markdown](https://github.com/agape-apps/Logos-Notes-Exporter)
+
+A partir daí, a conversão de anotações em Markdown para Synesis é muito simples.
+
+---
+
 ## Apêndice B: Estratégias para Exegese Comparativa
 
 A linguagem Synesis oferece flexibilidade estrutural para pesquisadores que necessitam comparar diferentes manuscritos ou traduções de uma mesma passagem. Como a invariante estrutural da linguagem estabelece que um bloco `ITEM` pertence a exatamente um `SOURCE`, existem duas abordagens arquiteturais recomendadas, dependendo de como os dados serão analisados nas etapas seguintes da pesquisa.
