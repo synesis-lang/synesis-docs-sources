@@ -1,0 +1,566 @@
+---
+title: "O que Synesis pode expressar"
+subtitle: "Uma visão panorâmica das possibilidades de anotação e estruturação"
+---
+
+Este documento apresenta, um a um, os recursos da linguagem Synesis. Cada exemplo mostra primeiro o trecho de configuração no **template** (`.synt`) e depois um **bloco de exemplo** usando aquele recurso.
+
+Todos os exemplos pertencem a um mesmo estudo fictício: **barreiras à adoção de telemedicina em comunidades rurais**.
+
+:::{.callout-tip}
+## Como ler esta página
+Cada seção é independente. Você não precisa ler tudo de uma vez --- navegue direto ao tipo de campo que deseja entender.
+:::
+
+---
+
+# Bloco SOURCE {#sec-source}
+
+O bloco `SOURCE` contextualiza a origem dos dados. Ele referencia uma entrada do arquivo `.bib` e pode conter campos adicionais definidos no template.
+
+```synesis
+SOURCE @entrevista_dona_maria2026
+    # campos opcionais aqui
+END SOURCE
+```
+
+A seguir, veja exemplos de diferentes tipos de campo que podem ser usados em SOURCE.
+
+---
+
+## TEXT em SOURCE
+
+O tipo `TEXT` armazena texto livre. Aqui, usamos para registrar o contexto da entrevista.
+
+**No template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL contexto
+END SOURCE FIELDS
+
+FIELD contexto TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Contexto ou circunstâncias da coleta de dados
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+SOURCE @entrevista_dona_maria2026
+    contexto: Entrevista realizada na residência da participante, zona rural, sem acesso à internet
+END SOURCE
+```
+
+---
+
+## DATE em SOURCE
+
+O tipo `DATE` registra datas. Útil para controlar quando uma fonte foi acessada ou coletada.
+
+**No template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL data_coleta
+END SOURCE FIELDS
+
+FIELD data_coleta TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Data em que os dados foram coletados
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+SOURCE @entrevista_dona_maria2026
+    data_coleta: 2026-01-15
+END SOURCE
+```
+
+---
+
+## ENUMERATED em SOURCE
+
+O tipo `ENUMERATED` restringe o valor a uma lista fechada predefinida. Aqui, classificamos o tipo de fonte.
+
+**No template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    REQUIRED tipo_fonte
+END SOURCE FIELDS
+
+FIELD tipo_fonte TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Tipo da fonte de dados
+    VALUES
+        entrevista: Entrevista individual ou em grupo
+        documento: Documento textual ou audiovisual
+        observacao: Observação de campo
+    END VALUES
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+SOURCE @entrevista_dona_maria2026
+    tipo_fonte: entrevista
+END SOURCE
+```
+
+:::{.callout-note}
+Se o pesquisador escrever um valor fora da lista (por exemplo, `tipo_fonte: questionario`), o compilador rejeitará com uma mensagem de erro indicando os valores permitidos.
+:::
+
+---
+
+# Bloco ITEM {#sec-item}
+
+O bloco `ITEM` é a unidade analítica fundamental. Contém excertos, interpretações, códigos e relações. Cada `ITEM` pertence a um `SOURCE`.
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    # campos de análise aqui
+END ITEM
+```
+
+---
+
+## QUOTATION em ITEM
+
+O tipo `QUOTATION` armazena o excerto textual extraído da fonte. É tipicamente o campo obrigatório mais básico.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+END ITEM FIELDS
+
+FIELD citacao TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído da fonte
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+END ITEM
+```
+
+---
+
+## MEMO em ITEM
+
+O tipo `MEMO` registra a interpretação ou nota analítica do pesquisador sobre o excerto.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED nota
+END ITEM FIELDS
+
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Interpretação analítica do pesquisador
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    nota: Participante expressa desconfiança tecnológica associada à falta de contato presencial
+END ITEM
+```
+
+---
+
+## CODE em ITEM
+
+O tipo `CODE` atribui rótulos conceituais ao excerto. Cada código deve existir como conceito na ontologia do projeto. Um mesmo item pode receber múltiplos códigos.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL codigo
+END ITEM FIELDS
+
+FIELD codigo TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Rótulo conceitual para categorização
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    codigo: Desconfianca_Tecnologica, Preferencia_Presencial
+END ITEM
+```
+
+:::{.callout-tip}
+## Múltiplos códigos
+Separe códigos com vírgula na mesma linha, ou repita o campo em linhas separadas:
+
+```synesis
+    codigo: Desconfianca_Tecnologica
+    codigo: Preferencia_Presencial
+```
+
+Ambas as formas são equivalentes.
+:::
+
+---
+
+## CHAIN simples em ITEM
+
+O tipo `CHAIN` expressa relações entre conceitos. Quando o template **não** define `RELATIONS`, a cadeia usa relações implícitas --- apenas conceitos separados por `->`.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL cadeia
+END ITEM FIELDS
+
+FIELD cadeia TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Relação entre conceitos
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    cadeia: Desconfianca_Tecnologica -> Resistencia_Telemedicina
+END ITEM
+```
+
+Neste caso, a relação entre os conceitos é implícita: o pesquisador sabe que existe uma conexão, mas não precisa nomeá-la.
+
+---
+
+## CHAIN qualificada com BUNDLE em ITEM
+
+Quando o template **define** `RELATIONS`, cada relação na cadeia deve ser nomeada. O modificador `BUNDLE` garante que nota e cadeia sempre apareçam juntos, em pares posicionais.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    REQUIRED BUNDLE nota, cadeia
+END ITEM FIELDS
+
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Interpretação analítica do pesquisador
+END FIELD
+
+FIELD cadeia TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Cadeia causal entre conceitos da ontologia
+    ARITY >= 2
+    RELATIONS
+        INFLUENCIA: Efeito causal direto
+        INIBE: Limita ou impede
+        HABILITA: Torna possível ou facilita
+    END RELATIONS
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+
+    nota: Desconfiança na tecnologia gera resistência direta
+    cadeia: Desconfianca_Tecnologica -> INIBE -> Adesao_Telemedicina
+
+    nota: A falta de letramento digital reforça a desconfiança
+    cadeia: Baixo_Letramento_Digital -> INFLUENCIA -> Desconfianca_Tecnologica -> INIBE -> Adesao_Telemedicina
+END ITEM
+```
+
+:::{.callout-note}
+## O que o BUNDLE garante
+
+- **nota** e **cadeia** devem aparecer em igual quantidade (aqui, 2 de cada)
+- A primeira **nota** corresponde à primeira **cadeia**, a segunda **nota** à segunda **cadeia**
+- Se você escrever 2 notas e 1 cadeia, o compilador acusará erro
+:::
+
+:::{.callout-tip}
+## ARITY
+A propriedade `ARITY >= 2` exige que cada cadeia contenha pelo menos 2 conceitos. Uma cadeia com apenas 1 conceito seria rejeitada.
+:::
+
+---
+
+## SCALE em ITEM
+
+O tipo `SCALE` registra um valor numérico dentro de um intervalo definido por `FORMAT`.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL confianca
+END ITEM FIELDS
+
+FIELD confianca TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Nível de confiança do pesquisador na interpretação
+    FORMAT [1..5]
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    nota: Desconfiança na tecnologia gera resistência direta
+    confianca: 5
+END ITEM
+```
+
+Se o pesquisador escrever `confianca: 7`, o compilador rejeitará porque o valor está fora do intervalo `[1..5]`.
+
+---
+
+## ENUMERATED em ITEM
+
+O tipo `ENUMERATED` também pode ser usado em blocos ITEM --- por exemplo, para classificar o sentimento expresso em cada excerto.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL sentimento
+END ITEM FIELDS
+
+FIELD sentimento TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Sentimento predominante no excerto
+    VALUES
+        positivo: Sentimento favorável
+        negativo: Sentimento desfavorável
+        neutro: Sem carga emocional evidente
+        ambivalente: Sentimentos mistos ou contraditórios
+    END VALUES
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    sentimento: negativo
+END ITEM
+```
+
+---
+
+## ORDERED em ITEM
+
+O tipo `ORDERED` funciona como uma lista com hierarquia explícita. Cada valor possui um índice numérico que define a ordem.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL relevancia
+END ITEM FIELDS
+
+FIELD relevancia TYPE ORDERED
+    SCOPE ITEM
+    DESCRIPTION Relevância do excerto para a questão de pesquisa
+    VALUES
+        1 baixa: Tangencialmente relacionado
+        2 media: Contribui para a compreensão
+        3 alta: Central para a questão de pesquisa
+    END VALUES
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu não confio nessas coisas de computador para falar com médico"
+    relevancia: alta
+END ITEM
+```
+
+:::{.callout-tip}
+## ORDERED vs. ENUMERATED
+A diferença é a **hierarquia**: em ORDERED, `alta > media > baixa` tem significado ordinal. Em ENUMERATED, os valores são categorias sem ranking (como `positivo`, `negativo`, `neutro`).
+:::
+
+---
+
+# Bloco ONTOLOGY {#sec-ontology}
+
+O bloco `ONTOLOGY` define os conceitos do vocabulário controlado do projeto. Todo código usado em `CODE` ou `CHAIN` deve existir como um conceito na ontologia.
+
+```synesis
+ONTOLOGY Nome_do_Conceito
+    # campos de definição aqui
+END ONTOLOGY
+```
+
+---
+
+## TEXT em ONTOLOGY
+
+O tipo `TEXT` na ontologia armazena a definição do conceito.
+
+**No template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definicao
+END ONTOLOGY FIELDS
+
+FIELD definicao TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definição textual do conceito
+END FIELD
+```
+
+**No arquivo de ontologia (.syno):**
+
+```synesis
+ONTOLOGY Desconfianca_Tecnologica
+    definicao: Resistência ou ceticismo em relação a tecnologias digitais para mediação de serviços essenciais
+END ONTOLOGY
+```
+
+---
+
+## TOPIC em ONTOLOGY
+
+O tipo `TOPIC` cria categorias de agrupamento dinâmicas. Diferente de `ENUMERATED`, não há lista fechada --- o pesquisador cria categorias livremente à medida que define conceitos.
+
+**No template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definicao
+    OPTIONAL tema
+END ONTOLOGY FIELDS
+
+FIELD tema TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Domínio temático do conceito
+END FIELD
+```
+
+**No arquivo de ontologia (.syno):**
+
+```synesis
+ONTOLOGY Desconfianca_Tecnologica
+    definicao: Resistência a tecnologias digitais
+    tema: Fatores_Culturais
+END ONTOLOGY
+
+ONTOLOGY Baixo_Letramento_Digital
+    definicao: Habilidades digitais insuficientes para uso de plataformas de saúde
+    tema: Fatores_Culturais
+END ONTOLOGY
+
+ONTOLOGY Infraestrutura_Precaria
+    definicao: Ausência ou insuficiência de conectividade e equipamentos
+    tema: Fatores_Estruturais
+END ONTOLOGY
+```
+
+Os temas `Fatores_Culturais` e `Fatores_Estruturais` emergem da análise --- não precisam ser predefinidos no template.
+
+---
+
+## ORDERED em ONTOLOGY
+
+O tipo `ORDERED` na ontologia permite classificar conceitos em uma hierarquia explícita.
+
+**No template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definicao
+    OPTIONAL prioridade
+END ONTOLOGY FIELDS
+
+FIELD prioridade TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Prioridade do conceito para intervenção
+    VALUES
+        1 baixa: Fator secundário
+        2 media: Fator relevante
+        3 alta: Fator crítico para intervenção
+    END VALUES
+END FIELD
+```
+
+**No arquivo de ontologia (.syno):**
+
+```synesis
+ONTOLOGY Desconfianca_Tecnologica
+    definicao: Resistência a tecnologias digitais
+    prioridade: alta
+END ONTOLOGY
+
+ONTOLOGY Preferencia_Presencial
+    definicao: Preferência por atendimento médico face a face
+    prioridade: media
+END ONTOLOGY
+```
+
+---
+
+# Resumo {#sec-resumo}
+
+A tabela abaixo consolida todos os tipos de campo e suas características.
+
+| Tipo | Escopos típicos | Propriedades especiais | O que armazena |
+|------|----------------|----------------------|----------------|
+| **TEXT** | SOURCE, ONTOLOGY | — | Texto livre genérico |
+| **QUOTATION** | ITEM | — | Excerto textual da fonte |
+| **MEMO** | ITEM | — | Nota analítica do pesquisador |
+| **CODE** | ITEM | — | Rótulo conceitual (deve existir na ontologia) |
+| **CHAIN** | ITEM | RELATIONS, ARITY | Relação entre conceitos (simples ou qualificada) |
+| **DATE** | SOURCE | — | Data (formato ISO) |
+| **SCALE** | ITEM | FORMAT [min..max] | Valor numérico em intervalo |
+| **ENUMERATED** | SOURCE, ITEM | VALUES (sem índice) | Valor de lista fechada |
+| **ORDERED** | ITEM, ONTOLOGY | VALUES (com índice) | Valor com hierarquia ordinal |
+| **TOPIC** | ONTOLOGY | — | Categoria dinâmica (valores abertos) |
+
+: Tipos de campo Synesis e suas características {.striped .hover}
+
+### Modificadores
+
+| Modificador | Significado |
+|-------------|-------------|
+| **REQUIRED** | Campo obrigatório --- o compilador rejeita se ausente |
+| **OPTIONAL** | Campo opcional --- pode ser omitido sem erro |
+| **REQUIRED BUNDLE** | Grupo de campos que devem aparecer juntos, em igual quantidade |
+
+: Modificadores de campo {.striped .hover}

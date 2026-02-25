@@ -1,0 +1,428 @@
+---
+title: "Codificação Assistida por IA"
+subtitle: "Um caso real: análise bibliométrica de aceitação social de tecnologias energéticas"
+---
+
+Este documento apresenta um caso real de uso do Synesis em pesquisa acadêmica, onde a codificação qualitativa foi realizada por inteligência artificial e revisada manualmente pelo pesquisador. O projeto analisa **fatores de aceitação social de tecnologias de transição energética** a partir de um corpus de artigos científicos selecionados por bibliometria.
+
+:::{.callout-important}
+## Dados reais
+Diferente dos exemplos fictícios em outras páginas desta documentação, todos os dados apresentados aqui são reais --- extraídos de artigos científicos publicados e processados pelo pipeline descrito neste documento.
+:::
+
+---
+
+# Visão geral do projeto {#sec-visao-geral}
+
+O projeto `Social_Acceptance` combina três etapas:
+
+1. **Seleção do corpus**: ~450 artigos científicos identificados por bibliometria (análise de citações, co-citações e acoplamento bibliográfico)
+2. **Codificação por IA**: cada abstract foi processado por um modelo de linguagem (LLM) seguindo prompts metodológicos específicos, gerando os arquivos `.syn` (anotações) e `.syno` (ontologia)
+3. **Revisão humana**: o pesquisador revisou e ajustou os resultados, corrigindo generalizações excessivas, relações imprecisas e conceitos duplicados
+
+O resultado é um grafo de conhecimento com centenas de conceitos e relações causais, estruturado em Synesis e exportável para Neo4j, Excel e JSON.
+
+---
+
+# O template: estrutura analítica avançada {#sec-template}
+
+O template define a estrutura que a IA deve preencher. Ele incorpora três frameworks teóricos:
+
+- **Teoria Fundamentada** (Grounded Theory): extração indutiva de conceitos e relações a partir dos dados
+- **Aspectos Modais de Dooyeweerd**: classificação de conceitos em 16 aspectos modais (do quantitativo ao fiducial)
+- **Dimensões de Wüstenhagen**: aceitação comunitária, de mercado e sociopolítica
+
+```synesis
+TEMPLATE bibliometrics version: "1.0" author: "Synesis Compiler Team"
+
+SOURCE FIELDS
+    REQUIRED description, epistemic_model, method
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED text
+    REQUIRED BUNDLE note, chain
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED description
+    OPTIONAL topic, aspect, dimension, confidence, reasoning,
+             rgt_element_a, rgt_element_b, theoretical_significance
+END ONTOLOGY FIELDS
+```
+
+Três decisões de design merecem destaque:
+
+1. **SOURCE com metadados epistêmicos**: cada fonte declara seu modelo epistemológico e método, permitindo cruzar resultados por tradição teórica
+2. **BUNDLE de note + chain**: cada interpretação analítica (memo) é obrigatoriamente pareada com sua formalização em cadeia causal
+3. **ONTOLOGY multidimensional**: cada conceito recebe classificação modal (Dooyeweerd), dimensional (Wüstenhagen), nível de confiança e construto bipolar (Repertory Grid Theory)
+
+Vejamos as definições completas dos campos mais relevantes:
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Cadeia causal/relacional entre conceitos da ontologia
+    RELATIONS
+        ENABLES: Condição necessária ou facilitadora
+        INFLUENCES: Efeito causal direto
+        CONSTRAINS: Limita ou restringe
+        CONTESTED-BY: Oposição ativa
+        RELATES-TO: Associação significativa genérica
+    END RELATIONS
+END FIELD
+
+FIELD aspect TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Aspectos modais de Dooyeweerd
+    VALUES
+        [0] Undefined: Not available
+        [1] Quantitative: Medições, estatísticas
+        [2] Spatial: Localização, geografia
+        [3] Kinematic: Movimento, fluxo, dinâmica
+        [4] Physical: Propriedades materiais, sistemas energéticos
+        [5] Biotic: Ecológico, ambiental, impactos na saúde
+        [6] Sensitive: Percepção, consciência, respostas emocionais
+        [7] Analytical: Pesquisa, análise, elementos metodológicos
+        [8] Formative: Planejamento, design, inovação
+        [9] Lingual: Comunicação, documentação
+        [10] Social: Relações comunitárias, dinâmicas coletivas
+        [11] Economic: Custos, mercados, finanças
+        [12] Aesthetic: Qualidades visuais, estética
+        [13] Juridical: Legal, regulatório, governança
+        [14] Ethical: Responsabilidade moral, equidade
+        [15] Fiducial: Confiança, crença, valores, cosmovisão
+    END VALUES
+END FIELD
+
+FIELD confidence TYPE ENUMERATED
+    SCOPE ONTOLOGY
+    DESCRIPTION Nível de confiança baseado em frequência e fontes
+    VALUES
+        LOW: Baixa frequência ou fontes limitadas
+        MEDIUM: Frequência moderada com suporte razoável
+        HIGH: Alta frequência e amplo suporte empírico
+    END VALUES
+END FIELD
+
+FIELD theoretical_significance TYPE SCALE
+    SCOPE ONTOLOGY
+    FORMAT [0..5]
+    DESCRIPTION Significância teórica do conceito
+END FIELD
+```
+
+:::{.callout-note}
+## Composição de tipos
+Este template usa **7 tipos de campo diferentes** em um único projeto: TEXT, QUOTATION, MEMO, CHAIN (com RELATIONS e ARITY), TOPIC, ORDERED (com VALUES indexados), ENUMERATED (com VALUES), e SCALE (com FORMAT). É um exemplo realista de como os tipos se compõem para expressar uma metodologia complexa.
+:::
+
+---
+
+# Os prompts: o cerne da metodologia {#sec-prompts}
+
+A IA não codifica livremente --- ela segue instruções metodológicas precisas, codificadas em prompts estruturados. Esses prompts constituem, na prática, o **método de pesquisa formalizado**. A qualidade dos resultados depende inteiramente da qualidade dessas instruções.
+
+## Seleção de excertos
+
+O prompt exige que cada excerto seja uma **unidade semântica completa** (1-3 sentenças) contendo sujeito, verbo, objeto e qualificadores:
+
+> *"Extract COMPLETE, SELF-CONTAINED semantic units. Must include: subject + verb + object + qualifiers."*
+
+Excertos truncados ou descontextualizados são explicitamente rejeitados:
+
+> GOOD: *"Community trust and environmental concern are the most important factors determining willingness to participate in renewable energy projects"*
+>
+> BAD: *"determining such willingness"* (falta sujeito e contexto)
+
+## Controle de granularidade conceitual
+
+Um dos maiores riscos da codificação automatizada é a **proliferação de conceitos** --- cada artigo gerando rótulos ligeiramente diferentes para o mesmo fenômeno. O prompt combate isso com uma hierarquia de generalização:
+
+> **Nível 1** --- Conceito nuclear: `Acceptance`, `Deployment`, `Policy`, `Trust`, `Cost`
+>
+> **Nível 2** --- Conceito qualificado (quando a distinção importa): `Public Acceptance`, `Community Trust`
+>
+> **Nível 3** --- Especificação completa (somente quando Nível 2 perde significado crítico): `Offshore Wind Acceptance`
+
+A regra de decisão é pragmática:
+
+> *"Ask: Will this specific term appear in 5+ abstracts, or is it unique to this one? Likely 1-2 uses → Generalize to Level 1-2."*
+
+A meta é manter menos de **150 conceitos únicos** ao longo de 450 artigos.
+
+## Critério de Mensurabilidade pelo Stakeholder
+
+Conceitos abstratos são generalizados quando o stakeholder não consegue percebê-los diretamente:
+
+> *"Can a stakeholder directly perceive, measure, or act upon this concept without specialized knowledge?"*
+>
+> SIM → Manter termo específico: `Risk Perception`, `Procedural Justice`
+>
+> NÃO → Generalizar: `institutional trust` + `interpersonal trust` → `Trust`
+
+## Pontuação de valor analítico
+
+Cada cadeia potencial recebe uma pontuação de 1 a 5 antes da extração. Somente cadeias com pontuação 3-5 são extraídas:
+
+> **5**: Revela mecanismo causal ou caminho multi-etapa (explica *como* a aceitação funciona)
+>
+> **4**: Mostra habilitação/moldagem com mecanismo claro
+>
+> **3**: Associação teoricamente significativa (*borderline*)
+>
+> **2**: Associação simples sem mecanismo (PULAR)
+>
+> **1**: Trivial, óbvio ou redundante (PULAR)
+
+O teste decisivo: *"Does this explain HOW or WHY social acceptance occurs?"*
+
+## Separação de caminhos sequenciais e paralelos
+
+O prompt distingue explicitamente entre cadeias sequenciais e caminhos paralelos:
+
+**Cadeia sequencial** (A causa B, que causa C) → um único bloco:
+
+```
+chain: Ownership -> ENABLES -> Financing -> ENABLES -> Deployment
+```
+
+**Caminhos paralelos** (A e B independentemente afetam C) → blocos separados:
+
+```
+chain: Trust -> INFLUENCES -> Acceptance
+chain: Cost -> INFLUENCES -> Acceptance
+chain: Policy -> INFLUENCES -> Acceptance
+```
+
+Esta distinção é crítica para a qualidade do grafo resultante: caminhos paralelos misturados em uma única cadeia criariam relações espúrias.
+
+## Classificação ontológica
+
+Um segundo prompt classifica cada conceito extraído em múltiplas dimensões, seguindo uma hierarquia de prioridade:
+
+1. **Significado semântico** do conceito (primário)
+2. **Perfil relacional** --- tipos de relação dominantes (secundário)
+3. **Padrões de co-ocorrência** --- conceitos frequentemente associados (terciário)
+4. **Perfil estatístico** --- frequência e diversidade de fontes (quaternário)
+5. **Semântica taxonômica** --- relações hierárquicas e partitivas (quinternário)
+
+---
+
+# Exemplos reais {#sec-exemplos}
+
+A seguir, exemplos extraídos diretamente do projeto, mostrando o pipeline completo: fonte → anotação → ontologia.
+
+---
+
+## SOURCE: metadados epistêmicos
+
+Cada fonte registra não apenas *o que* o estudo investiga, mas *como* investiga --- modelo epistemológico e método de coleta.
+
+```synesis
+SOURCE @ashworth2019
+    description: Comparative study of public attitudes toward CCS and
+                 low-carbon energy technologies in Australia and China,
+                 examining factors associated with support levels.
+    epistemic_model: Social acceptance of energy technologies,
+                     comparative public opinion research
+    method: Online survey (Australia n=2383, China n=1266)
+END SOURCE
+```
+
+O campo `epistemic_model` permite filtrar resultados por tradição teórica. Ao final da análise, o pesquisador pode perguntar: *"As relações causais identificadas por pesquisadores usando Difusão de Inovações diferem das identificadas por quem usa Teoria da Justiça?"*
+
+Outro exemplo mostra um estudo com abordagem diferente:
+
+```synesis
+SOURCE @aly2019
+    description: Investigates institutional, financial, and technological
+                 barriers to large-scale solar power deployment in Tanzania
+                 through stakeholder interviews.
+    epistemic_model: Stakeholder analysis, barrier identification framework
+    method: Semi-structured interviews (30 experts from public institutions,
+            research, private sector, civil society, development partners,
+            financial institutions)
+END SOURCE
+```
+
+---
+
+## ITEM: cadeias causais com BUNDLE
+
+Cada item contém um excerto e uma ou mais duplas nota/cadeia em BUNDLE. Veja um exemplo com **convergência multi-fator** --- quatro fatores independentes afetam o mesmo resultado:
+
+```synesis
+ITEM @ashworth2019
+    text: However, male respondents, those who perceived themselves to
+          have higher knowledge of CCS, and those who valued economic
+          outcomes over environmental protection were more likely to
+          support CCS - as long as the risks were not perceived to
+          outweigh the benefits.
+
+    note: *complex* Four-factor convergence (gender, knowledge,
+          economic values, risk perception) reveals multi-domain
+          determinants requiring integrated communication strategies
+    chain: Gender -> INFLUENCES -> CCS_Support
+
+    note: Self-assessed knowledge increases support, revealing
+          information deficit mechanism where perceived understanding
+          drives acceptance
+    chain: Knowledge -> INFLUENCES -> CCS_Support
+
+    note: Economic prioritization over environmental values predicts
+          support, indicating value-based acceptance mechanism
+    chain: Economic_Value -> INFLUENCES -> CCS_Support
+
+    note: Risk-benefit assessment constrains support, revealing
+          conditional acceptance mechanism where perceived risks
+          override other positive factors
+    chain: Risk_Perception -> CONSTRAINS -> CCS_Support
+END ITEM
+```
+
+Observe:
+
+- **4 pares nota/cadeia** para o mesmo excerto --- o BUNDLE garante correspondência posicional
+- A primeira nota recebe a marcação `*complex*` indicando convergência multi-fator
+- Três relações são `INFLUENCES` (efeito causal direto) e uma é `CONSTRAINS` (limitação) --- distinção semântica preservada
+- Os 4 caminhos são **paralelos** (cada fator afeta independentemente `CCS_Support`), então estão em blocos separados dentro do mesmo ITEM
+
+Agora um exemplo de **cadeia sequencial** --- um fator desencadeia outro em cascata:
+
+```synesis
+ITEM @aly2019
+    text: Institutional barriers for the diffusion of large-scale solar
+          power technologies are found to be predominant, and they often
+          trigger financial and technological barriers.
+
+    note: Reveals sequential triggering mechanism where institutional
+          barriers activate downstream financial and technological
+          constraints
+    chain: Institutional_Barrier -> ENABLES -> Financial_Barrier
+                                 -> ENABLES -> Technological_Barrier
+END ITEM
+```
+
+Aqui, uma única cadeia de 3 conceitos expressa o mecanismo sequencial: barreiras institucionais *habilitam* (tornam possíveis) barreiras financeiras, que por sua vez *habilitam* barreiras tecnológicas. A relação `ENABLES` é usada no sentido de condição necessária --- sem a barreira institucional, as demais não se manifestariam.
+
+---
+
+## ONTOLOGY: classificação multidimensional
+
+Cada conceito mencionado nas cadeias é definido na ontologia com classificação em múltiplas dimensões. Vejamos dois conceitos contrastantes:
+
+### Conceito de alta confiança
+
+```synesis
+ONTOLOGY Cost
+    topic: Economics
+    aspect: 11
+    dimension: 2
+    confidence: HIGH
+
+    reasoning: Aspect 11: Core economic factor representing financial
+               expenditure. Mainly constrains deployment/technology
+               development while enabling market penetration when
+               reduced. Co-occurs with Deployment and Acceptance,
+               indicating market-consumer relevance. Dimension 2:
+               Directly affects investors, consumers, and market
+               competitiveness. High frequency (96) across broad
+               sources (66) confirms central role.
+
+    description: Economic factor representing financial expenditure
+                 associated with energy technologies and systems.
+                 Acts as primary barrier constraining technology
+                 development, site selection, and deployment when
+                 high, while enabling market penetration, technology
+                 transition, and sustainable solutions when reduced.
+
+    rgt_element_a: Low_Cost
+    rgt_element_b: High_Cost
+    theoretical_significance: 0
+END ONTOLOGY
+```
+
+- **topic** `Economics` --- agrupamento temático emergente (TOPIC, valores abertos)
+- **aspect** `11` (Economic) --- classificação modal de Dooyeweerd (ORDERED, 16 valores)
+- **dimension** `2` (Market_Acceptance) --- dimensão de Wüstenhagen (ORDERED, 5 valores)
+- **confidence** `HIGH` --- frequência 96, em 66 fontes diferentes (ENUMERATED)
+- **reasoning** --- justificativa da classificação, incluindo evidência estatística (TEXT)
+- **rgt_element_a/b** --- construto bipolar: `Low_Cost` vs `High_Cost` (TEXT)
+- **theoretical_significance** --- escala 0-5 (SCALE)
+
+### Conceito de baixa confiança
+
+```synesis
+ONTOLOGY Climate_Belief
+    topic: Worldview
+    aspect: 15
+    dimension: 1
+    confidence: LOW
+
+    reasoning: Aspect 15 (Fiducial): Climate belief represents
+               worldview and conviction about climate change causation.
+               Relations show influences on acceptability and support.
+               Co-occurs with CCS support and acceptability factors.
+               Dimension 1: Affects community-level acceptance of
+               technologies like tidal and CCS. Low frequency (2)
+               and sources (2) limit robustness.
+
+    description: Climate belief refers to individuals' conviction
+                 regarding the existence and anthropogenic causation
+                 of climate change. In energy transition contexts,
+                 this worldview shapes acceptance of low-carbon
+                 technologies, with believers in human-induced
+                 climate change showing differential support patterns.
+
+    rgt_element_a: Strong_Climate_Belief
+    rgt_element_b: Weak_Climate_Belief
+    theoretical_significance: 0
+END ONTOLOGY
+```
+
+O contraste é instrutivo:
+
+| | Cost | Climate_Belief |
+|---|---|---|
+| **confidence** | HIGH (96 ocorrências, 66 fontes) | LOW (2 ocorrências, 2 fontes) |
+| **aspect** | 11 Economic | 15 Fiducial |
+| **dimension** | 2 Market | 1 Community |
+| **topic** | Economics | Worldview |
+
+`Cost` é um conceito central do corpus --- aparece em 66 artigos diferentes. `Climate_Belief` é periférico --- emerge em apenas 2 fontes. Ambos recebem a mesma estrutura de classificação, mas o campo `confidence` sinaliza ao pesquisador qual merece mais peso na análise.
+
+---
+
+# O papel da revisão humana {#sec-revisao}
+
+A IA produz resultados consistentes em escala, mas comete erros sistemáticos que o pesquisador deve corrigir:
+
+- **Generalização excessiva**: a IA tende a simplificar conceitos além do desejável (ex: colapsar `Procedural Justice` e `Distributive Justice` em apenas `Justice`)
+- **Relações imprecisas**: a distinção entre `ENABLES` e `INFLUENCES` exige julgamento contextual que a IA nem sempre acerta
+- **Conceitos duplicados**: variações de grafia (`Public Acceptance` vs `Social Acceptance`) podem gerar conceitos ontologicamente distintos que na verdade são o mesmo fenômeno
+- **Excertos truncados**: apesar das instruções, a IA ocasionalmente extrai fragmentos que não são auto-suficientes
+
+O Synesis facilita essa revisão porque o template **valida estruturalmente** os resultados: um conceito mencionado em `chain` que não existe na ontologia gera erro de compilação; um par nota/cadeia faltante viola o BUNDLE. Esses mecanismos transformam erros silenciosos em falhas explícitas.
+
+:::{.callout-tip}
+## A IA codifica, o template valida, o pesquisador decide
+O fluxo de trabalho é: a IA gera dados em escala → o compilador Synesis valida a estrutura → o pesquisador revisa o conteúdo. Cada ator faz o que faz melhor.
+:::
+
+---
+
+# Resumo {#sec-resumo}
+
+| Etapa | Quem faz | O que produz |
+|-------|---------|--------------|
+| Seleção do corpus | Pesquisador (bibliometria) | Lista de ~450 artigos relevantes |
+| Design do template | Pesquisador | `.synt` com estrutura analítica e frameworks teóricos |
+| Design dos prompts | Pesquisador | Instruções metodológicas formalizadas para a IA |
+| Codificação | IA (LLM) | `.syn` (anotações) e `.syno` (ontologia) |
+| Validação estrutural | Compilador Synesis | Erros de referência, BUNDLE, ARITY, tipos |
+| Revisão de conteúdo | Pesquisador | Correções de generalização, relações e duplicatas |
+| Exportação | Compilador Synesis | JSON, Neo4j, Excel para análise quantitativa |
+
+: Pipeline de codificação assistida por IA {.striped .hover}

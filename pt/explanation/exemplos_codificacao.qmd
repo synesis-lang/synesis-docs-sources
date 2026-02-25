@@ -1,0 +1,382 @@
+---
+title: "Métodos de Codificação em Synesis"
+subtitle: "Como expressar tradições de codificação qualitativa com templates Synesis"
+---
+
+A codificação qualitativa possui dezenas de métodos, cada um com propósitos analíticos distintos. Este documento mostra como os métodos mais representativos, conforme sistematizados por Saldaña (2013), se expressam através dos recursos de template do Synesis.
+
+A ideia central é simples: **o template define a estrutura analítica, e o método de codificação emerge da configuração escolhida** --- não do compilador em si. Synesis não impõe um método; ele fornece os blocos para você montar o seu.
+
+Todos os exemplos pertencem ao mesmo estudo fictício: **barreiras à adoção de telemedicina em comunidades rurais**.
+
+:::{.callout-tip}
+## Antes de ler
+Se você ainda não conhece os tipos de campo do Synesis (CODE, CHAIN, ENUMERATED, etc.), leia primeiro [O que Synesis pode expressar](show_case.qmd).
+:::
+
+---
+
+# Codificação com CODE {#sec-code}
+
+O tipo `CODE` é o recurso mais versátil do Synesis. Ele atribui rótulos conceituais a excertos e conecta cada rótulo à ontologia do projeto. Diferentes métodos de codificação emergem de como você usa esse recurso.
+
+---
+
+## Codificação Descritiva
+
+A **Codificação Descritiva** (Saldaña, 2013) resume o tópico de uma passagem em uma palavra ou frase curta --- tipicamente um substantivo. É o método mais direto: um excerto, um código.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    OPTIONAL codigo
+END ITEM FIELDS
+
+FIELD citacao TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído da fonte
+END FIELD
+
+FIELD codigo TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Rótulo conceitual descritivo
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "A internet aqui cai toda hora, não dá pra fazer consulta assim"
+    codigo: Infraestrutura_Precaria
+END ITEM
+```
+
+O código `Infraestrutura_Precaria` resume o tópico central do excerto. Ele deve existir como conceito na ontologia do projeto.
+
+---
+
+## Codificação Simultânea
+
+A **Codificação Simultânea** aplica dois ou mais códigos ao mesmo excerto para capturar sua complexidade. Em Synesis, basta listar múltiplos códigos.
+
+**O template é o mesmo da Codificação Descritiva** --- a diferença está no uso, não na configuração.
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Eu até queria usar, mas não sei mexer e ainda por cima a internet não funciona"
+    codigo: Baixo_Letramento_Digital, Infraestrutura_Precaria
+END ITEM
+```
+
+:::{.callout-note}
+Dois fenômenos distintos coexistem na mesma fala: a barreira individual (letramento) e a barreira estrutural (infraestrutura). A codificação simultânea preserva essa complexidade sem forçar uma escolha.
+:::
+
+---
+
+## Codificação In Vivo
+
+A **Codificação In Vivo** extrai uma palavra ou frase da linguagem exata do participante para usar como código. O código *é* a fala --- não uma abstração do pesquisador.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    OPTIONAL codigo_invivo
+END ITEM FIELDS
+
+FIELD codigo_invivo TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Código extraído da linguagem do participante (in vivo)
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_sr_joao2026
+    citacao: "Isso é coisa de cidade, aqui a gente se vira diferente"
+    codigo_invivo: Coisa_de_Cidade
+END ITEM
+```
+
+:::{.callout-tip}
+## In Vivo na ontologia
+O conceito `Coisa_de_Cidade` na ontologia pode incluir a fala original como parte de sua definição:
+
+```synesis
+ONTOLOGY Coisa_de_Cidade
+    definicao: Expressão nativa que denota a percepção de que tecnologias de saúde são alheias à realidade rural
+    tema: Percepcoes_Culturais
+END ONTOLOGY
+```
+
+Assim, a voz do participante é preservada formalmente no vocabulário controlado.
+:::
+
+---
+
+# Codificação com ENUMERATED {#sec-enumerated}
+
+O tipo `ENUMERATED` restringe valores a uma lista fechada. É o recurso ideal para métodos que categorizam dados segundo dimensões predefinidas.
+
+---
+
+## Codificação de Valores (Values Coding)
+
+A **Codificação de Valores** (Saldaña, 2013) etiqueta o sistema integrado de **valores** (o que importa), **atitudes** (modo de pensar) e **crenças** (percepções) do participante. Em Synesis, cada dimensão se torna um campo ENUMERATED.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    OPTIONAL tipo_valores
+END ITEM FIELDS
+
+FIELD tipo_valores TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Dimensão do sistema de valores do participante
+    VALUES
+        valor: O que o participante considera importante
+        atitude: Modo de pensar ou sentir sobre algo
+        crenca: Percepção ou convicção sobre a realidade
+    END VALUES
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Saúde é olho no olho, o médico precisa ver a gente de verdade"
+    tipo_valores: crenca
+END ITEM
+
+ITEM @entrevista_sr_joao2026
+    citacao: "O importante mesmo é ter acesso rápido, não importa se é por tela"
+    tipo_valores: valor
+END ITEM
+```
+
+:::{.callout-note}
+O mesmo excerto poderia ser codificado como `valor` ou `crenca` dependendo da interpretação do pesquisador. O template não resolve essa ambiguidade --- apenas garante que a escolha seja explícita e consistente.
+:::
+
+---
+
+# Codificação com SCALE {#sec-scale}
+
+O tipo `SCALE` registra valores numéricos em intervalo. Combinado com outros tipos, expressa métodos que adicionam dimensões quantitativas à análise qualitativa.
+
+---
+
+## Codificação de Magnitude
+
+A **Codificação de Magnitude** (Saldaña, 2013) adiciona um indicador suplementar de intensidade, frequência ou direção a um código. Em Synesis, isso se expressa combinando CODE com SCALE no mesmo template.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    OPTIONAL codigo
+    OPTIONAL intensidade
+    OPTIONAL avaliacao
+END ITEM FIELDS
+
+FIELD codigo TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Rótulo conceitual
+END FIELD
+
+FIELD intensidade TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Intensidade percebida do fenômeno (1=baixa, 5=alta)
+    FORMAT [1..5]
+END FIELD
+
+FIELD avaliacao TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Direção avaliativa do participante
+    VALUES
+        positiva: Posicionamento favorável
+        negativa: Posicionamento desfavorável
+        neutra: Sem posicionamento claro
+    END VALUES
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "A internet aqui cai toda hora, não dá pra fazer consulta assim"
+    codigo: Infraestrutura_Precaria
+    intensidade: 5
+    avaliacao: negativa
+END ITEM
+
+ITEM @entrevista_dra_ana2026
+    citacao: "Com o sistema novo, consigo atender 3 vezes mais pacientes por dia"
+    codigo: Eficiencia_Atendimento
+    intensidade: 4
+    avaliacao: positiva
+END ITEM
+```
+
+:::{.callout-tip}
+## Composição de tipos
+Este é um bom exemplo de como tipos diferentes se compõem: `CODE` captura *o quê*, `SCALE` captura *quanto*, e `ENUMERATED` captura *em que direção*. Cada tipo faz uma coisa; juntos, expressam a riqueza da Codificação de Magnitude.
+:::
+
+---
+
+# Codificação com CHAIN {#sec-chain}
+
+O tipo `CHAIN` expressa relações direcionais entre conceitos. É o recurso natural para métodos que buscam mapear causalidade, processos ou tensões.
+
+---
+
+## Codificação de Causalidade
+
+A **Codificação de Causalidade** (Saldaña, 2013) extrai crenças causais mapeando uma sequência de três partes: **Antecedente → Mediador → Resultado**. Em Synesis, isso se expressa diretamente como uma CHAIN qualificada com RELATIONS.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    REQUIRED BUNDLE nota, cadeia
+END ITEM FIELDS
+
+FIELD citacao TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual
+END FIELD
+
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Interpretação do mecanismo causal
+END FIELD
+
+FIELD cadeia TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Sequência causal entre conceitos
+    ARITY >= 2
+    RELATIONS
+        CAUSA: Efeito causal direto (antecedente produz resultado)
+        MEDIA: Elemento intermediário no processo causal
+        INIBE: Fator que reduz ou impede o resultado
+        HABILITA: Condição que torna o resultado possível
+    END RELATIONS
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Como a internet não funciona direito, eu não consigo aprender a usar o aplicativo, e aí desisto de vez"
+
+    nota: Infraestrutura precária impede o aprendizado, que por sua vez bloqueia a adoção
+    cadeia: Infraestrutura_Precaria -> INIBE -> Letramento_Digital -> MEDIA -> Adesao_Telemedicina
+END ITEM
+```
+
+A cadeia `Infraestrutura_Precaria -> INIBE -> Letramento_Digital -> MEDIA -> Adesao_Telemedicina` mapeia exatamente a sequência Antecedente → Mediador → Resultado de Saldaña, mas com a flexibilidade de nomear cada relação.
+
+:::{.callout-note}
+## BUNDLE garante consistência
+Como `nota` e `cadeia` estão em BUNDLE, o compilador garante que cada interpretação causal (nota) esteja pareada com sua formalização (cadeia). Isso impede que o pesquisador escreva uma interpretação sem formalizá-la, ou vice-versa.
+:::
+
+---
+
+# Codificação com BUNDLE {#sec-bundle}
+
+O modificador `BUNDLE` agrupa campos que devem aparecer juntos. Ele expressa métodos que exigem múltiplas perspectivas analíticas simultâneas sobre o mesmo excerto.
+
+---
+
+## Emoção + Processo
+
+A **Codificação de Emoção** rotula sentimentos do participante. A **Codificação de Processo** captura ações em andamento (gerúndios). Quando usadas em conjunto via BUNDLE, cada emoção é pareada com o processo que a provoca.
+
+**No template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED citacao
+    REQUIRED BUNDLE emocao, processo
+END ITEM FIELDS
+
+FIELD citacao TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual
+END FIELD
+
+FIELD emocao TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Estado emocional do participante
+    VALUES
+        medo: Receio ou temor
+        frustracão: Irritação por obstáculo
+        esperanca: Expectativa positiva
+        resignacao: Aceitação passiva
+    END VALUES
+END FIELD
+
+FIELD processo TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Ação ou processo observado (gerúndio conceitual)
+END FIELD
+```
+
+**No arquivo de anotação (.syn):**
+
+```synesis
+ITEM @entrevista_dona_maria2026
+    citacao: "Tenho medo de apertar o botão errado e perder a consulta. Já tentei três vezes e desisti"
+
+    emocao: medo
+    processo: Tentando_Usar_Sistema
+
+    emocao: frustracão
+    processo: Desistindo_do_Atendimento
+END ITEM
+```
+
+:::{.callout-note}
+## Duas leituras do mesmo excerto
+O BUNDLE garante a correspondência posicional: o primeiro par (`medo` + `Tentando_Usar_Sistema`) captura a experiência durante a tentativa; o segundo par (`frustração` + `Desistindo_do_Atendimento`) captura a consequência emocional da falha. Sem o BUNDLE, essas associações seriam ambíguas.
+:::
+
+---
+
+# Resumo {#sec-resumo}
+
+A tabela abaixo resume como cada método de codificação de Saldaña se expressa em Synesis.
+
+| Método de Saldaña | Recurso Synesis | O que configura no template |
+|--------------------|----------------|----------------------------|
+| **Descritiva** | CODE | 1 campo CODE, OPTIONAL |
+| **Simultânea** | CODE (múltiplo) | Mesmo campo CODE, múltiplos valores por item |
+| **In Vivo** | CODE | Código reproduz a fala; ontologia preserva origem |
+| **Valores (V/A/C)** | ENUMERATED | Lista fechada: valor, atitude, crença |
+| **Magnitude** | SCALE + ENUMERATED | Intensidade numérica + direção avaliativa |
+| **Causalidade** | CHAIN + RELATIONS | Cadeia qualificada com relações nomeadas |
+| **Emoção + Processo** | BUNDLE | Pareamento obrigatório de emoção (ENUMERATED) + processo (CODE) |
+
+: Métodos de codificação e seus recursos Synesis correspondentes {.striped .hover}
+
+:::{.callout-tip}
+## O template é o método
+Em Synesis, a escolha do método de codificação se concretiza na configuração do template. Um mesmo compilador suporta desde a codificação descritiva mais simples até cadeias causais complexas com múltiplas dimensões analíticas --- basta configurar os campos certos.
+:::

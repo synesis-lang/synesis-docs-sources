@@ -57,7 +57,7 @@ website:
           - href: reference/synesis_load.qmd
             text: API Synesis
           - href: reference/fluxo_compilacao.qmd
-            text: O fluxo de compilação            
+            text: O fluxo de compilação
       - text: "Explanation"
         menu:
           - href: explanation/posicionamento_arquitetural.qmd
@@ -72,6 +72,12 @@ website:
             text: Knowledge Graphs & GraphRAG
           - href: explanation/ideas.qmd
             text: Roadmap & Ideias
+          - href: explanation/show_case.qmd
+            text: O que Synesis pode expressar
+          - href: explanation/exemplos_codificacao.qmd
+            text: Métodos de Codificação em Synesis
+          - href: explanation/codificacao_assistida_IA.qmd
+            text: Codificação Assistida por IA
       - href: about.qmd
         text: Sobre
     right:
