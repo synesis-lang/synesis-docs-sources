@@ -1,0 +1,430 @@
+---
+title: "Diagnóstico Socioambiental Participativo"
+subtitle: "Codificação e análise SWOT com Synesis para diagnósticos comunitários"
+---
+
+Este documento mostra como usar Synesis para estruturar um **Diagnóstico Socioambiental Participativo (DSAP)** --- um processo que combina dados técnicos e percepções comunitárias para avaliar a sustentabilidade de uma localidade. O template proposto integra codificação qualitativa, análise SWOT e dimensões da sustentabilidade em uma única estrutura compilável.
+
+:::{.callout-important}
+## Dados fictícios
+Todos os exemplos apresentados aqui são fictícios, criados para ilustrar o uso do Synesis. A comunidade, as fontes e os fatores são inventados para fins didáticos.
+:::
+
+---
+
+# Visão geral do método {#sec-visao-geral}
+
+Há diversas formas de realizar um DSAP, em nosso exemplo utilizaremos o seguinte método:
+
+1. **Leitura técnica**: levantamento de dados referenciais sobre a comunidade (relatórios, estudos ambientais, dados censitários)
+2. **Leitura comunitária**: oficinas participativas onde moradores identificam fatores positivos e negativos de sua realidade
+3. **Itemização**: extração de unidades de análise --- trechos de texto que contêm uma ideia principal
+4. **Codificação**: atribuição de temas/fatores a cada item, usando codificação descritiva ou *in vivo*
+5. **Categorização SWOT**: cada fator é classificado como Força, Fraqueza, Oportunidade ou Ameaça
+6. **Dimensões da sustentabilidade**: cada fator é associado a uma dimensão (ambiental, sociocultural, econômica, governamental)
+7. **Pontuação de significância**: atribuição de importância para viabilizar comparações quantitativas
+
+O template Synesis formaliza todas essas etapas em uma estrutura validável pelo compilador.
+
+:::{.callout-tip}
+## Trilha analítica e trilha de auditoria
+Um diagnóstico participativo rigoroso precisa de duas trilhas rastreáveis:
+
+- **Trilha analítica**: o registro das decisões interpretativas do pesquisador --- *por que* este trecho foi codificado com este fator, *por que* recebeu esta classificação SWOT. No template, o campo `resumo` (MEMO) cumpre esse papel: cada item carrega a justificativa do pesquisador junto ao dado.
+- **Trilha de auditoria**: a rastreabilidade de cada interpretação até o dado bruto que a originou. O campo `citação` (QUOTATION) vincula cada codificação ao excerto exato da fonte, e a referência `@fonte` identifica de onde o excerto foi extraído.
+
+Juntas, essas trilhas permitem que qualquer leitor percorra o caminho inverso --- do resultado agregado (escala de sustentabilidade) até a fala original do morador ou o trecho do relatório técnico que o fundamenta.
+:::
+
+---
+
+# O template (arquivo *.synt*) {#sec-template}
+
+O template organiza o DSAP em três blocos: fontes, itens e ontologia.
+
+## Fontes: quem disse
+
+```synesis
+SOURCE FIELDS
+    REQUIRED tipo_ref
+END SOURCE FIELDS
+
+FIELD tipo_ref TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Define o tipo de referência utilizada
+    VALUES
+        pri: Referência primária, entrevistas
+        sec: Referência secundária, blogs, jornais, revistas, podcasts
+        ref: Artigos científicos, documentos oficiais
+    END VALUES
+END FIELD
+```
+
+A distinção entre `pri`, `sec` e `ref` permite filtrar resultados por tipo de evidência. Dados de oficinas comunitárias (`pri`) podem ser analisados separadamente de relatórios técnicos (`ref`).
+
+## Itens: o que foi dito e como se interpreta
+
+```synesis
+ITEM FIELDS
+    REQUIRED citação, resumo, fator, swot, importância
+END ITEM FIELDS
+
+FIELD citação TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído da fonte bibliográfica
+END FIELD
+
+FIELD resumo TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Memo analítico explicando a interpretação
+END FIELD
+
+FIELD fator TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Palavra-chave temática
+END FIELD
+
+FIELD swot TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Elementos da matriz SWOT
+    VALUES
+        fo: Força (perspectiva interna)
+        fr: Fraqueza (perspectiva interna)
+        op: Oportunidade (perspectiva externa)
+        am: Ameaça (perspectiva externa)
+    END VALUES
+END FIELD
+
+FIELD importância TYPE SCALE
+    SCOPE ITEM
+    FORMAT [0..1]
+    DESCRIPTION Importância do fator (0=nula ou baixa, 0.5=moderada, 1=alta)
+END FIELD
+```
+
+Cada item combina cinco tipos de campo: `QUOTATION` (o dado bruto), `MEMO` (interpretação), `CODE` (fator temático vinculado à ontologia), `ENUMERATED` (classificação SWOT) e `SCALE` (significância).
+
+## Ontologia: o que cada fator significa
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED description, dimensão_sustentabilidade
+END ONTOLOGY FIELDS
+
+FIELD description TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Descrição do fator
+END FIELD
+
+FIELD dimensão_sustentabilidade TYPE ENUMERATED
+    SCOPE ONTOLOGY
+    DESCRIPTION Dimensões da sustentabilidade
+    VALUES
+        ambiental: Ecossistemas, recursos naturais, fauna, flora
+        sociocultural: Qualidade de vida, valores culturais, intergeracionalidade
+        econômica: Investimentos, comércio, empregabilidade
+        governamental: Infraestrutura, sustentabilidade jurídica, justiça social
+    END VALUES
+END FIELD
+```
+
+:::{.callout-tip}
+## Composição de tipos
+Este template usa **5 tipos de campo** em um único projeto: QUOTATION, MEMO, CODE, ENUMERATED e SCALE. Juntos, eles expressam o pipeline completo do nosso DSAP: extração → interpretação → codificação → classificação → pontuação.
+:::
+
+---
+
+# Exemplos de fontes {#sec-fontes}
+
+Os exemplos a seguir utilizam uma comunidade fictícia --- **Vila dos Coqueiros**, uma vila pesqueira costeira.
+
+```synesis
+SOURCE @oficina_coqueiros2026
+    tipo_ref: pri
+END SOURCE
+
+SOURCE @jornal_litoral2026
+    tipo_ref: sec
+END SOURCE
+
+SOURCE @relatorio_ambiental2025
+    tipo_ref: ref
+END SOURCE
+```
+
+- `@oficina_coqueiros2026` --- oficina participativa realizada com moradores e pescadores
+- `@jornal_litoral2026` --- reportagem publicada em jornal regional
+- `@relatorio_ambiental2025` --- relatório técnico de monitoramento ambiental
+
+---
+
+# Exemplos de itens {#sec-itens}
+
+Cada item extrai um excerto, interpreta-o e classifica-o. Abaixo, um exemplo para cada categoria SWOT.
+
+---
+
+## Força
+
+```synesis
+ITEM @oficina_coqueiros2026
+    citação: "A pesca artesanal aqui sustenta mais da metade
+              das famílias. Meu avô já pescava nesse mesmo
+              canto, meu pai também."
+
+    resumo: A pesca artesanal é a principal atividade
+            econômica da comunidade, com continuidade
+            intergeracional que reforça tanto a economia
+            local quanto a identidade cultural.
+
+    fator: Pesca_Artesanal
+    swot: fo
+    importância: 1
+END ITEM
+```
+
+Fator interno positivo: a pesca artesanal sustenta famílias e carrega significado cultural. Importância alta (1).
+
+---
+
+## Fraqueza
+
+```synesis
+ITEM @oficina_coqueiros2026
+    citação: "O pessoal joga o lixo no manguezal porque
+              não tem coleta. A prefeitura não vem aqui."
+
+    resumo: Ausência de coleta de resíduos leva ao descarte
+            inadequado no ecossistema de mangue, gerando
+            impacto ambiental direto.
+
+    fator: Descarte_Residuos
+    swot: fr
+    importância: 0.5
+END ITEM
+```
+
+Fator interno negativo: prática local de descarte inadequado, agravada pela ausência de serviço público. Importância moderada (0.5).
+
+---
+
+## Oportunidade
+
+```synesis
+ITEM @jornal_litoral2026
+    citação: "Programa federal de turismo de base comunitária
+              selecionou cinco vilas do litoral para receber
+              capacitação e infraestrutura."
+
+    resumo: Programa governamental pode diversificar a
+            economia local e valorizar ativos culturais
+            da comunidade.
+
+    fator: Turismo_Comunitario
+    swot: op
+    importância: 1
+END ITEM
+```
+
+Fator externo positivo: oportunidade de diversificação econômica vinda de política pública. Importância alta (1).
+
+---
+
+## Ameaça
+
+```synesis
+ITEM @relatorio_ambiental2025
+    citação: "O monitoramento identificou taxa de assoreamento
+              acelerado na foz do rio Coqueiros, com redução
+              de 30% na profundidade do canal principal nos
+              últimos cinco anos."
+
+    resumo: Assoreamento compromete a navegabilidade e os
+            estoques pesqueiros, ameaçando a principal
+            atividade econômica da comunidade.
+
+    fator: Assoreamento
+    swot: am
+    importância: 1
+END ITEM
+```
+
+Fator externo negativo: processo ambiental que independe da ação da comunidade, mas afeta diretamente sua sustentabilidade. Importância alta (1).
+
+---
+
+## Mais itens
+
+Os fatores `Patrimonio_Cultural` e `Saneamento_Basico`, presentes na ontologia, também aparecem como itens:
+
+```synesis
+ITEM @oficina_coqueiros2026
+    citação: "As festas de São Pedro e a farinhada são
+              tradição antiga. Todo mundo participa, até
+              quem já saiu da vila volta pra isso."
+
+    resumo: Festividades tradicionais e práticas coletivas
+            de produção reforçam coesão social e identidade
+            cultural da comunidade.
+
+    fator: Patrimonio_Cultural
+    swot: fo
+    importância: 0.5
+END ITEM
+
+ITEM @oficina_coqueiros2026
+    citação: "Não tem rede de esgoto. Cada um resolve do
+              seu jeito --- fossa, vala, ou vai direto pro
+              rio."
+
+    resumo: Ausência de esgotamento sanitário gera soluções
+            improvisadas com risco de contaminação hídrica.
+
+    fator: Saneamento_Basico
+    swot: fr
+    importância: 1
+END ITEM
+```
+
+---
+
+# Ontologia: os fatores e suas dimensões {#sec-ontologia}
+
+Cada fator mencionado nos itens deve existir na ontologia com sua descrição e dimensão de sustentabilidade.
+
+```synesis
+ONTOLOGY Pesca_Artesanal
+    description: Atividade pesqueira tradicional de pequena
+                 escala, praticada com técnicas transmitidas
+                 entre gerações.
+    dimensão_sustentabilidade: econômica
+END ONTOLOGY
+
+ONTOLOGY Descarte_Residuos
+    description: Descarte inadequado de resíduos sólidos em
+                 áreas naturais, decorrente da ausência de
+                 coleta pública e de práticas locais de manejo.
+    dimensão_sustentabilidade: ambiental
+END ONTOLOGY
+
+ONTOLOGY Turismo_Comunitario
+    description: Modelo de turismo gerido pela própria
+                 comunidade, que valoriza ativos culturais
+                 e naturais locais.
+    dimensão_sustentabilidade: econômica
+END ONTOLOGY
+
+ONTOLOGY Assoreamento
+    description: Acúmulo de sedimentos em corpos d'água que
+                 reduz profundidade e compromete a navegação
+                 e a biodiversidade aquática.
+    dimensão_sustentabilidade: ambiental
+END ONTOLOGY
+
+ONTOLOGY Saneamento_Basico
+    description: Conjunto de serviços de abastecimento de
+                 água, esgotamento sanitário e drenagem
+                 urbana prestados pelo poder público.
+    dimensão_sustentabilidade: governamental
+END ONTOLOGY
+
+ONTOLOGY Patrimonio_Cultural
+    description: Práticas, saberes e expressões culturais
+                 transmitidas entre gerações na comunidade.
+    dimensão_sustentabilidade: sociocultural
+END ONTOLOGY
+```
+
+:::{.callout-note}
+## Uma dimensão por conceito
+Cada fator recebe uma dimensão principal. `Pesca_Artesanal` é classificada como `econômica` (sua função primária é a geração de renda), embora também tenha relevância sociocultural. A dimensão escolhida reflete o aspecto predominante no contexto do diagnóstico.
+:::
+
+:::{.callout-tip}
+## Objetivos do Desenvolvimento Sustentável
+Além de dimensões da sustentabilidade, uma categoria *ODS* pode ser criada para identificar em que medida os objetivos do desenvolvimento sustentável estão sendo atingidos na comunidade avaliada.
+:::
+---
+
+# Análise e exportação {#sec-analise}
+
+Uma vez compilados, e exportados, os dados permitem diversas análises:
+
+- **Filtrar por SWOT**: quantas forças vs. fraquezas? A comunidade tem mais oportunidades ou ameaças?
+- **Agrupar por dimensão**: qual dimensão da sustentabilidade concentra mais fraquezas?
+- **Comparar comunidades**: aplicando o mesmo template em várias vilas, os resultados são diretamente comparáveis
+- **Exportar**: JSON para visualizações, Neo4j para grafos de relações entre fatores, Excel ou Jupiter Lab para matrizes SWOT
+
+A estrutura compilável garante que todos os fatores mencionados nos itens existam na ontologia e que todos os campos obrigatórios estejam preenchidos --- erros de referência ou campos ausentes são detectados antes da análise.
+
+## Escala de sustentabilidade local {#sec-escala}
+
+Após a exportação dos dados, os pontos de importância podem ser combinados em uma **escala de sustentabilidade** de 0 a 10, onde 0 é muito desfavorável e 10 é muito favorável. A fórmula normaliza a razão entre fatores positivos e negativos:
+
+$$
+\text{Escala} = \frac{(F + O) - (Fr + A)}{(F + O) + (Fr + A)} \times 5 + 5
+$$
+
+Onde $F$, $O$, $Fr$ e $A$ são as somas dos pontos de importância de forças, oportunidades, fraquezas e ameaças, respectivamente.
+
+**Propriedades da fórmula:**
+
+- Se todos os fatores forem positivos ($Fr + A = 0$): resultado = **10**
+- Se todos forem negativos ($F + O = 0$): resultado = **0**
+- Se positivos e negativos se equilibram ($F + O = Fr + A$): resultado = **5**
+- O resultado está sempre no intervalo **[0, 10]**
+
+### Exemplo com os dados da Vila dos Coqueiros
+
+Somando os pontos de importância dos itens apresentados:
+
+| Categoria | Fatores | Importância |
+|-----------|---------|-------------|
+| **Forças (F)** | Pesca_Artesanal (1) + Patrimonio_Cultural (0.5) | **1.5** |
+| **Oportunidades (O)** | Turismo_Comunitario (1) | **1.0** |
+| **Fraquezas (Fr)** | Descarte_Residuos (0.5) + Saneamento_Basico (1) | **1.5** |
+| **Ameaças (A)** | Assoreamento (1) | **1.0** |
+
+: Pontos de importância por categoria SWOT {.striped .hover}
+
+Aplicando a fórmula:
+
+$$
+\text{Escala} = \frac{(1{,}5 + 1{,}0) - (1{,}5 + 1{,}0)}{(1{,}5 + 1{,}0) + (1{,}5 + 1{,}0)} \times 5 + 5 = \frac{0}{5} \times 5 + 5 = 5{,}0
+$$
+
+O resultado **5,0** situa a Vila dos Coqueiros na faixa de **Estagnação** --- os fatores positivos e negativos se equilibram.
+
+### Classes da escala
+
+| Classe | De | Até |
+|--------|----|-----|
+| Muito desfavorável | 0,00 | 2,50 |
+| Desfavorável | 2,51 | 4,25 |
+| Estagnação | 4,26 | 5,75 |
+| Favorável | 5,76 | 7,50 |
+| Muito favorável | 7,51 | 10,00 |
+
+: Escala de sustentabilidade local {.striped .hover}
+
+:::{.callout-note}
+## Limitações da fórmula
+A fórmula exige que ao menos um fator tenha sido identificado ($F + O + Fr + A > 0$), caso contrário ocorre divisão por zero. Além disso, o resultado é sensível ao número de fatores: uma comunidade com muitos fatores pontuados tende a convergir para 5, enquanto comunidades com poucos fatores podem oscilar mais. Para comparações entre comunidades, é importante manter critérios de codificação consistentes.
+:::
+
+---
+
+# Resumo {#sec-resumo}
+
+| Etapa | Quem faz | O que produz |
+|-------|----------|--------------|
+| Leitura técnica | Equipe técnica | Dados referênciais sobre a comunidade |
+| Leitura comunitária | Comunidade + facilitador | Percepções locais (oficinas participativas) |
+| Design do template | Pesquisador | `.synt` com campos SWOT, dimensões e significância |
+| Itemização e codificação | Pesquisador | `.syn` com itens, fatores e classificações |
+| Definição da ontologia | Pesquisador | `.syno` com descrição e dimensão de cada fator |
+| Validação estrutural | Compilador Synesis | Erros de referência, campos ausentes, tipos |
+| Exportação e análise | Compilador Synesis | JSON, Neo4j, Excel para análise quantitativa |
+
+: Pipeline do DSAP com Synesis {.striped .hover}
