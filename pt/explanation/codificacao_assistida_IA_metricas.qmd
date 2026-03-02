@@ -1,0 +1,613 @@
+---
+title: "Métricas da Pesquisa"
+subtitle: "Resultados quantitativos da análise de aceitação social de tecnologias energéticas"
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+    code-tools: true
+jupyter: python3
+---
+
+Este documento apresenta os **principais resultados quantitativos** da análise de ~450 artigos científicos sobre fatores de aceitação social de tecnologias de transição energética. Todos os dados são extraídos diretamente do compilador Synesis --- sem dependência de banco de dados externo.
+
+:::{.callout-note}
+## Notebook interativo
+Os gráficos abaixo são interativos (Plotly): passe o mouse para ver detalhes, clique na legenda para filtrar, e use os controles de zoom. O código-fonte está disponível em cada seção --- clique em "Mostrar código" para expandir.
+:::
+
+:::{.callout-tip}
+## Jupyter e Quarto Publishing
+Esta página exemplifica o uso de **notebooks Jupyter** integrados ao **Quarto Publishing** para produção de documentação profissional e reproduzível. Os dados são lidos diretamente pelo compilador Synesis via `synesis.load`, sem necessidade de banco de dados externo ou exportações intermediárias — o próprio corpus de anotações alimenta os gráficos e tabelas.
+
+O código ilustra como anotações no formato Synesis podem ser compiladas em memória e convertidas em DataFrames para análise e visualização. Consulte o [Guia de Referência do `synesis.load`](../../pt/reference/synesis_load.qmd) para a documentação completa da API.
+:::
+
+---
+
+# Carregamento dos dados {#sec-setup}
+
+```{python}
+#| label: setup
+#| code-fold: true
+
+from pathlib import Path
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import synesis
+from IPython.display import display, Markdown
+
+pd.set_option('display.max_colwidth', 80)
+
+# --- Carregamento do projeto ---
+project_dir = Path("../../case-studies/Social_Acceptance")
+
+def read_text(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+result = synesis.load(
+    project_content=read_text(project_dir / "social_acceptance.synp"),
+    template_content=read_text(project_dir / "social_acceptance.synt"),
+    annotation_contents={"social_acceptance.syn": read_text(project_dir / "social_acceptance.syn")},
+    ontology_contents={"social_acceptance.syno": read_text(project_dir / "social_acceptance.syno")},
+    bibliography_content=read_text(project_dir / "social_acceptance.bib"),
+)
+
+assert result.success, f"Erro de compilação:\n{result.get_diagnostics()}"
+
+dfs = result.to_dataframes()
+sources = dfs["sources"]
+items = dfs["items"]
+onto = dfs["ontologies"]
+chains = dfs["chains"]
+stats = result.stats
+
+# Dicionários de referência usados em várias seções
+aspect_labels = {
+    "0": "Undefined", "1": "Quantitative", "2": "Spatial", "3": "Kinematic",
+    "4": "Physical", "5": "Biotic", "6": "Sensitive", "7": "Analytical",
+    "8": "Formative", "9": "Lingual", "10": "Social", "11": "Economic",
+    "12": "Aesthetic", "13": "Juridical", "14": "Ethical", "15": "Fiducial",
+}
+
+dim_labels = {
+    "0": "Não classificado",
+    "1": "Comunitária",
+    "2": "Mercado",
+    "3": "Sociopolítica",
+    "4": "Técnico-científica",
+}
+
+# Estatísticas de conceitos (reutilizadas em várias seções)
+all_concepts = pd.concat([
+    chains[["from_code", "bibref"]].rename(columns={"from_code": "concept"}),
+    chains[["to_code", "bibref"]].rename(columns={"to_code": "concept"}),
+])
+concept_stats = all_concepts.groupby("concept").agg(
+    frequencia=("concept", "count"),
+    fontes=("bibref", "nunique")
+).sort_values("frequencia", ascending=False)
+
+display(Markdown("Projeto carregado com sucesso."))
+```
+
+---
+
+# Panorama geral {#sec-panorama}
+
+Antes de explorar os resultados, é importante entender a **escala** da análise. O corpus combina centenas de artigos processados por codificação assistida por IA, produzindo uma rede de conhecimento com milhares de relações causais.
+
+```{python}
+#| label: panorama-stats
+
+panorama = pd.DataFrame([
+    {"Métrica": "Artigos analisados", "Valor": stats.source_count,
+     "O que significa": "Fontes científicas processadas pelo pipeline"},
+    {"Métrica": "Evidências extraídas", "Valor": stats.item_count,
+     "O que significa": "Excertos com cadeias causais identificadas"},
+    {"Métrica": "Conceitos na ontologia", "Valor": stats.ontology_count,
+     "O que significa": "Fatores únicos classificados multidimensionalmente"},
+    {"Métrica": "Relações causais", "Valor": stats.triple_count,
+     "O que significa": "Conexões do tipo A → relação → B entre conceitos"},
+])
+
+display(panorama.style.hide(axis='index').set_properties(**{
+    'text-align': 'left'
+}).set_table_styles([
+    {'selector': 'th', 'props': [('text-align', 'left'), ('font-weight', 'bold')]}
+]))
+```
+
+---
+
+# Conceitos centrais {#sec-conceitos}
+
+Os conceitos que aparecem com maior **frequência** e em maior **diversidade de fontes** são os mais robustos empiricamente. Se muitos artigos independentes identificam o mesmo fator, ele provavelmente é central para o campo.
+
+```{python}
+#| label: fig-top-concepts
+#| fig-cap: "Top 25 conceitos por frequência nas cadeias causais. A cor indica diversidade de fontes."
+
+top25 = concept_stats.head(25).reset_index()
+
+fig = px.bar(
+    top25.iloc[::-1],
+    x="frequencia", y="concept",
+    color="fontes",
+    color_continuous_scale="YlOrRd",
+    orientation="h",
+    labels={"concept": "", "frequencia": "Ocorrências em cadeias causais",
+            "fontes": "Fontes"},
+    height=600,
+)
+fig.update_layout(
+    template="plotly_white",
+    font=dict(size=12),
+    coloraxis_colorbar=dict(title="Nº de<br>fontes"),
+)
+fig.show()
+```
+
+---
+
+# Tipos de relação causal {#sec-relacoes}
+
+O template define cinco tipos de relação. A distribuição revela a **natureza** do campo: se os fatores predominantemente *facilitam*, *influenciam*, *restringem* ou *contestam* uns aos outros.
+
+```{python}
+#| label: fig-relation-types
+#| fig-cap: "Proporção de cada tipo de relação causal no corpus."
+
+rel_counts = chains["relation"].value_counts().reset_index()
+rel_counts.columns = ["Tipo de relação", "Quantidade"]
+
+rel_descriptions = {
+    "INFLUENCES": "Efeito causal direto (A afeta B)",
+    "ENABLES": "Condição facilitadora (A permite B)",
+    "CONSTRAINS": "Restrição (A limita B)",
+    "RELATES-TO": "Associação genérica",
+    "CONTESTED-BY": "Oposição ativa (A é contestado por B)",
+}
+rel_counts["Significado"] = rel_counts["Tipo de relação"].map(rel_descriptions)
+
+fig = px.pie(
+    rel_counts,
+    values="Quantidade", names="Tipo de relação",
+    color_discrete_sequence=px.colors.qualitative.Set2,
+    hole=0.4,
+)
+fig.update_traces(textposition="inside", textinfo="percent+label+value")
+fig.update_layout(template="plotly_white", font=dict(size=12))
+fig.show()
+
+display(rel_counts.style.hide(axis='index'))
+```
+
+---
+
+# Relações mais documentadas {#sec-top-relacoes}
+
+Cada relação `A → tipo → B` expressa uma hipótese causal extraída da literatura. As relações mais frequentes representam os **mecanismos mais amplamente documentados**.
+
+```{python}
+#| label: fig-top-relations
+#| fig-cap: "As 20 relações causais com mais evidências empíricas."
+
+rel_freq = (
+    chains.groupby(["from_code", "relation", "to_code"])
+    .agg(ocorrencias=("bibref", "count"), fontes=("bibref", "nunique"))
+    .sort_values("ocorrencias", ascending=False)
+    .reset_index()
+)
+
+top20_rel = rel_freq.head(20).copy()
+top20_rel["cadeia"] = (
+    top20_rel["from_code"] + " → " +
+    top20_rel["relation"].str.lower() + " → " +
+    top20_rel["to_code"]
+)
+
+fig = px.bar(
+    top20_rel.iloc[::-1],
+    x="ocorrencias", y="cadeia",
+    color="relation",
+    orientation="h",
+    labels={"cadeia": "", "ocorrencias": "Ocorrências", "relation": "Tipo"},
+    color_discrete_map={
+        "INFLUENCES": "#4CAF50", "ENABLES": "#2196F3",
+        "CONSTRAINS": "#FF9800", "CONTESTED-BY": "#F44336",
+        "RELATES-TO": "#9E9E9E",
+    },
+    height=600,
+)
+fig.update_layout(template="plotly_white", font=dict(size=11))
+fig.show()
+```
+
+---
+
+# Aspectos Modais de Dooyeweerd {#sec-dooyeweerd}
+
+A classificação modal de Dooyeweerd organiza os conceitos em **16 aspectos** que vão do quantitativo ao fiducial. A distribuição revela quais dimensões da realidade são mais estudadas --- e quais são negligenciadas.
+
+```{python}
+#| label: fig-aspects
+#| fig-cap: "Conceitos classificados por aspecto modal. Cores distinguem aspectos pré-analíticos (naturais) dos normativos (culturais)."
+
+aspect_counts = onto["aspect"].value_counts().sort_index()
+aspect_df = pd.DataFrame({
+    "aspect_id": aspect_counts.index,
+    "count": aspect_counts.values,
+})
+aspect_df["label"] = aspect_df["aspect_id"].map(aspect_labels)
+aspect_df["order"] = aspect_df["aspect_id"].astype(int)
+aspect_df = aspect_df.sort_values("order")
+
+aspect_df["grupo"] = aspect_df["order"].apply(
+    lambda x: "Pré-analíticos (1-6)" if x <= 6 else "Normativos (7-15)" if x >= 7 else "N/D"
+)
+
+fig = px.bar(
+    aspect_df[aspect_df["order"] > 0],
+    x="label", y="count",
+    color="grupo",
+    labels={"label": "Aspecto modal", "count": "Nº de conceitos", "grupo": ""},
+    color_discrete_map={
+        "Pré-analíticos (1-6)": "#42A5F5",
+        "Normativos (7-15)": "#AB47BC",
+    },
+    height=450,
+)
+fig.update_layout(
+    template="plotly_white",
+    xaxis_tickangle=-45,
+    font=dict(size=12),
+    bargap=0.15,
+)
+fig.show()
+
+top3 = aspect_df[aspect_df["order"] > 0].nlargest(3, "count")
+display(Markdown(
+    f"**Aspectos dominantes:** {', '.join(top3['label'])} — "
+    f"juntos representam {top3['count'].sum()} dos {aspect_df['count'].sum()} conceitos "
+    f"({top3['count'].sum()/aspect_df['count'].sum()*100:.0f}%)."
+))
+```
+
+---
+
+# Dimensões de aceitação (Wüstenhagen) {#sec-wustenhagen}
+
+O framework de Wüstenhagen classifica a aceitação em três dimensões: **comunitária**, **de mercado** e **sociopolítica**, além da avaliação **técnico-científica**.
+
+```{python}
+#| label: fig-dimensions
+#| fig-cap: "Distribuição dos conceitos por dimensão de aceitação social."
+
+dim_counts = onto["dimension"].value_counts().sort_index().reset_index()
+dim_counts.columns = ["dim_id", "count"]
+dim_counts["label"] = dim_counts["dim_id"].map(dim_labels)
+dim_counts = dim_counts[dim_counts["dim_id"] != "0"]
+
+fig = px.bar(
+    dim_counts,
+    x="label", y="count",
+    color="label",
+    labels={"label": "", "count": "Nº de conceitos"},
+    color_discrete_sequence=["#26A69A", "#FFA726", "#7E57C2", "#42A5F5"],
+    text="count",
+    height=400,
+)
+fig.update_traces(textposition="outside")
+fig.update_layout(
+    template="plotly_white",
+    showlegend=False,
+    font=dict(size=13),
+)
+fig.show()
+```
+
+---
+
+# Robustez dos conceitos {#sec-confianca}
+
+Cada conceito recebe um nível de confiança baseado na frequência e diversidade de fontes. Conceitos **HIGH** aparecem em muitos artigos; conceitos **LOW** emergem de poucas fontes.
+
+```{python}
+#| label: fig-confidence
+#| fig-cap: "Distribuição dos conceitos por nível de confiança empírica."
+
+conf_counts = onto["confidence"].value_counts().reindex(["HIGH", "MEDIUM", "LOW"]).reset_index()
+conf_counts.columns = ["Nível", "Conceitos"]
+
+fig = px.bar(
+    conf_counts,
+    x="Nível", y="Conceitos",
+    color="Nível",
+    color_discrete_map={"HIGH": "#2E7D32", "MEDIUM": "#F9A825", "LOW": "#C62828"},
+    text="Conceitos",
+    height=400,
+)
+fig.update_traces(textposition="outside")
+fig.update_layout(template="plotly_white", showlegend=False, font=dict(size=13))
+fig.show()
+
+pct_low = conf_counts[conf_counts["Nível"] == "LOW"]["Conceitos"].values[0] / conf_counts["Conceitos"].sum() * 100
+display(Markdown(
+    f"**{pct_low:.0f}%** dos conceitos têm confiança LOW — típico de um corpus amplo onde "
+    f"muitos conceitos são específicos de poucos estudos. Os {conf_counts[conf_counts['Nível']=='HIGH']['Conceitos'].values[0]} "
+    f"conceitos HIGH formam o núcleo consolidado do campo."
+))
+```
+
+---
+
+# Mapa temático {#sec-topicos}
+
+Os tópicos são categorias temáticas **emergentes** atribuídas a cada conceito durante a codificação. O treemap mostra a proporção relativa de cada tema.
+
+```{python}
+#| label: fig-treemap
+#| fig-cap: "Treemap dos tópicos temáticos. Áreas maiores indicam mais conceitos naquele tema."
+
+topic_counts = onto["topic"].value_counts().reset_index()
+topic_counts.columns = ["Tópico", "Conceitos"]
+
+fig = px.treemap(
+    topic_counts,
+    path=["Tópico"],
+    values="Conceitos",
+    color="Conceitos",
+    color_continuous_scale="Viridis",
+    height=500,
+)
+fig.update_layout(template="plotly_white", font=dict(size=12))
+fig.show()
+```
+
+---
+
+# Cruzamento: tópicos vs. dimensões {#sec-heatmap}
+
+Qual tópico concentra conceitos em qual dimensão? Este heatmap revela onde o conhecimento é mais denso e onde há **lacunas** que merecem investigação futura.
+
+```{python}
+#| label: fig-heatmap
+#| fig-cap: "Cruzamento entre tópicos temáticos e dimensões de aceitação social."
+
+cross = onto.copy()
+cross["dim_label"] = cross["dimension"].map(dim_labels)
+cross = cross[cross["dimension"] != "0"]
+
+pivot = cross.groupby(["topic", "dim_label"]).size().reset_index(name="count")
+top_topics = topic_counts[topic_counts["Conceitos"] >= 10]["Tópico"].tolist()
+pivot = pivot[pivot["topic"].isin(top_topics)]
+
+heatmap_data = pivot.pivot(index="topic", columns="dim_label", values="count").fillna(0)
+
+fig = px.imshow(
+    heatmap_data,
+    labels=dict(x="Dimensão de aceitação", y="Tópico", color="Conceitos"),
+    color_continuous_scale="Blues",
+    aspect="auto",
+    text_auto=True,
+    height=500,
+)
+fig.update_layout(template="plotly_white", font=dict(size=12))
+fig.show()
+```
+
+---
+
+# Perfil metodológico {#sec-metodos}
+
+A diversidade metodológica fortalece a robustez das conclusões. O gráfico mostra quais abordagens de pesquisa predominam no corpus.
+
+```{python}
+#| label: fig-methods
+#| fig-cap: "Métodos de pesquisa identificados nos artigos do corpus."
+
+method_series = sources["method"].dropna().str.lower()
+
+method_keywords = {
+    "Survey / Questionário": ["survey", "questionnaire"],
+    "Entrevista": ["interview"],
+    "Revisão de literatura": ["review", "literature", "meta-analysis", "bibliometric"],
+    "Estudo de caso": ["case study", "case-study"],
+    "Análise quantitativa": ["regression", "sem ", "structural equation", "statistical"],
+    "Método misto": ["mixed method", "mixed-method"],
+    "Experimento / Choice": ["experiment", "choice experiment", "conjoint", "contingent"],
+    "Modelagem / Simulação": ["model", "simulation", "agent-based", "optimization"],
+    "Análise de conteúdo": ["content analysis", "discourse", "thematic", "qualitative"],
+    "Dados secundários": ["secondary data", "panel data", "database"],
+}
+
+method_counts = {}
+for label, keywords in method_keywords.items():
+    mask = method_series.apply(lambda x: any(kw in x for kw in keywords))
+    method_counts[label] = mask.sum()
+
+method_df = pd.DataFrame([
+    {"Método": k, "Artigos": v} for k, v in method_counts.items() if v > 0
+]).sort_values("Artigos", ascending=True)
+
+fig = px.bar(
+    method_df,
+    x="Artigos", y="Método",
+    orientation="h",
+    color_discrete_sequence=["#5C6BC0"],
+    text="Artigos",
+    height=400,
+)
+fig.update_traces(textposition="outside")
+fig.update_layout(template="plotly_white", font=dict(size=12))
+fig.show()
+
+display(Markdown(
+    f"*Nota: um artigo pode usar mais de um método, portanto os totais "
+    f"podem exceder os {len(sources)} artigos do corpus.*"
+))
+```
+
+---
+
+# Rede de conceitos {#sec-rede}
+
+O grafo abaixo mostra os **30 conceitos com mais conexões** e as relações entre eles. O tamanho dos nós reflete a frequência; as cores representam os tópicos temáticos.
+
+```{python}
+#| label: fig-network
+#| fig-cap: "Rede dos 30 conceitos mais conectados. Passe o mouse sobre os nós para ver detalhes."
+
+import networkx as nx
+
+G = nx.DiGraph()
+for _, row in chains.iterrows():
+    G.add_edge(row["from_code"], row["to_code"], relation=row["relation"])
+
+degree_dict = dict(G.degree())
+top30_nodes = sorted(degree_dict, key=degree_dict.get, reverse=True)[:30]
+subG = G.subgraph(top30_nodes).copy()
+
+pos = nx.spring_layout(subG, k=2.5, iterations=80, seed=42)
+
+onto_topic_map = onto.set_index("chain")["topic"].to_dict()
+
+node_x, node_y, node_text, node_size, node_color = [], [], [], [], []
+topic_list = sorted(set(onto_topic_map.get(n, "Outros") for n in subG.nodes()))
+topic_color_map = {t: i for i, t in enumerate(topic_list)}
+
+for node in subG.nodes():
+    x, y = pos[node]
+    node_x.append(x)
+    node_y.append(y)
+    deg = degree_dict[node]
+    topic = onto_topic_map.get(node, "Outros")
+    node_text.append(f"{node}<br>Conexões: {deg}<br>Tópico: {topic}")
+    node_size.append(max(15, min(60, deg * 0.8)))
+    node_color.append(topic_color_map.get(topic, 0))
+
+edge_traces = []
+for u, v, data in subG.edges(data=True):
+    x0, y0 = pos[u]
+    x1, y1 = pos[v]
+    edge_traces.append(go.Scatter(
+        x=[x0, x1, None], y=[y0, y1, None],
+        mode="lines",
+        line=dict(width=0.5, color="#ccc"),
+        hoverinfo="none",
+        showlegend=False,
+    ))
+
+node_trace = go.Scatter(
+    x=node_x, y=node_y,
+    mode="markers+text",
+    text=[n for n in subG.nodes()],
+    textposition="top center",
+    textfont=dict(size=9),
+    marker=dict(
+        size=node_size,
+        color=node_color,
+        colorscale="Turbo",
+        line=dict(width=1, color="white"),
+    ),
+    hovertext=node_text,
+    hoverinfo="text",
+    showlegend=False,
+)
+
+fig = go.Figure(data=edge_traces + [node_trace])
+fig.update_layout(
+    template="plotly_white",
+    showlegend=False,
+    xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+    height=650,
+    font=dict(size=12),
+)
+fig.show()
+```
+
+---
+
+# Conceitos de alta confiança {#sec-high-confidence}
+
+A tabela lista os conceitos classificados com **confiança HIGH** --- aqueles que aparecem com alta frequência em múltiplas fontes independentes. Cada linha mostra a classificação multidimensional completa.
+
+```{python}
+#| label: tbl-high-confidence
+#| tbl-cap: "Conceitos com confiança HIGH: os pilares empíricos do campo."
+
+high_conf = onto[onto["confidence"] == "HIGH"].copy()
+high_conf["aspect_label"] = high_conf["aspect"].map(aspect_labels)
+high_conf["dim_label"] = high_conf["dimension"].map(dim_labels)
+
+high_conf = high_conf.merge(
+    concept_stats.reset_index().rename(columns={"concept": "chain"}),
+    on="chain", how="left"
+)
+
+display_cols = ["chain", "topic", "aspect_label", "dim_label", "frequencia", "fontes", "reasoning"]
+display_names = {
+    "chain": "Conceito", "topic": "Tópico", "aspect_label": "Aspecto modal",
+    "dim_label": "Dimensão", "frequencia": "Freq.", "fontes": "Fontes",
+    "reasoning": "Justificativa",
+}
+
+table = high_conf[display_cols].rename(columns=display_names)
+table = table.sort_values("Freq.", ascending=False)
+table["Freq."] = table["Freq."].fillna(0).astype(int)
+table["Fontes"] = table["Fontes"].fillna(0).astype(int)
+
+display(Markdown(f"**{len(table)} conceitos com confiança HIGH:**"))
+display(
+    table.style
+    .hide(axis="index")
+    .background_gradient(subset=["Freq."], cmap="Greens")
+    .background_gradient(subset=["Fontes"], cmap="Blues")
+    .set_properties(**{"text-align": "left", "font-size": "11px"})
+    .set_table_styles([
+        {"selector": "th", "props": [("text-align", "left"), ("font-weight", "bold")]}
+    ])
+)
+```
+
+---
+
+# Síntese {#sec-sintese}
+
+```{python}
+#| label: summary
+
+n_sources = stats.source_count
+n_concepts = stats.ontology_count
+n_relations = stats.triple_count
+n_high = len(onto[onto["confidence"] == "HIGH"])
+
+top5 = concept_stats.head(5).index.tolist()
+
+dominant_rel = chains["relation"].value_counts().index[0]
+dominant_dim = dim_counts.iloc[dim_counts["count"].values.argmax()]["label"]
+
+summary = f"""
+### Principais achados
+
+| Dimensão | Resultado |
+|----------|----------|
+| **Corpus** | {n_sources} artigos &rarr; {n_concepts} conceitos e {n_relations} relações causais |
+| **Conceitos centrais** | {', '.join(top5)} |
+| **Relação dominante** | {dominant_rel} ({chains['relation'].value_counts().iloc[0]} ocorrências) |
+| **Dimensão mais estudada** | {dominant_dim} |
+| **Robustez** | {n_high} conceitos com alta confiança, {n_concepts - n_high} emergentes |
+
+: Síntese quantitativa da análise {{.striped .hover}}
+
+---
+
+*Dados gerados pelo compilador Synesis a partir de codificação assistida por IA.*
+"""
+
+display(Markdown(summary))
+```

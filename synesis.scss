@@ -487,9 +487,9 @@ img.quarto-cover-image {
 // Imagens dentro do conteúdo — borda sutil
 .quarto-figure img,
 article img:not(.quarto-cover-image) {
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid $syn-paper-tint;
-  box-shadow: 0 4px 12px rgba($syn-navy, 0.06);
+  box-shadow: 0 4px 16px rgba($syn-navy, 0.10);
 }
 
 // ══════════════════════════════════════════════════════════

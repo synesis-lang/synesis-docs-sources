@@ -16,6 +16,9 @@ _site/
 Thumbs.db
 
 
+# Case studies (dados locais, não versionados)
+case-studies/
+
 # Temporary files
 *.tmp
 *.temp

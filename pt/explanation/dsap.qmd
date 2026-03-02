@@ -1,6 +1,11 @@
 ---
 title: "Diagnóstico Socioambiental Participativo"
 subtitle: "Codificação e análise SWOT com Synesis para diagnósticos comunitários"
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+jupyter: python3
 ---
 
 Este documento mostra como usar Synesis para estruturar um **Diagnóstico Socioambiental Participativo (DSAP)** --- um processo que combina dados técnicos e percepções comunitárias para avaliar a sustentabilidade de uma localidade. O template proposto integra codificação qualitativa, análise SWOT e dimensões da sustentabilidade em uma única estrutura compilável.
@@ -415,6 +420,227 @@ A fórmula exige que ao menos um fator tenha sido identificado ($F + O + Fr + A 
 
 ---
 
+# Métricas da Vila dos Coqueiros {#sec-metricas}
+
+As visualizações abaixo sintetizam os dados apresentados nesta página --- todos extraídos diretamente dos exemplos de itens, fontes e ontologia da Vila dos Coqueiros.
+
+```{python}
+#| label: setup-dsap
+#| code-fold: true
+
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+from plotly.subplots import make_subplots
+
+# Dados extraídos dos exemplos da página
+fatores = pd.DataFrame([
+    {"fator": "Pesca Artesanal",    "swot": "Força",      "dimensao": "Econômica",      "importancia": 1.0},
+    {"fator": "Patrimônio Cultural", "swot": "Força",      "dimensao": "Sociocultural",   "importancia": 0.5},
+    {"fator": "Turismo Comunitário", "swot": "Oportunidade","dimensao": "Econômica",      "importancia": 1.0},
+    {"fator": "Descarte Resíduos",   "swot": "Fraqueza",   "dimensao": "Ambiental",       "importancia": 0.5},
+    {"fator": "Saneamento Básico",   "swot": "Fraqueza",   "dimensao": "Governamental",   "importancia": 1.0},
+    {"fator": "Assoreamento",        "swot": "Ameaça",     "dimensao": "Ambiental",       "importancia": 1.0},
+])
+
+fontes = pd.DataFrame([
+    {"tipo": "Primária (oficina)",    "sigla": "pri", "count": 1},
+    {"tipo": "Secundária (jornal)",   "sigla": "sec", "count": 1},
+    {"tipo": "Referência (relatório)","sigla": "ref", "count": 1},
+])
+
+F  = fatores[fatores["swot"] == "Força"]["importancia"].sum()
+O  = fatores[fatores["swot"] == "Oportunidade"]["importancia"].sum()
+Fr = fatores[fatores["swot"] == "Fraqueza"]["importancia"].sum()
+A  = fatores[fatores["swot"] == "Ameaça"]["importancia"].sum()
+escala = ((F + O) - (Fr + A)) / ((F + O) + (Fr + A)) * 5 + 5
+
+def classe_escala(v):
+    if v <= 2.50: return "Muito desfavorável"
+    if v <= 4.25: return "Desfavorável"
+    if v <= 5.75: return "Estagnação"
+    if v <= 7.50: return "Favorável"
+    return "Muito favorável"
+
+classe = classe_escala(escala)
+```
+
+## Escala de sustentabilidade
+
+```{python}
+#| label: fig-gauge
+#| fig-cap: "Escala de sustentabilidade local da Vila dos Coqueiros (0–10)."
+
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.gridspec as gridspec
+import numpy as np
+
+faixas = [
+    {"label": "Muito desfavorável", "inicio": 0,   "fim": 2.5, "cor": "#E57373", "txt": "#7f0000"},
+    {"label": "Desfavorável",       "inicio": 2.5, "fim": 4.3, "cor": "#FFB74D", "txt": "#6d3b00"},
+    {"label": "Estagnação",         "inicio": 4.3, "fim": 5.8, "cor": "#FFF176", "txt": "#5a4a00"},
+    {"label": "Favorável",          "inicio": 5.8, "fim": 7.5, "cor": "#81C784", "txt": "#1b4d1e"},
+    {"label": "Muito favorável",    "inicio": 7.5, "fim": 10,  "cor": "#388E3C", "txt": "#ffffff"},
+]
+
+def val_para_rad(v):
+    return np.pi - (v / 10) * np.pi
+
+fig = plt.figure(figsize=(9, 6), facecolor="white")
+gs  = gridspec.GridSpec(2, 1, height_ratios=[5, 1], hspace=0.05)
+
+# ── Eixo polar (gauge) ────────────────────────────────────────────────────────
+ax = fig.add_subplot(gs[0], projection="polar")
+ax.set_facecolor("white")
+
+for f in faixas:
+    theta_ini = val_para_rad(f["fim"])
+    largura   = val_para_rad(f["inicio"]) - val_para_rad(f["fim"])
+    ax.bar(x=theta_ini, width=largura, height=0.52, bottom=1.98,
+           color=f["cor"], edgecolor="white", linewidth=2.5, align="edge")
+
+# Marcadores numéricos nos limites
+for v in [0, 2.5, 4.3, 5.8, 7.5, 10]:
+    ax.annotate(f"{v:g}".replace(".", ","),
+                xy=(val_para_rad(v), 2.58),
+                ha="center", va="center",
+                fontsize=8.5, color="#888888")
+
+# Ponteiro wedge
+ax.annotate("", xytext=(0, 0), xy=(val_para_rad(escala), 1.88),
+            arrowprops=dict(arrowstyle="wedge,tail_width=0.45",
+                            color="#1A3A5C", shrinkA=0))
+
+# Círculo central com valor
+ax.annotate(f"{escala:.1f}".replace(".", ","),
+            xy=(0, 0), xycoords="data",
+            ha="center", va="center",
+            fontsize=28, fontweight="bold", color="white",
+            bbox=dict(boxstyle="circle,pad=0.38", facecolor="#1A3A5C", linewidth=0))
+
+ax.set_ylim(0, 3)
+ax.set_xlim(0, np.pi)
+ax.set_axis_off()
+
+# Título e classe acima do gauge
+fig.text(0.5, 0.96, "Escala de Sustentabilidade Local",
+         ha="center", va="top", fontsize=13, fontweight="bold", color="#2C3E50")
+fig.text(0.5, 0.90, classe,
+         ha="center", va="top", fontsize=11, color="#7F8C8D")
+
+# ── Eixo cartesiano (legenda horizontal) ─────────────────────────────────────
+ax2 = fig.add_subplot(gs[1])
+ax2.set_facecolor("white")
+ax2.set_axis_off()
+
+n = len(faixas)
+chip_w, chip_h = 0.17, 0.55
+gap = (1.0 - n * chip_w) / (n + 1)
+
+for i, f in enumerate(faixas):
+    x = gap + i * (chip_w + gap)
+    rect = mpatches.FancyBboxPatch(
+        (x, 0.2), chip_w, chip_h,
+        boxstyle="round,pad=0.02",
+        facecolor=f["cor"], edgecolor="none",
+        transform=ax2.transAxes, clip_on=False,
+    )
+    ax2.add_patch(rect)
+    ax2.text(x + chip_w / 2, 0.2 + chip_h / 2, f["label"],
+             ha="center", va="center",
+             fontsize=8.2, fontweight="bold", color=f["txt"],
+             transform=ax2.transAxes)
+
+plt.show()
+```
+
+## Distribuição SWOT
+
+```{python}
+#| label: fig-swot
+#| fig-cap: "Importância acumulada por categoria SWOT. Positivos (F+O) vs. negativos (Fr+A)."
+
+swot_agg = fatores.groupby("swot")["importancia"].sum().reset_index()
+swot_agg.columns = ["Categoria", "Importância"]
+
+cor_map = {
+    "Força":       "#2E7D32",
+    "Oportunidade":"#7CB342",
+    "Fraqueza":    "#EF6C00",
+    "Ameaça":      "#C62828",
+}
+ordem = ["Força", "Oportunidade", "Fraqueza", "Ameaça"]
+swot_agg["Categoria"] = pd.Categorical(swot_agg["Categoria"], categories=ordem, ordered=True)
+swot_agg = swot_agg.sort_values("Categoria")
+
+fig = px.bar(
+    swot_agg,
+    x="Categoria", y="Importância",
+    color="Categoria",
+    color_discrete_map=cor_map,
+    text="Importância",
+    height=320,
+)
+fig.update_traces(texttemplate="%{text:.1f}", textposition="outside", width=0.45)
+fig.update_layout(
+    template="plotly_white",
+    showlegend=False,
+    font=dict(size=13),
+    yaxis=dict(range=[0, 2], title="Importância acumulada"),
+    xaxis_title="",
+    margin=dict(t=20, b=10),
+    shapes=[
+        dict(type="line", x0=-0.5, x1=1.5, y0=0, y1=0,
+             line=dict(color="#ccc", width=1)),
+        dict(type="rect", x0=1.5, x1=3.5, y0=0, y1=2,
+             fillcolor="rgba(198,40,40,0.04)", line_width=0),
+    ],
+)
+fig.add_annotation(x=0.5, y=1.85, text="Positivos", showarrow=False,
+                   font=dict(color="#2E7D32", size=12))
+fig.add_annotation(x=2.5, y=1.85, text="Negativos", showarrow=False,
+                   font=dict(color="#C62828", size=12))
+fig.show()
+```
+
+## Fatores por dimensão da sustentabilidade
+
+```{python}
+#| label: fig-dimensoes
+#| fig-cap: "Importância total dos fatores por dimensão de sustentabilidade e categoria SWOT."
+
+pivot = fatores.groupby(["dimensao", "swot"])["importancia"].sum().reset_index()
+pivot.columns = ["Dimensão", "Categoria", "Importância"]
+
+cor_map2 = {
+    "Força": "#2E7D32", "Oportunidade": "#7CB342",
+    "Fraqueza": "#EF6C00", "Ameaça": "#C62828",
+}
+fig = px.bar(
+    pivot,
+    x="Dimensão", y="Importância",
+    color="Categoria",
+    color_discrete_map=cor_map2,
+    barmode="group",
+    text="Importância",
+    height=350,
+    category_orders={"Categoria": ordem},
+)
+fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+fig.update_layout(
+    template="plotly_white",
+    font=dict(size=12),
+    legend_title_text="",
+    yaxis=dict(range=[0, 1.4], title="Importância"),
+    xaxis_title="",
+    margin=dict(t=20, b=10),
+)
+fig.show()
+```
+
+---
+
 # Resumo {#sec-resumo}
 
 | Etapa | Quem faz | O que produz |
@@ -425,6 +651,6 @@ A fórmula exige que ao menos um fator tenha sido identificado ($F + O + Fr + A 
 | Itemização e codificação | Pesquisador | `.syn` com itens, fatores e classificações |
 | Definição da ontologia | Pesquisador | `.syno` com descrição e dimensão de cada fator |
 | Validação estrutural | Compilador Synesis | Erros de referência, campos ausentes, tipos |
-| Exportação e análise | Compilador Synesis | JSON, Neo4j, Excel para análise quantitativa |
+| Exportação e análise | Compilador Synesis | JSON, Jupyter, R, Excel para análise quantitativa |
 
 : Pipeline do DSAP com Synesis {.striped .hover}

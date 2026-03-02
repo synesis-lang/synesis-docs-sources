@@ -78,6 +78,8 @@ website:
             text: Métodos de Codificação em Synesis
           - href: explanation/codificacao_assistida_IA.qmd
             text: Codificação Assistida por IA
+          - href: explanation/codificacao_assistida_IA_metricas.qmd
+            text: Métricas da Pesquisa
           - href: explanation/dsap.qmd
             text: Diagnóstico Socioambiental Participativo
       - href: about.qmd
