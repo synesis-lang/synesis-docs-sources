@@ -57,25 +57,95 @@ Três decisões de design merecem destaque:
 2. **BUNDLE de note + chain**: cada interpretação analítica (memo) é obrigatoriamente pareada com sua formalização em cadeia causal
 3. **ONTOLOGY multidimensional**: cada conceito recebe classificação modal (Dooyeweerd), dimensional (Wüstenhagen), nível de confiança e construto bipolar (Repertory Grid Theory)
 
-Vejamos as definições completas dos campos mais relevantes:
+Vejamos as definições completas dos campos mais relevantes. A partir da versão 2.0 do template, cada campo incorpora um bloco `GUIDELINES` com as instruções metodológicas que antes eram fornecidas em prompts externos:
 
 ```synesis
+FIELD text TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído da fonte bibliográfica
+    GUIDELINES
+        Extract COMPLETE, SELF-CONTAINED semantic units (1-3 sentences).
+        Each excerpt must include: subject + verb + object + qualifiers.
+        The excerpt must be intelligible without surrounding context.
+
+        GOOD: 'Community trust and environmental concern are the most important
+        factors determining willingness to participate in renewable energy projects'
+        BAD: 'determining such willingness' (lacks subject/context)
+
+        Score analytical value 1-5 BEFORE extraction. Extract only score 3-5:
+        Score 5: Reveals causal mechanism or multi-step pathway (explains HOW acceptance works)
+        Score 4: Shows enabling/shaping relationship with clear mechanism
+        Score 3: Theoretically significant association (flag as *borderline*)
+        Score 2: Simple association without mechanism (SKIP)
+        Score 1: Trivial/obvious/redundant (SKIP)
+
+        TEST: 'Does this explain HOW or WHY social acceptance occurs?'
+        YES + mechanism visible = Extract. Otherwise SKIP.
+    END GUIDELINES
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Memo analítico explicando a interpretação e mecanismo causal identificado
+    GUIDELINES
+        Write an analytical description of the mechanism, significance, or rationale
+        revealed by the excerpt. Do NOT merely restate the excerpt.
+        Maximum 25 words (up to 50 words if flagged *complex*).
+
+        State the causal mechanism or theoretical insight, not a description of the text.
+
+        GOOD: 'Reveals dual mechanism: Integration and Engagement independently
+        enable transition via complementary pathways'
+        BAD: 'The excerpt describes how factors influence willingness'
+
+        Add *borderline* flag if analytical value score is 3.
+        Add *complex* flag if 4+ factors converge on the same outcome.
+    END GUIDELINES
+END FIELD
+
 FIELD chain TYPE CHAIN
     SCOPE ITEM
     ARITY >= 2
     DESCRIPTION Cadeia causal/relacional entre conceitos da ontologia
     RELATIONS
-        ENABLES: Condição necessária ou facilitadora
-        INFLUENCES: Efeito causal direto
-        CONSTRAINS: Limita ou restringe
-        CONTESTED-BY: Oposição ativa
-        RELATES-TO: Associação significativa genérica
+        ENABLES: Condição necessária ou facilitadora (A permite que B ocorra)
+        INFLUENCES: Efeito causal direto (A afeta ou muda B)
+        CONSTRAINS: Limita ou restringe (A reduz opções ou viabilidade de B)
+        CONTESTED-BY: Oposição ativa (A é contestado ou desafiado por B)
+        RELATES-TO: Associação significativa genérica (A está relacionado a B)
     END RELATIONS
-END FIELD
+    GUIDELINES
+        RELATION SELECTION PRIORITY: ENABLES > INFLUENCES > CONSTRAINS > CONTESTED-BY > RELATES-TO
 
+        Selection tests for each relation type:
+        ENABLES: 'Can B exist without A?' If NO, use ENABLES.
+        INFLUENCES: 'Does A increase/decrease/modify B?' If YES, use INFLUENCES.
+        CONSTRAINS: 'Does A impose boundaries on B?' If YES, use CONSTRAINS.
+        RELATES-TO: Theoretically significant association. LAST RESORT — use in less than 5% of relations.
+
+        SEQUENTIAL vs PARALLEL CHAINS (CRITICAL):
+        SEQUENTIAL (A->B->C): Keep in ONE chain when factors form a causal pathway.
+        'Ownership enables financing which enables deployment'
+        -> Ownership -> ENABLES -> Financing -> ENABLES -> Deployment
+
+        PARALLEL (X,Y,Z->A): Create SEPARATE ITEM blocks when multiple factors
+        independently affect the same outcome.
+        'Environmental concern, education, trust determine participation'
+        -> Three separate ITEM blocks, each with its own note and chain.
+
+        FACTOR GRANULARITY (target: fewer than 150 unique factors across the full corpus):
+        Level 1 - Core concept: Acceptance, Deployment, Policy, Trust, Cost
+        Level 2 - Qualified concept (when distinction matters): Public_Acceptance, Community_Trust
+        Level 3 - Full specification (only when Level 2 loses critical meaning): Offshore_Wind_Acceptance
+        DECISION: 'Will this term appear in 5+ abstracts?' If unlikely, generalize to Level 1-2.
+    END GUIDELINES
+END FIELD
+```
+
+```synesis
 FIELD aspect TYPE ORDERED
     SCOPE ONTOLOGY
-    DESCRIPTION Aspectos modais de Dooyeweerd
+    DESCRIPTION Aspectos modais de Dooyeweerd (ordem é significativa)
     VALUES
         [0] Undefined: Not available
         [1] Quantitative: Medições, estatísticas
@@ -94,6 +164,20 @@ FIELD aspect TYPE ORDERED
         [14] Ethical: Responsabilidade moral, equidade
         [15] Fiducial: Confiança, crença, valores, cosmovisão
     END VALUES
+    GUIDELINES
+        Classify the factor's primary modal nature using the Dooyeweerd framework.
+        The semantic domain of the factor name determines the base classification.
+
+        PRIMARY classification mapping:
+        Economic terms -> aspect 11
+        Governance/regulation -> aspect 13
+        Psychological/trust/attitudes -> aspect 15 or 6
+        Environmental/impact/ecology -> aspect 5
+        Technical/method/assessment -> aspect 7
+        Social/community/participation -> aspect 10
+
+        Critical rule: Semantic meaning > relations > co-occurrence > statistics.
+    END GUIDELINES
 END FIELD
 
 FIELD confidence TYPE ENUMERATED
@@ -104,93 +188,86 @@ FIELD confidence TYPE ENUMERATED
         MEDIUM: Frequência moderada com suporte razoável
         HIGH: Alta frequência e amplo suporte empírico
     END VALUES
+    GUIDELINES
+        Assign confidence based on statistical evidence:
+        HIGH: frequency > 10 AND sources > 5
+        MEDIUM: frequency 5-10 OR sources 3-5
+        LOW: frequency < 5 OR sources < 3
+    END GUIDELINES
 END FIELD
 
 FIELD theoretical_significance TYPE SCALE
     SCOPE ONTOLOGY
     FORMAT [0..5]
-    DESCRIPTION Significância teórica do conceito
+    DESCRIPTION Significância teórica do conceito (0=baixa, 5=alta)
+    GUIDELINES
+        Rate based on frequency, source diversity, and centrality in causal chains.
+        0: No theoretical significance identified
+        3: Moderate significance, appears in multiple chains across several sources
+        5: Core concept, foundational to the theoretical framework
+    END GUIDELINES
 END FIELD
 ```
 
 :::{.callout-note}
-## Composição de tipos
-Este template usa **7 tipos de campo diferentes** em um único projeto: TEXT, QUOTATION, MEMO, CHAIN (com RELATIONS e ARITY), TOPIC, ORDERED (com VALUES indexados), ENUMERATED (com VALUES), e SCALE (com FORMAT). É um exemplo realista de como os tipos se compõem para expressar uma metodologia complexa.
+## Composição de tipos e GUIDELINES
+Este template usa **7 tipos de campo diferentes** em um único projeto: TEXT, QUOTATION, MEMO, CHAIN (com RELATIONS e ARITY), TOPIC, ORDERED (com VALUES indexados), ENUMERATED (com VALUES), e SCALE (com FORMAT). A partir da versão 2.0, cada campo incorpora também um bloco `GUIDELINES` com as instruções metodológicas que governam o comportamento da IA — o template deixa de ser apenas esquema de dados e passa a ser o **playbook completo** da análise.
 :::
 
 ---
 
-# Os prompts: o cerne da metodologia {#sec-prompts}
+# As instruções metodológicas no template {#sec-prompts}
 
-A IA não codifica livremente --- ela segue instruções metodológicas precisas, codificadas em prompts estruturados. Esses prompts constituem, na prática, o **método de pesquisa formalizado**. A qualidade dos resultados depende inteiramente da qualidade dessas instruções.
+A IA não codifica livremente --- ela segue instruções metodológicas precisas que governam cada decisão de extração e classificação. Na versão 1.0 do projeto, essas instruções eram fornecidas em prompts externos ao template. Na versão 2.0, foram migradas para dentro do próprio template usando o bloco `GUIDELINES`, tornando o `.synt` o repositório único e versionado de toda a metodologia.
+
+:::{.callout-tip}
+## Template como playbook metodológico
+Com `GUIDELINES`, o template deixa de ser um esquema de dados e passa a ser um **playbook executável**: cada campo define não apenas *o que* guardar, mas *como* a IA deve decidir o que extrair. As instruções ficam junto à estrutura, versionadas no mesmo arquivo, auditáveis por qualquer colaborador.
+:::
 
 ## Seleção de excertos
 
-O prompt exige que cada excerto seja uma **unidade semântica completa** (1-3 sentenças) contendo sujeito, verbo, objeto e qualificadores:
+O campo `text` instrui a IA a extrair apenas **unidades semânticas completas** (1-3 sentenças) com sujeito, verbo, objeto e qualificadores. Cada excerto potencial recebe uma pontuação de valor analítico antes da extração --- apenas pontuações 3-5 são incluídas:
 
-> *"Extract COMPLETE, SELF-CONTAINED semantic units. Must include: subject + verb + object + qualifiers."*
-
-Excertos truncados ou descontextualizados são explicitamente rejeitados:
-
-> GOOD: *"Community trust and environmental concern are the most important factors determining willingness to participate in renewable energy projects"*
+> Score 5: Revela mecanismo causal ou caminho multi-etapa (explica *como* a aceitação funciona)
 >
-> BAD: *"determining such willingness"* (falta sujeito e contexto)
+> Score 4: Mostra habilitação/moldagem com mecanismo claro
+>
+> Score 3: Associação teoricamente significativa (`*borderline*`)
+>
+> Score 2: Associação simples sem mecanismo (PULAR)
+>
+> Score 1: Trivial, óbvio ou redundante (PULAR)
+
+O teste decisivo, inscrito no `GUIDELINES` do campo: *"Does this explain HOW or WHY social acceptance occurs?"*
 
 ## Controle de granularidade conceitual
 
-Um dos maiores riscos da codificação automatizada é a **proliferação de conceitos** --- cada artigo gerando rótulos ligeiramente diferentes para o mesmo fenômeno. O prompt combate isso com uma hierarquia de generalização:
+O `GUIDELINES` do campo `chain` combate a **proliferação de conceitos** — o maior risco da codificação automatizada — com uma hierarquia de generalização e uma regra de decisão pragmática:
 
-> **Nível 1** --- Conceito nuclear: `Acceptance`, `Deployment`, `Policy`, `Trust`, `Cost`
+> Nível 1 --- Conceito nuclear: `Acceptance`, `Deployment`, `Policy`, `Trust`, `Cost`
 >
-> **Nível 2** --- Conceito qualificado (quando a distinção importa): `Public Acceptance`, `Community Trust`
+> Nível 2 --- Conceito qualificado (quando a distinção importa): `Public_Acceptance`, `Community_Trust`
 >
-> **Nível 3** --- Especificação completa (somente quando Nível 2 perde significado crítico): `Offshore Wind Acceptance`
-
-A regra de decisão é pragmática:
-
-> *"Ask: Will this specific term appear in 5+ abstracts, or is it unique to this one? Likely 1-2 uses → Generalize to Level 1-2."*
-
-A meta é manter menos de **150 conceitos únicos** ao longo de 450 artigos.
-
-## Critério de Mensurabilidade pelo Stakeholder
-
-Conceitos abstratos são generalizados quando o stakeholder não consegue percebê-los diretamente:
-
-> *"Can a stakeholder directly perceive, measure, or act upon this concept without specialized knowledge?"*
+> Nível 3 --- Especificação completa (somente quando Nível 2 perde significado crítico): `Offshore_Wind_Acceptance`
 >
-> SIM → Manter termo específico: `Risk Perception`, `Procedural Justice`
->
-> NÃO → Generalizar: `institutional trust` + `interpersonal trust` → `Trust`
+> *"Will this specific term appear in 5+ abstracts? Likely 1-2 uses → Generalize to Level 1-2."*
 
-## Pontuação de valor analítico
-
-Cada cadeia potencial recebe uma pontuação de 1 a 5 antes da extração. Somente cadeias com pontuação 3-5 são extraídas:
-
-> **5**: Revela mecanismo causal ou caminho multi-etapa (explica *como* a aceitação funciona)
->
-> **4**: Mostra habilitação/moldagem com mecanismo claro
->
-> **3**: Associação teoricamente significativa (*borderline*)
->
-> **2**: Associação simples sem mecanismo (PULAR)
->
-> **1**: Trivial, óbvio ou redundante (PULAR)
-
-O teste decisivo: *"Does this explain HOW or WHY social acceptance occurs?"*
+A meta: menos de **150 conceitos únicos** ao longo de 450 artigos.
 
 ## Separação de caminhos sequenciais e paralelos
 
-O prompt distingue explicitamente entre cadeias sequenciais e caminhos paralelos:
+O `GUIDELINES` do campo `chain` distingue explicitamente os dois padrões estruturais:
 
-**Cadeia sequencial** (A causa B, que causa C) → um único bloco:
+**Cadeia sequencial** (A causa B, que causa C) → um único bloco `chain`:
 
-```
+```synesis
 chain: Ownership -> ENABLES -> Financing -> ENABLES -> Deployment
 ```
 
-**Caminhos paralelos** (A e B independentemente afetam C) → blocos separados:
+**Caminhos paralelos** (A, B e C independentemente afetam D) → blocos `ITEM` separados, cada um com seu par `note`/`chain`:
 
-```
+```synesis
 chain: Trust -> INFLUENCES -> Acceptance
 chain: Cost -> INFLUENCES -> Acceptance
 chain: Policy -> INFLUENCES -> Acceptance
@@ -200,7 +277,7 @@ Esta distinção é crítica para a qualidade do grafo resultante: caminhos para
 
 ## Classificação ontológica
 
-Um segundo prompt classifica cada conceito extraído em múltiplas dimensões, seguindo uma hierarquia de prioridade:
+O `GUIDELINES` dos campos `aspect`, `dimension` e `confidence` instrui a IA a classificar cada conceito extraído seguindo uma hierarquia de prioridade explícita:
 
 1. **Significado semântico** do conceito (primário)
 2. **Perfil relacional** --- tipos de relação dominantes (secundário)
@@ -418,11 +495,15 @@ O fluxo de trabalho é: a IA gera dados em escala → o compilador Synesis valid
 | Etapa | Quem faz | O que produz |
 |-------|---------|--------------|
 | Seleção do corpus | Pesquisador (bibliometria) | Lista de ~450 artigos relevantes |
-| Design do template | Pesquisador | `.synt` com estrutura analítica e frameworks teóricos |
-| Design dos prompts | Pesquisador | Instruções metodológicas formalizadas para a IA |
+| Design do template | Pesquisador | `.synt` com estrutura analítica, frameworks teóricos e `GUIDELINES` por campo |
 | Codificação | IA (LLM) | `.syn` (anotações) e `.syno` (ontologia) |
 | Validação estrutural | Compilador Synesis | Erros de referência, BUNDLE, ARITY, tipos |
 | Revisão de conteúdo | Pesquisador | Correções de generalização, relações e duplicatas |
 | Exportação | Compilador Synesis | JSON, Neo4j, Excel para análise quantitativa |
 
 : Pipeline de codificação assistida por IA {.striped .hover}
+
+:::{.callout-note}
+## De prompts externos a GUIDELINES no template
+Na versão 1.0 do projeto, "Design dos prompts" era uma etapa separada: as instruções metodológicas existiam em documentos externos e precisavam ser incluídas manualmente em cada chamada ao LLM. Na versão 2.0, essa etapa foi incorporada ao template via `GUIDELINES` — o `.synt` passou a ser o repositório único de estrutura **e** metodologia, versionado junto ao projeto.
+:::

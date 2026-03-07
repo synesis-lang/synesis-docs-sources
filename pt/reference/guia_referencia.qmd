@@ -249,7 +249,13 @@ FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED 
 
     # Propriedade exclusiva para TYPE SCALE
     [FORMAT [min..max]]
-    
+
+    # Disponível para qualquer tipo — instrução para agentes de IA
+    [GUIDELINES
+        Texto livre com instruções de preenchimento para o anotador ou agente de IA.
+        Múltiplas linhas são permitidas. Recuo é ignorado.
+    END GUIDELINES]
+
 END FIELD
 ```
 
@@ -293,6 +299,82 @@ FIELD confidence TYPE SCALE
     SCOPE ITEM
     DESCRIPTION Nível de confiança da interpretação
     FORMAT [1..5]
+END FIELD
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto textual extraído da fonte
+    GUIDELINES
+        Extract the exact verbatim quote from the source text.
+        Do not paraphrase or summarize — preserve the original wording.
+        Include enough context for the quote to be self-explanatory.
+        Omit only if the passage is not quotable (e.g., tables, figures).
+    END GUIDELINES
+END FIELD
+```
+
+### Bloco GUIDELINES
+
+O bloco `GUIDELINES` é um especificador opcional disponível em qualquer definição `FIELD`. Seu conteúdo é texto livre com instruções precisas sobre como o campo deve ser preenchido — destinado a agentes de IA ou anotadores humanos.
+
+#### Propósito
+
+`GUIDELINES` transforma o template de um esquema de dados em um **playbook executável**: em vez de instruções genéricas fornecidas separadamente à IA, cada campo carrega suas próprias regras de extração. Isso permite:
+
+- **Prompt atômico por campo**: A IA recebe instruções específicas para cada entidade, reduzindo ambiguidade
+- **Rastreabilidade de decisões**: As regras de extração estão codificadas no template, junto à estrutura, versionadas e auditáveis
+- **Ciclo de feedback estruturado**: A IA gera código Synesis → o compilador valida → erros de validação servem como instrução de correção automática
+
+#### Sintaxe
+
+```synesis
+FIELD field_name TYPE type
+    SCOPE scope
+    GUIDELINES
+        Linha 1 de instrução.
+        Linha 2 de instrução.
+        Linha N de instrução.
+    END GUIDELINES
+END FIELD
+```
+
+#### Semântica
+
+- O conteúdo é texto livre — qualquer caractere é permitido
+- Múltiplas linhas são preservadas com suas quebras de linha
+- Recuo interno é ignorado (as linhas são dedentadas automaticamente)
+- Um bloco vazio (`GUIDELINES` imediatamente seguido de `END GUIDELINES`) resulta em valor `null` no JSON exportado
+- O valor compilado é exportado no campo `"guidelines"` do JSON de cada `FieldSpec`
+- O compilador não interpreta nem valida o conteúdo — é tratado como dado opaco
+
+#### Exemplo de uso com IA
+
+```synesis
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Memo analítico do mecanismo causal identificado
+    GUIDELINES
+        Identify the causal mechanism linking the quote to the research question.
+        State the mechanism in one sentence: "[Factor] [verb] [outcome] because [reason]."
+        Ground the interpretation in the text — do not infer beyond what is stated.
+        If causality is ambiguous, describe the relationship as associative.
+    END GUIDELINES
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Efeito causal direto
+        ENABLES: Condição necessária ou facilitadora
+        INHIBITS: Limitação ou restrição
+    END RELATIONS
+    GUIDELINES
+        Map the causal structure identified in the note field as a formal chain.
+        Use only concepts that exist in the ontology (ONTOLOGY blocks).
+        Chain elements at odd positions must be concept names; even positions must be RELATIONS.
+        Prefer specific relations (ENABLES, INHIBITS) over generic ones (INFLUENCES).
+    END GUIDELINES
 END FIELD
 ```
 
@@ -664,6 +746,7 @@ Use '->' para conectar elementos:
 | `RELATIONS`   | Lista de relações para CHAIN |
 | `VALUES`      | Lista de valores para ORDERED/ENUMERATED |
 | `FORMAT`      | Formato para SCALE |
+| `GUIDELINES`  | Instruções de preenchimento para o anotador ou agente de IA (qualquer tipo) |
 
 ---
 
@@ -757,7 +840,12 @@ FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED 
     END VALUES]
 
     [FORMAT [min..max]]           # ← Apenas para SCALE
-    
+
+    [GUIDELINES                   # ← Qualquer tipo — instrução para anotador ou IA
+        Texto livre com instruções de preenchimento.
+        Múltiplas linhas permitidas.
+    END GUIDELINES]
+
 END FIELD
 ```
 
