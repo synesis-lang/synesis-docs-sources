@@ -40,6 +40,8 @@ website:
             text: Guia para Pesquisadores
           - href: tutorials/synesis_explorer_tutorial.qmd
             text: Synesis Explorer
+          - href: tutorials/synesis_para_iramuteq.qmd
+            text: Synesis para Usuários do IRaMuTeQ
       - text: "How-to Guides"
         menu:
           - href: howto/guia_profissionais.qmd

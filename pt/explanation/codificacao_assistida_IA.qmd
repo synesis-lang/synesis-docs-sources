@@ -1,6 +1,6 @@
 ---
 title: "Codificação Assistida por IA"
-subtitle: "Um caso real: análise bibliométrica de aceitação social de tecnologias energéticas"
+subtitle: "Um caso real: análise bibliométrica de aceitação social de tecnologias de transição energética"
 ---
 
 Este documento apresenta um caso real de uso do Synesis em pesquisa acadêmica, onde a codificação qualitativa foi realizada por inteligência artificial e revisada manualmente pelo pesquisador. O projeto analisa **fatores de aceitação social de tecnologias de transição energética** a partir de um corpus de artigos científicos selecionados por bibliometria.

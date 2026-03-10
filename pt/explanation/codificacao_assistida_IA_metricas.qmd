@@ -124,7 +124,7 @@ display(panorama.style.hide(axis='index').set_properties(**{
 
 # Conceitos centrais {#sec-conceitos}
 
-Os conceitos que aparecem com maior **frequência** e em maior **diversidade de fontes** são os mais robustos empiricamente. Se muitos artigos independentes identificam o mesmo fator, ele provavelmente é central para o campo.
+Os conceitos que aparecem com maior **frequência** e em maior **diversidade de fontes** são os mais evidentes empiricamente. Se muitos artigos independentes identificam o mesmo fator, ele provavelmente é central para o campo.
 
 ```{python}
 #| label: fig-top-concepts

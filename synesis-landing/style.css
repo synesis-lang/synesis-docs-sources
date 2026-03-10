@@ -550,6 +550,23 @@ a {
   border-radius: 3px;
 }
 
+.eco-card__screenshot {
+  margin-top: auto;
+  padding-top: 1.25rem;
+}
+
+.eco-card__screenshot img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--color-paper-tint);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: box-shadow 0.3s ease;
+}
+
+.eco-card:hover .eco-card__screenshot img {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
 /* ─── CTA Section ────────────────────────── */
 .cta-graph { width: 90px; margin: 0 auto var(--space-md); opacity: 0.8; }
 .cta__headline {
