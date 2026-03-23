@@ -56,34 +56,45 @@ website:
         menu:
           - href: reference/guia_referencia.qmd
             text: Referência da Linguagem
+          - href: reference/gramatica.qmd
+            text: Gramática da Linguagem
+          - href: reference/guia_erros.qmd
+            text: Guia de Erros
           - href: reference/synesis_load.qmd
             text: API Synesis
           - href: reference/fluxo_compilacao.qmd
             text: O fluxo de compilação
       - text: "Explanation"
         menu:
+          - text: "— Visão Geral —"
           - href: explanation/posicionamento_arquitetural.qmd
             text: Posicionamento Arquitetural
+          - href: explanation/show_case.qmd
+            text: O que Synesis pode expressar
+          - text: "— Para Pesquisadores —"
           - href: explanation/por_que_estrutura_importa.qmd
             text: Por Que Estrutura Importa
           - href: explanation/guia_sincero.qmd
             text: Por que não Excel?
-          - href: explanation/synesis_escrituras.qmd
-            text: Sinesis e as Escrituras
-          - href: explanation/knowledge_graphs.qmd
-            text: Knowledge Graphs & GraphRAG
-          - href: explanation/ideas.qmd
-            text: Roadmap & Ideias
-          - href: explanation/show_case.qmd
-            text: O que Synesis pode expressar
           - href: explanation/exemplos_codificacao.qmd
             text: Métodos de Codificação em Synesis
           - href: explanation/codificacao_assistida_IA.qmd
             text: Codificação Assistida por IA
           - href: explanation/codificacao_assistida_IA_metricas.qmd
             text: Métricas da Pesquisa
+          - href: explanation/knowledge_graphs.qmd
+            text: Knowledge Graphs & GraphRAG
+          - href: explanation/synesis_escrituras.qmd
+            text: Synesis e as Escrituras
           - href: explanation/dsap.qmd
             text: Diagnóstico Socioambiental Participativo
+          - text: "— Para Desenvolvedores —"
+          - href: explanation/fluxo_compilacao_interno.qmd
+            text: Por Dentro do Compilador
+          - href: explanation/interface_lsp.qmd
+            text: A Interface LSP
+          - href: explanation/ideas.qmd
+            text: Roadmap & Ideias
       - href: about.qmd
         text: Sobre
     right:

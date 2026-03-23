@@ -1,0 +1,419 @@
+---
+title: "A Interface LSP"
+subtitle: "Como o compilador Synesis ganha vida dentro do editor — em tempo real"
+---
+
+::: {.callout-tip}
+## Para quem é este documento?
+Devs e técnicos que querem entender como o compilador Synesis se conecta ao VS Code (ou qualquer editor compatível com LSP) para oferecer validação em tempo real, autocomplete, navegação e muito mais. Não é necessário conhecimento prévio do código-fonte.
+
+Se você procura entender o compilador em si, veja [Por Dentro do Compilador](fluxo_compilacao_interno.qmd).
+:::
+
+
+## O que é LSP?
+
+O **Language Server Protocol** é um padrão aberto criado pela Microsoft que separa a inteligência de uma linguagem (validação, autocomplete, navegação) do editor em si. Em vez de reimplementar tudo para cada editor, você cria um **servidor de linguagem** que qualquer editor compatível pode usar.
+
+```{mermaid}
+flowchart LR
+    VS["VS Code"]
+    EX["Synesis Explorer\n(extensão)"]
+    LSP["Servidor LSP\nsynesis-lsp"]
+    COMP["Compilador\nSynesis"]
+
+    VS --> EX
+    EX -- "JSON-RPC STDIO\n(protocolo padrão)" --> LSP
+    EX -- "synesis/loadProject\nsynesis/getCodes...\n(comandos customizados)" --> LSP
+    LSP -- "chamadas Python\ndiretas" --> COMP
+```
+
+O Synesis Explorer é a extensão VS Code que une tudo. Dentro dela, o `SynesisLspClient` (baseado em `vscode-languageclient`) gerencia a conexão com o servidor: inicia o processo Python, mantém o canal STDIO aberto e despacha eventos do editor (arquivo aberto, tecla digitada, arquivo salvo). Para funcionalidades além do protocolo padrão — como listar códigos e relações — o Explorer envia **comandos customizados** pelo mesmo canal.
+
+
+## Arquitetura geral {#sec-arquitetura}
+
+O ecossistema envolve três componentes distintos: o **Synesis Explorer** (extensão VS Code), o **synesis-lsp** (servidor Python) e o **compilador Synesis**. Internamente, o servidor é organizado em três camadas:
+
+```{mermaid}
+flowchart TB
+    classDef extension fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+    classDef protocol fill:#E0F7FA,stroke:#084C54,stroke-width:2px,color:#084C54,font-weight:bold;
+    classDef adapter fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
+    classDef compiler fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#E65100,font-weight:bold;
+
+    subgraph VSCode ["VS Code"]
+        direction TB
+        EX["Synesis Explorer<br/>(extensão)"]:::extension
+        subgraph ExplorerInternals ["Dentro da extensão"]
+            direction LR
+            LC["SynesisLspClient<br/>vscode-languageclient"]
+            UI["Explorers visuais<br/>Reference · Code · Relation · Ontology"]
+        end
+        EX --> ExplorerInternals
+    end
+
+    subgraph LSP ["Servidor LSP (synesis-lsp)"]
+        direction TB
+        S["server.py<br/>Protocolo LSP"]:::protocol
+        C["converters.py<br/>Tradução de tipos"]:::adapter
+        CA["cache.py<br/>Cache de compilação"]:::adapter
+
+        subgraph Features ["Módulos de Funcionalidade"]
+            direction LR
+            F1["symbols"]
+            F2["hover"]
+            F3["completion"]
+            F4["definition"]
+            F5["rename"]
+            F6["semantic_tokens"]
+            F7["code_actions"]
+            F8["references"]
+        end
+    end
+
+    subgraph Compiler ["Compilador Synesis"]
+        direction TB
+        LA["lsp_adapter.py<br/>Interface de validação"]:::compiler
+        COMP["compiler.py<br/>Pipeline completo"]:::compiler
+    end
+
+    LC -- "JSON-RPC STDIO<br/>(protocolo padrão)" --> S
+    LC -- "synesis/loadProject<br/>synesis/getCodes etc.<br/>(comandos customizados)" --> S
+    S --> C
+    S --> CA
+    S --> Features
+    C --> LA
+    CA --> COMP
+
+    style VSCode fill:transparent,stroke:#2E7D32,stroke-width:1px,stroke-dasharray:5 5
+    style ExplorerInternals fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style LSP fill:transparent,stroke:#084C54,stroke-width:2px
+    style Features fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Compiler fill:transparent,stroke:#E65100,stroke-width:1px,stroke-dasharray:5 5
+```
+
+| Camada | Responsabilidade | Módulos |
+|---|---|---|
+| **Protocolo** | Receber eventos do editor, despachar para módulos, publicar resultados | `server.py` |
+| **Tradução** | Converter tipos do compilador para tipos LSP (coordenadas, severidades) | `converters.py`, `cache.py` |
+| **Funcionalidade** | Implementar cada feature LSP (hover, completion, etc.) | `symbols.py`, `hover.py`, `completion.py`, ... |
+
+O compilador Synesis não sabe nada sobre LSP. Quem faz a ponte é o módulo `lsp_adapter.py`, que vive dentro do próprio compilador e expõe uma interface simplificada para validação de arquivo único.
+
+
+## Os dois modos de operação {#sec-modos}
+
+O LSP opera em dois modos distintos, dependendo do que o editor precisa:
+
+### Modo 1: Validação por arquivo (tempo real)
+
+Usado a cada tecla digitada. Rápido, leve, focado no arquivo aberto.
+
+```{mermaid}
+sequenceDiagram
+    participant E as Editor
+    participant S as server.py
+    participant A as lsp_adapter
+    participant P as Parser Lark
+    participant V as Validador Semântico
+
+    E->>S: textDocument/didChange
+    Note over S: Debounce 300ms
+    S->>A: validate_single_file(source, uri)
+    A->>A: discover_context(uri)
+    Note over A: Cache por workspace<br/>(mtime dos arquivos)
+    A->>P: parse_string(source)
+    P-->>A: AST nodes
+    A->>V: validate_source/item/ontology
+    V-->>A: ValidationResult
+    A-->>S: errors + warnings
+    S->>S: build_diagnostics()
+    S->>E: publishDiagnostics
+```
+
+Neste modo, o `lsp_adapter` faz o trabalho pesado:
+
+1. **Descobre o contexto** — encontra o `.synp` do workspace, carrega template e bibliografia
+2. **Faz o parsing** — transforma o texto em nós AST via Lark
+3. **Valida** — aplica regras semânticas usando o `SemanticValidator`
+4. **Retorna** — lista de erros e warnings com localização precisa
+
+::: {.callout-note}
+## Por que não compilar o projeto inteiro a cada tecla?
+A compilação completa leva ~3.7 segundos e envolve leitura de disco para todos os arquivos do projeto. É inviável para feedback em tempo real. O `lsp_adapter` resolve isso validando apenas o arquivo aberto, usando o contexto (template, bibliografia, ontologia) em cache.
+:::
+
+
+### Modo 2: Compilação completa (sob demanda)
+
+Usado quando o Synesis Explorer precisa de dados completos — códigos, relações, grafos.
+
+```{mermaid}
+sequenceDiagram
+    participant X as Synesis Explorer
+    participant S as server.py
+    participant C as SynesisCompiler
+    participant CA as WorkspaceCache
+
+    X->>S: synesis/loadProject
+    S->>CA: get(workspace_key)
+    alt Cache válido (fingerprint match)
+        CA-->>S: CachedCompilation
+    else Cache miss
+        S->>C: SynesisCompiler(synp).compile()
+        C-->>S: CompilationResult
+        S->>CA: put(workspace_key, result)
+    end
+    S-->>X: stats + diagnostics
+    Note over X: Agora pode chamar<br/>getCodes, getRelations, etc.
+```
+
+Neste modo, o servidor invoca o compilador completo (`SynesisCompiler.compile()`) e armazena o `CompilationResult` em cache. As requisições subsequentes do Explorer (`getCodes`, `getRelations`, `getRelationGraph`) consultam esse cache sem recompilar.
+
+
+## O adaptador: lsp_adapter.py {#sec-adapter}
+
+O `lsp_adapter` é a ponte entre os dois mundos. Ele vive dentro do pacote `synesis` (não do `synesis-lsp`) porque precisa acessar internamente o parser, o transformer e o validador.
+
+### O que ele expõe
+
+```python
+from synesis.lsp_adapter import (
+    validate_single_file,   # Valida texto em memória, retorna erros
+    discover_context,       # Encontra template/bib/ontologia do workspace
+    find_workspace_root,    # Detecta raiz do workspace (busca .synp, .git)
+    invalidate_cache,       # Força recarga do contexto
+)
+```
+
+### Como a descoberta funciona
+
+Quando o editor abre um arquivo `.syn`, o adaptador precisa encontrar o contexto do projeto:
+
+1. **Encontra a raiz do workspace** — sobe a hierarquia de diretórios procurando um `.synp`, `.git` ou `.vscode`
+2. **Parseia o `.synp`** — extrai caminhos do template, bibliografia e ontologia
+3. **Carrega o contexto** — lê template (`.synt`), bibliografia (`.bib`) e ontologia (`.syno`)
+4. **Cacheia** — armazena o contexto com os `mtime` dos arquivos monitorados
+
+Na próxima validação, o cache é verificado: se nenhum arquivo de contexto foi modificado, o contexto anterior é reutilizado. Se algum `mtime` mudou, o cache é invalidado e o contexto é reconstruído.
+
+::: {.callout-important}
+## Dois caches, duas finalidades
+O **cache do `lsp_adapter`** armazena o *contexto* (template + bibliografia + ontologia) para validação rápida por arquivo. O **`WorkspaceCache`** do servidor armazena o *resultado de compilação completa* (`LinkedProject` com todas as fontes, itens, relações) para servir ao Synesis Explorer. São caches independentes com ciclos de vida diferentes.
+:::
+
+
+## Como os erros viajam {#sec-erros}
+
+O caminho de um erro — desde a detecção pelo compilador até o sublinhado vermelho no editor — passa por várias transformações:
+
+```
+ Compilador                    LSP                        Editor
+┌──────────────────┐        ┌──────────────┐          ┌──────────────┐
+│ ValidationError  │──────▶│  Diagnostic  │─────────▶│  Sublinhado  │
+│  .severity       │        │  .severity   │          │  vermelho /  │
+│  .location       │        │  .range      │          │  amarelo     │
+│  .to_diagnostic()│        │  .message    │          │              │
+└──────────────────┘        └──────────────┘          └──────────────┘
+```
+
+A tradução é feita pelo `converters.py`:
+
+| Compilador | LSP | Observação |
+|---|---|---|
+| `ErrorSeverity.ERROR` | `DiagnosticSeverity.Error` (1) | Sublinhado vermelho |
+| `ErrorSeverity.WARNING` | `DiagnosticSeverity.Warning` (2) | Sublinhado amarelo |
+| `ErrorSeverity.INFO` | `DiagnosticSeverity.Information` (3) | Sublinhado azul |
+| `SourceLocation(line=1, col=1)` | `Position(line=0, character=0)` | 1-based para 0-based |
+| `error.to_diagnostic()` | `diagnostic.message` | Texto legível + sugestões |
+
+::: {.callout-note}
+## Mensagens pedagógicas
+Quando disponível, o `error_handler` do compilador enriquece a mensagem com contexto e sugestões — por exemplo, "Código 'Cohesion' não encontrado na ontologia. Você quis dizer 'Social_Cohesion'?". Isso é feito via `create_pedagogical_error()`, que traduz tokens Lark internos em linguagem legível.
+:::
+
+
+## Funcionalidades implementadas {#sec-features}
+
+O `synesis-lsp` implementa um conjunto abrangente de funcionalidades LSP, cada uma em seu próprio módulo:
+
+### Validação em tempo real
+
+| Evento | Comportamento |
+|---|---|
+| Abrir arquivo (`did_open`) | Validação imediata |
+| Digitar (`did_change`) | Debounce de 300ms — só valida após pausa |
+| Salvar (`did_save`) | Validação imediata + invalidação de cache se `.synp`/`.synt`/`.bib` |
+| Fechar (`did_close`) | Limpa diagnósticos e libera memória |
+
+O debounce segue o padrão **Pyright** (`scheduleReanalysis`): quando o usuário digita 10 caracteres rapidamente, apenas 1 validação é disparada após a última tecla. Isso elimina ~80% do uso desnecessário de CPU.
+
+### Navegação e compreensão
+
+| Feature | Módulo | O que faz |
+|---|---|---|
+| **Semantic Tokens** | `semantic_tokens.py` | Coloração sintática rica (keywords, bibrefs, códigos, campos) |
+| **Document Symbols** | `symbols.py` | Painel de outline — mostra SOURCEs, ITEMs e ONTOLOGYs como árvore |
+| **Hover** | `hover.py` | Tooltip ao passar o mouse — mostra definição do código, tipo do campo |
+| **Inlay Hints** | `inlay_hints.py` | Dicas inline — mostra autor/ano ao lado de `@bibref` |
+| **Signature Help** | `signature_help.py` | Documentação do campo ao digitar `:` |
+
+### Produtividade
+
+| Feature | Módulo | O que faz |
+|---|---|---|
+| **Completion** | `completion.py` | Autocomplete para `@bibrefs`, códigos e nomes de campo |
+| **Go to Definition** | `definition.py` | `Ctrl+Click` em `@bibref` vai para a SOURCE; em código vai para a ONTOLOGY |
+| **Find References** | `references.py` | Encontra todos os usos de um código ou bibref no projeto |
+| **Rename** | `rename.py` | Renomeia código ou bibref em todos os arquivos do workspace |
+| **Code Actions** | `code_actions.py` | Quick fixes — sugestões de correção para erros comuns |
+
+### Synesis Explorer
+
+O Synesis Explorer é uma extensão VS Code que oferece uma interface visual para explorar projetos Synesis. Ele se comunica com o servidor LSP via **comandos customizados** — extensões do protocolo padrão:
+
+| Comando | Módulo | Retorna |
+|---|---|---|
+| `synesis/loadProject` | `server.py` | Estatísticas do projeto + diagnósticos |
+| `synesis/getCodes` | `explorer_requests.py` | Lista de códigos com usos e ocorrências |
+| `synesis/getReferences` | `explorer_requests.py` | Fontes com contagem de itens |
+| `synesis/getRelations` | `explorer_requests.py` | Triples (sujeito, relação, objeto) com localizações |
+| `synesis/getRelationGraph` | `graph.py` | Grafo de relações em formato Mermaid.js |
+| `synesis/getExcerpts` | `explorer_requests.py` | Itens de uma fonte específica |
+| `synesis/getOntologyTopics` | `ontology_topics.py` | Hierarquia de temas da ontologia |
+| `synesis/getOntologyAnnotations` | `ontology_annotations.py` | Códigos com localizações no fonte |
+| `synesis/getAbstract` | `abstract_viewer.py` | Conteúdo do campo ABSTRACT |
+
+Todos esses comandos dependem do `WorkspaceCache` — primeiro é necessário chamar `loadProject` para compilar e cachear o projeto.
+
+
+## Estratégias de performance {#sec-performance}
+
+O LSP precisa responder em milissegundos enquanto o compilador opera em segundos. Quatro estratégias resolvem essa tensão:
+
+### 1. Cache em camadas
+
+```
+Camada 1: lsp_adapter    → contexto (template, bib, ontologia)
+                            Invalidação: mtime dos arquivos
+                            Evita: recarregar template a cada validação
+
+Camada 2: WorkspaceCache  → CompilationResult completo
+                            Invalidação: fingerprint {count}:{max_mtime}
+                            Evita: recompilar projeto a cada request do Explorer
+
+Camada 3: FileState       → dirty flags por documento
+                            Invalidação: hash do conteúdo + versão do contexto
+                            Evita: revalidar arquivo que não mudou
+
+Camada 4: Feature caches  → resultados por feature (symbols, tokens)
+                            Invalidação: hash do source
+                            Evita: recalcular tokens para mesmo conteúdo
+```
+
+### 2. Debounce + cancelamento
+
+Inspirado no Pyright:
+
+- **Timer de 300ms** — cada tecla reinicia o timer; validação só ocorre após pausa
+- **Cancelamento de task** — se uma validação está em andamento e o usuário digita novamente, a validação antiga é cancelada antes de iniciar a nova
+- **Resultado**: 10 teclas = 1 validação, não 10
+
+### 3. Priorização do arquivo em foco
+
+Quando o contexto muda (ex: o template foi editado e salvo), todos os arquivos abertos precisam ser revalidados. O servidor valida **primeiro o arquivo com foco** (feedback imediato para o usuário) e depois os demais em background, cedendo o event loop entre cada arquivo (`asyncio.sleep(0)`).
+
+### 4. Fingerprint de workspace
+
+Em vez de calcular SHA1 de todos os arquivos do projeto, o `WorkspaceCache` usa uma fingerprint simples: `{contagem_de_arquivos}:{mtime_mais_recente}`. Isso é suficiente para detectar mudanças na maioria dos casos e custa microsegundos em vez de milissegundos.
+
+
+## Ciclo de vida de um arquivo {#sec-ciclo}
+
+Para consolidar, este é o ciclo completo quando o usuário trabalha com um arquivo `.syn`:
+
+```{mermaid}
+stateDiagram-v2
+    [*] --> Aberto: did_open
+    Aberto --> Validando: validação imediata
+    Validando --> Diagnosticado: publish_diagnostics
+
+    Diagnosticado --> Editando: did_change
+    Editando --> Debounce: timer 300ms
+    Debounce --> Editando: nova tecla (reset timer)
+    Debounce --> Validando: timer expirou
+
+    Diagnosticado --> Salvo: did_save
+    Salvo --> Validando: validação imediata
+    Salvo --> CacheInvalidado: se .synp/.synt/.bib
+
+    CacheInvalidado --> RevalidandoTodos: revalidar workspace
+    RevalidandoTodos --> Diagnosticado
+
+    Diagnosticado --> [*]: did_close
+```
+
+1. **Abertura** — validação imediata, contexto descoberto ou carregado do cache
+2. **Edição** — debounce de 300ms, dirty flag atualizado, task anterior cancelada
+3. **Salvamento** — validação imediata; se for arquivo de contexto, invalida caches e revalida workspace
+4. **Fechamento** — diagnósticos limpos, FileState removido, memória liberada
+
+
+## Mapa dos módulos {#sec-modulos}
+
+| Módulo | Linhas | Tipo | Importa de |
+|---|---|---|---|
+| `server.py` | ~1700 | Core | Todos os outros + `synesis` |
+| `converters.py` | ~300 | Tradução | `synesis.ast` |
+| `cache.py` | ~100 | Cache | Nenhum |
+| `explorer_requests.py` | ~1200 | Feature | `converters`, `synesis` |
+| `symbols.py` | ~300 | Feature | `synesis.ast.nodes` |
+| `semantic_tokens.py` | ~230 | Feature | `synesis` |
+| `hover.py` | ~280 | Feature | `synesis` |
+| `completion.py` | ~150 | Feature | `synesis` |
+| `definition.py` | ~90 | Feature | `synesis` |
+| `references.py` | ~210 | Feature | `synesis` |
+| `rename.py` | ~520 | Feature | `synesis` |
+| `code_actions.py` | ~230 | Feature | `synesis` |
+| `inlay_hints.py` | ~60 | Feature | `synesis` |
+| `signature_help.py` | ~80 | Feature | `synesis` |
+| `graph.py` | ~410 | Feature | `synesis` |
+| `ontology_annotations.py` | ~680 | Feature | `synesis` |
+| `ontology_topics.py` | ~200 | Feature | `synesis` |
+| `abstract_viewer.py` | ~270 | Feature | `synesis` |
+| `template_diagnostics.py` | ~290 | Feature | Nenhum |
+| `workspace_diagnostics.py` | ~110 | Feature | `synesis` |
+
+Todos os módulos de feature seguem o mesmo padrão: recebem o `CompilationResult` ou o source do documento, processam, e retornam tipos LSP que o `server.py` despacha para o editor.
+
+
+## Relação com o compilador {#sec-relacao}
+
+O `synesis-lsp` **depende** do compilador, mas o compilador **não depende** do LSP. Essa assimetria é intencional:
+
+```
+synesis (compilador)
+  ├── lsp_adapter.py     ← Interface para o LSP
+  ├── compiler.py        ← Pipeline completo
+  ├── parser/            ← Lark + transformer
+  ├── semantic/          ← Validador + linker
+  └── exporters/         ← JSON, CSV, Excel
+
+synesis-lsp (servidor)
+  ├── server.py          ← Importa de synesis.lsp_adapter
+  ├── converters.py      ← Importa de synesis.ast
+  └── features/          ← Importam de synesis.*
+```
+
+O `lsp_adapter.py` foi colocado dentro do compilador (e não no LSP) porque precisa acessar internamente o parser, o transformer e o validador — componentes que não fazem parte da API pública do compilador. Ele funciona como uma **fachada interna**: expõe `validate_single_file()` como uma operação atômica que esconde toda a complexidade do pipeline de 8 estágios.
+
+::: {.callout-tip}
+## Para contribuidores
+Se você quer adicionar uma nova feature ao LSP (ex: folding ranges), o padrão é:
+
+1. Criar um módulo em `synesis_lsp/` (ex: `folding.py`)
+2. Implementar a função principal (ex: `compute_folding_ranges()`)
+3. Registrar o handler em `server.py` com `@server.feature(TEXT_DOCUMENT_FOLDING_RANGE)`
+4. Os dados vêm do `WorkspaceCache` (compilação completa) ou de `compile_string` (parse rápido do source)
+:::

@@ -1,120 +1,108 @@
 ---
 title: "Sobre o Synesis"
+subtitle: "Da planilha à linguagem — a trajetória real de um projeto nascido da pesquisa"
 ---
 
-## Sobre o Projeto
+## A origem do problema
 
-**Synesis** é uma linguagem de domínio específico (DSL) de código aberto para consolidação sistemática de conhecimento qualitativo. Desenvolvida para pesquisadores, profissionais do conhecimento e analistas que precisam transformar interpretações em estruturas auditáveis e tecnicamente interoperáveis.
+Como organizar, de forma rigorosa e replicável, os dados de uma pesquisa qualitativa com centenas de fontes, dezenas de conceitos e relações complexas entre eles?
 
-### Visão
+Essa pergunta perseguiu o mesmo pesquisador por mais de uma década — e cada tentativa de resposta se tornou um degrau na construção do que hoje é o Synesis.
 
-Eliminar a lacuna entre a riqueza interpretativa das ciências humanas e o rigor estrutural da ciência de dados, sem sacrificar a profundidade analítica nem a precisão técnica.
 
-### Princípios de Design
+## Linha do tempo {#sec-linha-do-tempo}
 
-1. **Template como Fonte da Verdade**: Toda estrutura de validação é derivada do arquivo de template (`.synt`) em tempo de execução. Nenhum campo é hardcoded.
+### 1985 — Primeiros contatos com programação
 
-2. **Text-First & Interoperável**: Arquivos de texto puro, versionáveis com Git, compiláveis para JSON/CSV/Excel, integráveis com qualquer stack tecnológica.
+Christian Maciel De Britto, aos 13 anos, começa a estudar informática. Os primeiros contatos são com **Basic** e noções de **COBOL** — uma linguagem de blocos com delimitadores explícitos de início e fim. Essa estrutura reapareceria décadas depois na sintaxe do Synesis: `SOURCE ... END SOURCE`, `ITEM ... END ITEM`.
 
-3. **Validação Semântica Rigorosa**: O compilador valida consistência conceitual, rastreabilidade bidirecional e conformidade com ontologias definidas.
+### 1989–1997 — Clipper, sistemas profissionais e a FUMSOFT
 
-4. **Ecossistema Integrado**: Compilador, Language Server Protocol (LSP), extensão VSCode, pipeline Neo4j e plugin Zotero funcionam como sistema coeso.
+A descoberta do **dBase II Plus** e do **Clipper** (Autumn 86, Summer 87, Clipper 5) abre o caminho profissional. Em Clipper — linguagem orientada a dados e registros — são construídos dois sistemas de porte real:
 
----
+- Um sistema de **gestão escolar** (dados acadêmicos, notas, históricos)
+- O **SAGA — Sistema de Automação de Postos de Combustível**, que chegou a ter mais de cem clientes ativos
 
-## Ecossistema Synesis
+Entre 1995 e 1997, a empresa é incubada na [FUMSOFT](https://fumsoft.org.br/), incubadora de software de Belo Horizonte, com apoio da Universidade Federal de Minas Gerais (UFMG).
 
-O projeto é composto por 7 repositórios integrados:
+### 1999 — Mudança de rumo
 
-| Projeto | Descrição | Tecnologia | Versão |
-|---------|-----------|------------|--------|
-| [**synesis**](https://github.com/synesis-lang/synesis) | Compilador Core (LALR parser, validador semântico, exporters) | Python 3.10+ | 0.2.6 |
-| [**synesis-lsp**](https://github.com/synesis-lang/synesis-lsp) | Language Server Protocol (diagnostics, completions, hover) | Python 3.10+ | 0.14.6 |
-| [**synesis-explorer**](https://github.com/synesis-lang/synesis-explorer) | Extensão VSCode (syntax highlighting, tree views, graph viewer) | TypeScript/Node | 0.5.2 |
-| [**synesis2neo4j**](https://github.com/synesis-lang/synesis2neo4j) | Pipeline para Neo4j (GraphRAG, knowledge graphs) | Python 3.11+ | 0.1.2 |
-| [**zotero-synesis-export**](https://github.com/synesis-lang/zotero-synesis-export) | Plugin Zotero 7 (exporta anotações PDF como `.syn`) | JavaScript | 0.1.4 |
-| [**synesis-docs-sources**](https://github.com/synesis-lang/synesis-docs-sources) | Fontes da documentação (Quarto Publishing) | Quarto/QMD | — |
-| [**synesis-docs**](https://synesis-lang.github.io/synesis-docs) | Documentação publicada (GitHub Pages) | HTML | — |
+A atividade comercial de desenvolvimento é encerrada. O foco se volta para estudos e práticas teológicas — um realinhamento intelectual e profissional que, na perspectiva de hoje, alimentou a sensibilidade hermeneutica, epistemológica e filosófica que mais tarde encontraria expressão na aplicação da filosofia de Herman Dooyeweerd e Dirk Vollenhoven ao método de pesquisa. Um sistema em **Delphi 5** para controle financeiro, desenvolvido sem fins comerciais, mantém vivo o vínculo com a prática de programação.
 
----
+### 2013 — BDM: o primeiro protótipo
 
-## Licença
+Na dissertação de mestrado [*Sustentabilidade e Intradisciplinaridade*](https://doi.org/10.13140/RG.2.2.10686.10563) (UFPR), dedicada aos impactos socioambientais da indústria parapetrolífera em Pontal do Paraná, surge o **BDM — Banco de Dados Multimodal**.
 
-O ecossistema Synesis é software livre distribuído sob licença **MIT** (compilador, LSP, extensão VSCode) e **MPL-2.0** (plugin Zotero), permitindo uso comercial, modificação e redistribuição com atribuição apropriada.
+Tecnicamente simples — um front-end em **Microsoft Access 2010** conectado a **PostgreSQL** — o BDM era uma solução local e individual. Mas o fluxo de trabalho já continha o embrião do que viria depois: **fontes** classificadas por tipo, **fatores** vinculados a modalidades filosóficas, **itens** relacionados a pares de fatores com nexos positivos ou negativos, e geração automática de sumários e grafos de relações.
 
-A documentação está licenciada sob **Creative Commons BY 4.0**.
+Limitação reconhecida pelo próprio autor: o BDM só permitia pares de fatores por item. A pergunta que ficou em aberto — como representar redes mais ricas de relações sem perder o rigor? — moldou tudo que veio depois.
 
----
+### 2018 — SocioAtlas: um ecosistema CAQDAS sob medida
 
-## Como Contribuir
+Na tese de doutorado [*Pensamento Sistêmico Multimodal*](https://doi.org/10.13140/RG.2.2.26449.17760) (UFPR), a resposta foi mais ambiciosa: o **SocioAtlas**, um ecosistema com partes desenvolvidas em **Free Pascal/Lazarus** com banco de dados **Firebird**.
 
-Contribuições são bem-vindas! Para reportar bugs, propor melhorias ou submeter code contributions:
+A solução era um CAQDAS (*Computer-Assisted Qualitative Data Analysis Software*) construído sob medida para o Método Sistêmico Multimodal (MSM). Importava dados do **Zotero**, organizava fontes, itens e fatores, vinculava cada fator a uma modalidade, e incluía uma camada de georeferenciamento com exportação em arquivos KML para o Google Earth Desktop. A plataforma web *SocioAtlas* tornava os mapas acessíveis ao público.
 
-1. **Issues**: Abra uma issue no repositório específico
-2. **Pull Requests**: Fork o repositório, crie uma branch, e envie PR com descrição clara
-3. **Discussions**: Para dúvidas conceituais ou propostas de features, use [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions)
+Os conceitos que reapareceriam no Synesis já estavam presentes: fonte, item, fator, trilha de auditoria, integração com Zotero. O que faltava era **portabilidade metodológica** — a estrutura estava acoplada ao MSM e às suas dezoito modalidades. Adaptar o sistema para uma pesquisa diferente exigiria reescrever o software.
 
-### Guias de Contribuição
+### 2020 — SocioAtlas para Google Sheets
 
-- Siga as convenções de código do projeto (veja `CONTRIBUTING.md` em cada repositório)
-- Adicione testes para novas funcionalidades
-- Documente mudanças em `CHANGELOG.md` (seção `[Unreleased]`)
-- Use commits semânticos: `feat:`, `fix:`, `docs:`, `refactor:`, `test:`
+Se a antiga solução exigia instalação local, por que não reconstruir a essência do método numa plataforma acessível a qualquer pessoa? O **SocioAtlas para Google Sheets** — um complemento em **Google Apps Script** publicado no Google Workspace Marketplace — transformava uma planilha comum em banco de conhecimento. O pesquisador marcava trechos em Google Docs, e o sistema importava, organizava e gerava matrizes de análise multimodal automaticamente.
 
----
+A colaboração em equipe foi conquistada. A profundidade, não. A planilha é um ambiente tabular — projetado para dados em linhas e colunas. Anotações aninhadas, relações tipadas e hierarquias de conceitos geravam fricção constante. Cada exigência metodológica demandava soluções frágeis. Uma ferramenta metodológica não pode ser ao mesmo tempo poderosa e quebrável.
 
-## Citação Acadêmica
+### 2024 — Pipeline DGT7: o formato proprietário para representação de conhecimento
 
-Se você utiliza Synesis em pesquisas acadêmicas, cite da seguinte forma:
+Para analisar 453 artigos sobre aceitação social de tecnologias no contexto da transição energética, foi criado um novo pipeline em **Python** com banco **MySQL** e uma linguagem de marcação própria:
 
-### BibTeX
-
-```bibtex
-@software{synesis2026,
-  author = {De Britto, Márcio},
-  title = {Synesis: A Domain-Specific Language for Structured Qualitative Analysis},
-  year = {2026},
-  url = {https://github.com/synesis-lang/synesis},
-  version = {0.2.6},
-  note = {Software de código aberto para consolidação sistemática de conhecimento qualitativo}
-}
+```
+[-begin-]
+[@burke2018@]
+[!Sistemas de energia distribuída permitem reorganizar
+estruturas de poder político.!]
+[%Energia distribuída pode reestruturar o poder político%]
+[#Energy System#][&influences&][#Governance#]
+[-end-]
 ```
 
-### APA 7
+O sistema funcionava. Mas era difícil de ler, frágil a erros de digitação (`[#Energy Sistem#]` criava um fator duplicado sem aviso), e qualquer mudança na metodologia ou nos campos exigia reescrever scripts, banco de dados e plataforma web. O formato estava preso a um modelo específico de pesquisa.
 
-De Britto, M. (2026). *Synesis: A Domain-Specific Language for Structured Qualitative Analysis* (Versão 0.2.6) [Software]. https://github.com/synesis-lang/synesis
+### 2025 — Nasce o Synesis
+
+A primeira tentativa de solução foi modesta: um parser mais robusto para o formato DGT7. Mas ao definir regras claras sobre como os arquivos deveriam ser escritos, a percepção foi tomando forma: por que não criar uma linguagem de verdade?
+
+A inovação central foi separar **método** e **conteúdo**. No sistema antigo, os campos estavam embutidos nos scripts. No Synesis, um **arquivo de template** define quais campos existem, quais são obrigatórios, de que tipo. O pesquisador configura as regras da sua pesquisa, e o sistema se adapta.
+
+O mesmo trecho, na nova linguagem:
+
+```synesis
+SOURCE @burke2018
+    description: Explora energia renovável e poder político
+END SOURCE
+
+ITEM @burke2018
+    citation: "Sistemas de energia distribuída permitem
+               reorganizar estruturas de poder político."
+    note: Energia distribuída pode reestruturar o poder político
+    code: Energy_System -> INFLUENCES -> Governance
+END ITEM
+```
+
+Qualquer pessoa consegue ler esse arquivo. E se o pesquisador escrever `Governance` sem defini-lo na ontologia, armazenada em arquivo de formato específico, o compilador avisa imediatamente.
+
+Ao se tornar uma linguagem formal com gramática LALR(1), o Synesis herdou o que nenhum script poderia oferecer sozinho: validação em tempo real no editor, autocomplete de campos, exportação para JSON, CSV e Excel, e portabilidade para qualquer tipo de pesquisa qualitativa.
+
+O que começou como um banco de dados local, virou um ecosistema de análise, foisimplificado em uma planilha de anotações tornou-se, finalmente, uma ferramenta metodológica genérica.
+
+
+## Duas trajetórias, um ponto de convergência
+
+O Synesis é o ponto onde duas trajetórias se encontram: décadas de prática em desenvolvimento de software (COBOL, Clipper, Delphi, Python) e décadas de imersão em metodologia de pesquisa qualitativa (BDM, SocioAtlas, DGT7).
+
+A linguagem em blocos do COBOL. A orientação a dados do Clipper. A arquitetura de domínio construída ao longo de sistemas reais. A compreensão das exigências da pesquisa qualitativa. E, por fim, o uso de IA como parceira de implementação — não para substituir o conhecimento de domínio, mas para executá-lo.
+
+O ecossistema Synesis — compilador, servidor LSP, extensão VS Code, pipeline Neo4j, plugin Zotero, documentação — foi integralmente desenvolvido com codificação assistida por IA. A experiência acumulada nos projetos anteriores definiu *o que* construir; a IA viabilizou, por sua vez, viabilizou a construção em escala e ritmo excepcional. Pelo caminho tradicional de desenvolvimento solo, o mesmo resultado teria demandado anos.
+
+O [currículo completo do autor](https://lattes.cnpq.br/2334832147379385) está disponível na plataforma Lattes.
 
 ---
-
-## Agradecimentos
-
-O desenvolvimento do Synesis foi possível graças a:
-
-- **Lark Parser** (Erez Shinan) — Base do parser LALR(1)
-- **pygls** (Open Law Library) — Framework do Language Server Protocol
-- **VSCode Extension API** (Microsoft) — Infraestrutura da extensão
-- **Quarto** (Posit PBC) — Sistema de documentação técnica
-- **Comunidade Open Source** — Por ferramentas, bibliotecas e inspiração
-
----
-
-## Contato
-
-- **Documentação Oficial**: [synesis-lang.github.io/synesis-docs](https://synesis-lang.github.io/synesis-docs)
-- **Repositório Principal**: [github.com/synesis-lang/synesis](https://github.com/synesis-lang/synesis)
-- **Discussões**: [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions)
-- **Issues**: Reportar no repositório específico
-
----
-
-## Histórico de Versões
-
-- **v0.2.6** (2026-02) — Refinamentos no compilador e LSP
-- **v0.2.0** (2025-12) — Adição de suporte a ontologias (`.syno`)
-- **v0.1.0** (2025-09) — Release inicial do compilador e extensão VSCode
-
-Para changelog completo, consulte `CHANGELOG.md` em cada repositório.
-
----
-
-*Esta documentação segue os princípios [Diátaxis](https://diataxis.fr/) para documentação técnica sistemática.*

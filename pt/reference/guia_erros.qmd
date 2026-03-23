@@ -1,0 +1,1447 @@
+---
+title: "Guia de Erros"
+subtitle: "Todas as mensagens do compilador — com exemplos reproduzíveis"
+---
+
+::: {.callout-tip}
+## Como usar este guia
+Cada erro mostra: o que aconteceu, por que é problema, e como corrigir — com um trecho de código que você pode copiar para reproduzir o erro. Os projetos de teste completos estão na pasta do repositório de ![estudos de caso](https://github.com/synesis-lang/case-studies/tree/main/Tests).
+:::
+
+## Convenções
+
+- **(ERRO)** — impede a compilação e bloqueia a exportação
+- **(AVISO)** — algo incompleto ou incomum; não bloqueia, mas deve ser investigado
+- Erros marcados com **[implementado]** já são detectados pelo compilador; **[pendente]** ainda não
+- Erros de template (39–60, 69) são problemas na definição das regras do projeto, não nas anotações
+
+
+## Formato das mensagens
+
+Toda mensagem segue esta estrutura:
+
+```
+ERRO  arquivo.syn  linha 42, coluna 7
+  O código `Acietacao_Social` não está definido na ontologia.
+  Você quis dizer `Aceitacao_Social`?
+```
+
+- **Nível** — ERRO ou AVISO
+- **Localização** — arquivo, linha e coluna
+- **Descrição** — o que aconteceu
+- **Sugestão** — quando aplicável, o compilador sugere correções usando similaridade de texto
+
+
+# Vínculos Bibliográficos {#sec-bibliografia}
+
+Erros de ligação entre SOURCEs, ITEMs e o arquivo `.bib`. Projeto de teste: `T01`.
+
+## Erro 1 — Fonte não encontrada na bibliografia (AVISO) {#sec-erro-1}
+
+O `@bibref` de um SOURCE não existe no arquivo `.bib`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @garcia2022
+    summary: Estudo sobre aceitação social.
+END SOURCE
+```
+
+Mas o arquivo `.bib` não contém a entrada `garcia2022`:
+
+```bibtex
+@article{smith2024,
+    author = {Smith, Jane},
+    title  = {Community Resilience},
+    year   = {2024}
+}
+# garcia2022 não existe aqui
+```
+
+### Como corrigir
+
+Adicione a entrada ao `.bib` ou corrija a grafia do `@bibref`. O compilador sugere alternativas similares quando encontra.
+:::
+
+
+## Erro 2 — ITEM sem SOURCE correspondente (ERRO) {#sec-erro-2}
+
+Um ITEM referencia um `@bibref` que não tem bloco SOURCE no mesmo arquivo.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+# Nenhum bloco SOURCE @orphan_ref existe neste arquivo
+
+ITEM @orphan_ref
+    citation: Trecho sem fonte declarada.
+    memo: Este item não tem SOURCE.
+    tag: Aceitacao_Social
+END ITEM
+```
+
+### Como corrigir
+
+Crie um bloco `SOURCE @orphan_ref` antes do ITEM, ou corrija o `@bibref`.
+:::
+
+
+## Erro 24 — SOURCE sem ITEMs (AVISO) {#sec-erro-24}
+
+Uma SOURCE foi declarada mas nenhum ITEM a referencia.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @jones2023
+    summary: Estudo urbano sem unidades de análise extraídas.
+END SOURCE
+
+# Nenhum ITEM @jones2023 existe no projeto
+```
+
+### Como corrigir
+
+Adicione pelo menos um ITEM que referencie `@jones2023`, ou remova o SOURCE se não for mais necessário.
+:::
+
+
+## Erro 70 — SOURCE duplicada (ERRO) {#sec-erro-70}
+
+O mesmo `@bibref` aparece em dois blocos SOURCE no mesmo arquivo.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @smith2024
+    summary: Primeira declaração.
+END SOURCE
+
+# ...outros blocos...
+
+SOURCE @smith2024
+    summary: Declaração duplicada.
+END SOURCE
+```
+
+### Como corrigir
+
+Unifique os dois blocos num único SOURCE, ou distribua as anotações em arquivos `.syn` separados.
+:::
+
+
+# Vínculos Ontológicos {#sec-ontologia}
+
+Erros de ligação entre códigos usados em ITEMs e definições na ontologia. Projeto de teste: `T01`.
+
+## Erro 3 — Código não definido na ontologia (AVISO) {#sec-erro-3}
+
+Um código usado no campo `code` de um ITEM não tem entrada ONTOLOGY correspondente.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @smith2024
+    citation: Os custos foram citados como principal barreira.
+    memo: Custo como fator determinante.
+    tag: Custo_Inexistente, Aceitacao_Social
+END ITEM
+```
+
+`Custo_Inexistente` não tem bloco ONTOLOGY no `.syno`.
+
+### Como corrigir
+
+Crie o conceito na ontologia:
+
+```synesis
+ONTOLOGY Custo_Inexistente
+    definition: ...
+    group: ...
+END ONTOLOGY
+```
+
+Ou corrija a grafia — o compilador sugere alternativas similares.
+:::
+
+
+## Erro 4 — Conceito de CHAIN não definido (AVISO) {#sec-erro-4}
+
+Um nó conceitual usado numa CHAIN não existe na ontologia.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @smith2024
+    citation: A percepção de risco influencia a aceitação.
+    tag: Aceitacao_Social
+    chain: Percepcao_Risco -> INFLUENCES -> Conceito_Fantasma
+END ITEM
+```
+
+`Conceito_Fantasma` não tem entrada ONTOLOGY.
+
+### Como corrigir
+
+Crie o conceito na ontologia ou corrija a grafia.
+:::
+
+
+## Erro 68 — Conceito duplicado na ontologia (ERRO) {#sec-erro-68}
+
+O mesmo nome de conceito aparece em dois blocos ONTOLOGY.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY Aceitacao_Social
+    definition: Grau de aprovação de uma tecnologia.
+    group: Fatores_Sociais
+END ONTOLOGY
+
+ONTOLOGY Aceitacao_Social
+    definition: Definição duplicada.
+    group: Duplicatas
+END ONTOLOGY
+```
+
+### Como corrigir
+
+Unifique os dois blocos num único ONTOLOGY, ou renomeie um deles.
+:::
+
+
+## Erro 71 — Descrições idênticas em conceitos diferentes (AVISO) {#sec-erro-71}
+
+Dois blocos ONTOLOGY distintos têm exatamente a mesma `definition`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY Conceito_A
+    definition: Fator que influencia positivamente a adoção de tecnologias limpas.
+    group: Fatores_Gerais
+END ONTOLOGY
+
+ONTOLOGY Conceito_B
+    definition: Fator que influencia positivamente a adoção de tecnologias limpas.
+    group: Fatores_Gerais
+END ONTOLOGY
+```
+
+### Como corrigir
+
+Diferencie as definições, ou verifique se os conceitos deveriam ser um único.
+:::
+
+
+# Cadeias (CHAINs) e Relações {#sec-chains}
+
+Erros de estrutura e vínculo em campos CHAIN. Projeto de teste: `T02`.
+
+Estes exemplos usam o seguinte template:
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Efeito causal direto
+        CONSTRAINS: Um conceito limita outro
+        ENABLES:    Condição necessária
+    END RELATIONS
+END FIELD
+```
+
+
+## Erro 7 — Relação não declarada no template (ERRO) {#sec-erro-7}
+
+Uma CHAIN usa um nome de relação que não está no bloco RELATIONS.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Correlação não declarada.
+    chain: Custo -> CORRELATES -> Aceitacao
+END ITEM
+```
+
+`CORRELATES` não está nas RELATIONS do template (que define `INFLUENCES`, `CONSTRAINS`, `ENABLES`).
+
+### Como corrigir
+
+Use uma das relações disponíveis ou peça ao coordenador do projeto para incluir a nova relação no template.
+:::
+
+
+## Erro 9 — CHAIN simples onde relações são obrigatórias (ERRO) {#sec-erro-9}
+
+A CHAIN foi escrita sem relações (`A -> B`), mas o template define RELATIONS e exige o formato qualificado (`A -> RELAÇÃO -> B`).
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Cadeia simples em campo que exige relações.
+    chain: Custo -> Aceitacao
+END ITEM
+```
+
+### Como corrigir
+
+Reescreva com relações:
+
+```synesis
+    chain: Custo -> INFLUENCES -> Aceitacao
+```
+:::
+
+
+## Erro 10 — Estrutura mal formada em CHAIN qualificada (ERRO) {#sec-erro-10}
+
+Uma CHAIN qualificada deve alternar conceitos e relações: `Conceito -> RELAÇÃO -> Conceito`. Um número par de elementos indica estrutura incorreta.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Estrutura mal formada.
+    chain: Custo -> Aceitacao -> Percepcao_Risco -> Beneficio
+END ITEM
+```
+
+4 elementos sem relações — o parser não sabe quais são conceitos e quais são relações.
+
+### Como corrigir
+
+Intercale com relações:
+
+```synesis
+    chain: Custo -> INFLUENCES -> Aceitacao -> CONSTRAINS -> Percepcao_Risco
+```
+:::
+
+
+## Erro 12 — CHAIN com poucos elementos (ERRO) {#sec-erro-12}
+
+A CHAIN tem menos conceitos que o mínimo exigido pelo ARITY do template.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com `ARITY >= 3` no template, esta CHAIN tem apenas 2 conceitos efetivos:
+
+```synesis
+ITEM @autor2024
+    citation: Cadeia com elemento único.
+    chain: Custo -> INFLUENCES -> Aceitacao
+END ITEM
+```
+
+### Como corrigir
+
+Adicione conceitos até atingir o mínimo exigido.
+:::
+
+
+## Erro 14 — Conceito com mesmo nome de uma relação (ERRO) {#sec-erro-14}
+
+Um elemento aparece na posição de conceito, mas também está declarado como relação no template. O compilador não consegue determinar o papel do elemento.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Conceito com mesmo nome de relação.
+    chain: INFLUENCES -> CONSTRAINS -> Aceitacao
+END ITEM
+```
+
+`INFLUENCES` é relação no template E está na posição de conceito.
+
+### Como corrigir
+
+Renomeie o conceito na ontologia para ser diferente dos nomes de relação.
+:::
+
+
+## Erro 15 — Conceito com espaços (ERRO) {#sec-erro-15}
+
+Nomes de conceito em CHAINs não podem conter espaços — use underscore.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Conceito com espaço no nome.
+    chain: Custo -> INFLUENCES -> Aceitacao Social
+END ITEM
+```
+
+### Como corrigir
+
+```synesis
+    chain: Custo -> INFLUENCES -> Aceitacao_Social
+```
+:::
+
+
+# Bundles {#sec-bundles}
+
+Erros de campos que devem aparecer juntos. Projeto de teste: `T03`.
+
+Estes exemplos usam o seguinte template:
+
+```synesis
+ITEM FIELDS
+    REQUIRED citation
+    REQUIRED BUNDLE note, chain
+    REQUIRED BUNDLE lone_field
+END ITEM FIELDS
+```
+
+
+## Erro 16 — Campo de bundle sem parceiro (ERRO) {#sec-erro-16}
+
+Apenas um dos campos do bundle está presente.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Bundle parcial.
+    note: Este memo não tem cadeia correspondente.
+END ITEM
+```
+
+O campo `note` pertence ao bundle `(note, chain)`, mas `chain` está ausente.
+
+### Como corrigir
+
+Adicione o campo `chain` ou remova `note`. Campos de bundle devem aparecer sempre juntos.
+:::
+
+
+## Erro 17 — Contagem desigual no bundle (ERRO) {#sec-erro-17}
+
+Os campos do bundle aparecem em quantidades diferentes.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Bundle com contagens desiguais.
+    note: Primeiro memo.
+    chain: Custo -> INFLUENCES -> Aceitacao_Social
+    note: Segundo memo sem cadeia correspondente.
+END ITEM
+```
+
+`note` aparece 2 vezes, `chain` apenas 1.
+
+### Como corrigir
+
+Cada ocorrência de `note` precisa de uma ocorrência correspondente de `chain`.
+:::
+
+
+## Erro 18 — Bundle com campo único (ERRO) {#sec-erro-18}
+
+Um bundle foi declarado no template com apenas um campo. Bundles existem para garantir co-ocorrência — com um campo só, não faz sentido.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+No template:
+
+```synesis
+ITEM FIELDS
+    REQUIRED BUNDLE lone_field
+END ITEM FIELDS
+```
+
+### Como corrigir
+
+Adicione pelo menos um campo parceiro ao bundle ou remova a declaração BUNDLE.
+:::
+
+
+## Erro 19 — Bundle obrigatório ausente (ERRO) {#sec-erro-19}
+
+O ITEM não contém nenhuma ocorrência de um bundle declarado como REQUIRED.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Sem nenhuma ocorrência do bundle note+chain.
+    lone_field: Apenas este campo presente.
+END ITEM
+```
+
+### Como corrigir
+
+Adicione ao menos uma ocorrência completa do bundle (`note` + `chain`).
+:::
+
+
+# Campos Obrigatórios {#sec-campos-obrigatorios}
+
+Erros de campos REQUIRED ausentes. Projeto de teste: `T04`.
+
+
+## Erro 20 — Campo obrigatório ausente no ITEM (ERRO) {#sec-erro-20}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com `REQUIRED citation` no template:
+
+```synesis
+ITEM @autor2024
+    memo: Item sem citation obrigatório.
+    rating: 3
+END ITEM
+```
+
+### Como corrigir
+
+Adicione `citation: <valor>` ao bloco.
+:::
+
+
+## Erro 21 — Campo obrigatório ausente no SOURCE (ERRO) {#sec-erro-21}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com `REQUIRED source_date` no template:
+
+```synesis
+SOURCE @autor2024
+    summary: Fonte sem a data obrigatória.
+END SOURCE
+```
+
+### Como corrigir
+
+Adicione `source_date: 2024-03-15` ao bloco.
+:::
+
+
+## Erro 22 — Campo obrigatório ausente no ONTOLOGY (ERRO) {#sec-erro-22}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com `REQUIRED definition, group` no template:
+
+```synesis
+ONTOLOGY Custo_Energia
+    definition: Custo total de instalação.
+    # "group" ausente
+END ONTOLOGY
+```
+
+### Como corrigir
+
+Adicione `group: <valor>` ao bloco.
+:::
+
+
+## Erro 23 — ITEM vazio (ERRO) {#sec-erro-23}
+
+Bloco ITEM sem nenhum campo.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+END ITEM
+```
+
+### Como corrigir
+
+Adicione os campos exigidos pelo template ou remova o bloco.
+:::
+
+
+# Tipos de Campo {#sec-tipos}
+
+Erros de validação de tipo — quando o valor não corresponde ao tipo declarado. Projeto de teste: `T04`.
+
+
+## Erro 25 — Valor fora do intervalo SCALE (ERRO) {#sec-erro-25}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com `FORMAT [1..5]` no template:
+
+```synesis
+ITEM @autor2024
+    citation: Valor fora do intervalo.
+    rating: 8
+END ITEM
+```
+
+### Como corrigir
+
+Use um valor entre 1 e 5.
+:::
+
+
+## Erro 26 — Decimal em SCALE inteira (ERRO) {#sec-erro-26}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Valor decimal em escala inteira.
+    rating: 3.5
+END ITEM
+```
+
+### Como corrigir
+
+Use um valor inteiro, ou peça ao coordenador para ajustar o FORMAT (ex: `[1.0..5.0]`).
+:::
+
+
+## Erro 27 — Valor inválido em ENUMERATED (ERRO) {#sec-erro-27}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com VALUES `Ativo`, `Inativo`, `Pendente`:
+
+```synesis
+ITEM @autor2024
+    citation: Valor inválido em campo ENUMERATED.
+    status: Cancelado
+END ITEM
+```
+
+### Como corrigir
+
+Use um dos valores definidos: `Ativo`, `Inativo` ou `Pendente`.
+:::
+
+
+## Erro 28 — Valor inválido em ORDERED (ERRO) {#sec-erro-28}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Com VALUES `[1] Baixa`, `[2] Media`, `[3] Alta`:
+
+```synesis
+ITEM @autor2024
+    citation: Valor inválido em campo ORDERED.
+    importance: Critica
+END ITEM
+```
+
+### Como corrigir
+
+Use o rótulo (`Baixa`, `Media`, `Alta`) ou o índice numérico (`1`, `2`, `3`).
+:::
+
+
+## Erro 29 — Data em formato inválido (ERRO) {#sec-erro-29}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @autor2024
+    source_date: 15/03/2024
+END SOURCE
+```
+
+### Como corrigir
+
+Use o formato `AAAA-MM-DD`: `source_date: 2024-03-15`.
+:::
+
+
+## Erro 30 — Número em campo de texto (ERRO) {#sec-erro-30}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: 42
+END ITEM
+```
+
+### Como corrigir
+
+Campos QUOTATION e TEXT esperam texto, não números isolados. Escreva o conteúdo como frase.
+:::
+
+
+## Erro 31 — Código duplicado no mesmo campo (AVISO) {#sec-erro-31}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Código duplicado.
+    tag: Aceitacao_Social, Aceitacao_Social
+END ITEM
+```
+
+### Como corrigir
+
+Remova a ocorrência duplicada.
+:::
+
+
+## Erro 32 — TOPIC com espaços (ERRO) {#sec-erro-32}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY Barreira_Economica
+    definition: Fator econômico que dificulta a adoção.
+    group: Economia Energia
+END ONTOLOGY
+```
+
+### Como corrigir
+
+Use underscore: `group: Economia_Energia`.
+:::
+
+
+## Erro 33 — Caractere inválido em identificador (ERRO) {#sec-erro-33}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY Custo-Alto
+    definition: Custo elevado que representa barreira.
+    group: Economia
+END ONTOLOGY
+```
+
+O hífen (`-`) não é permitido em nomes de conceito.
+
+### Como corrigir
+
+Use underscore: `Custo_Alto`.
+:::
+
+
+# Escopo {#sec-escopo}
+
+Erros de campo usado fora do seu escopo declarado. Projeto de teste: `T04`.
+
+
+## Erro 34 — Campo ITEM usado em SOURCE (ERRO) {#sec-erro-34}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @autor2024
+    source_date: 2024-01-01
+    citation: Campo de ITEM usado indevidamente em SOURCE.
+END SOURCE
+```
+
+`citation` tem `SCOPE ITEM` no template.
+
+### Como corrigir
+
+Mova o campo para o ITEM correspondente.
+:::
+
+
+## Erro 35 — Campo SOURCE usado em ITEM (ERRO) {#sec-erro-35}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Campo de SOURCE usado em ITEM.
+    source_date: 2024-06-01
+END ITEM
+```
+
+`source_date` tem `SCOPE SOURCE` no template.
+
+### Como corrigir
+
+Mova `source_date` para o bloco SOURCE correspondente.
+:::
+
+
+## Erro 36 — Campo ONTOLOGY usado em ITEM/SOURCE (ERRO) {#sec-erro-36}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ITEM @autor2024
+    citation: Campo de ONTOLOGY em ITEM.
+    group: Economia
+END ITEM
+```
+
+`group` tem `SCOPE ONTOLOGY` no template.
+
+### Como corrigir
+
+Campos com SCOPE ONTOLOGY pertencem ao arquivo `.syno`, não às anotações.
+:::
+
+
+## Erro 37 — TOPIC fora de ONTOLOGY (ERRO) {#sec-erro-37}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE @autor2024
+    source_date: 2024-02-01
+    category: Economia_Energia
+END SOURCE
+```
+
+`category` é `TYPE TOPIC` com `SCOPE ONTOLOGY`.
+
+### Como corrigir
+
+Campos TOPIC organizam a ontologia — não pertencem a blocos SOURCE ou ITEM.
+:::
+
+
+## Erro 38 — CHAIN fora de ITEM (ERRO) {#sec-erro-38}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY Fator_Completo
+    definition: Conceito com campo de escopo ITEM.
+    group: Teste_Escopo
+    citation: Trecho indevido em ONTOLOGY.
+END ONTOLOGY
+```
+
+`citation` tem `SCOPE ITEM` — não pode ser usado em ONTOLOGY.
+
+### Como corrigir
+
+Campos com SCOPE ITEM pertencem a blocos ITEM, não à ontologia.
+:::
+
+
+# Declaração de Template {#sec-template}
+
+Erros na definição das regras do projeto (arquivo `.synt`). Projeto de teste: `T05`.
+
+::: {.callout-note}
+## Nota para pesquisadores
+Estes erros estão no template — a definição das regras do projeto. Se você não é o autor do template, avise o coordenador do projeto.
+:::
+
+
+## Erro 39, 40, 41 — Campo listado mas não definido (ERRO) {#sec-erro-39}
+
+Um campo aparece em `SOURCE/ITEM/ONTOLOGY FIELDS` mas não tem bloco `FIELD` correspondente.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL resumo, country
+END SOURCE FIELDS
+
+FIELD resumo TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+
+# FIELD country não existe — provoca erro 39
+```
+
+### Como corrigir
+
+Adicione a definição:
+
+```synesis
+FIELD country TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+```
+:::
+
+
+## Erro 42 — Campo definido mas não listado (AVISO) {#sec-erro-42}
+
+Um `FIELD` está definido mas não aparece em nenhum bloco `FIELDS`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL resumo
+END SOURCE FIELDS
+
+FIELD resumo TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+
+FIELD campo_orfao TYPE TEXT
+    SCOPE ITEM
+END FIELD
+# campo_orfao não está em ITEM FIELDS
+```
+
+### Como corrigir
+
+Adicione `campo_orfao` ao bloco `ITEM FIELDS`, ou remova a definição.
+:::
+
+
+## Erro 47 — CHAIN sem ARITY (ERRO) {#sec-erro-47}
+
+Campo CHAIN sem declaração de quantos elementos mínimos.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD cadeia_sem_aridade TYPE CHAIN
+    SCOPE ITEM
+    RELATIONS
+        INFLUENCES: Efeito causal direto
+    END RELATIONS
+END FIELD
+```
+
+### Como corrigir
+
+Adicione: `ARITY >= 2`.
+:::
+
+
+## Erro 48 — ARITY incompatível com RELATIONS (ERRO) {#sec-erro-48}
+
+O número de relações declaradas é insuficiente para o ARITY exigido.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD cadeia_aridade_errada TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 4
+    RELATIONS
+        INFLUENCES: Efeito causal direto
+    END RELATIONS
+END FIELD
+```
+
+4 conceitos precisam de pelo menos 3 relações (4−1=3), mas só 1 está declarada.
+
+### Como corrigir
+
+Adicione mais relações ou reduza o ARITY.
+:::
+
+
+## Erro 49 — ORDERED sem VALUES (ERRO) {#sec-erro-49}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD avaliacao_sem_valores TYPE ORDERED
+    SCOPE ITEM
+END FIELD
+```
+
+### Como corrigir
+
+Adicione um bloco VALUES com as opções ordenadas:
+
+```synesis
+    VALUES
+        [1] Baixa: Importância menor
+        [2] Media: Importância moderada
+        [3] Alta:  Importância central
+    END VALUES
+```
+:::
+
+
+## Erro 50 — ENUMERATED sem VALUES (ERRO) {#sec-erro-50}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD categoria_sem_valores TYPE ENUMERATED
+    SCOPE ITEM
+END FIELD
+```
+
+### Como corrigir
+
+Adicione um bloco VALUES com todas as opções aceitas.
+:::
+
+
+## Erro 51 — SCALE sem FORMAT (ERRO) {#sec-erro-51}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD intensidade_sem_formato TYPE SCALE
+    SCOPE ITEM
+END FIELD
+```
+
+### Como corrigir
+
+Adicione: `FORMAT [0..10]` (ou o intervalo desejado).
+:::
+
+
+## Erro 54 — FORMAT em campo não-SCALE (ERRO) {#sec-erro-54}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD nota_com_formato TYPE TEXT
+    SCOPE ITEM
+    FORMAT [1..10]
+END FIELD
+```
+
+FORMAT só faz sentido em campos SCALE.
+
+### Como corrigir
+
+Remova o FORMAT ou mude o tipo para SCALE.
+:::
+
+
+## Erro 55 — ARITY em campo não-CHAIN (ERRO) {#sec-erro-55}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD nota_com_aridade TYPE MEMO
+    SCOPE ITEM
+    ARITY >= 2
+END FIELD
+```
+
+### Como corrigir
+
+Remova o ARITY ou mude o tipo para CHAIN.
+:::
+
+
+## Erro 56 — RELATIONS em campo não-CHAIN (ERRO) {#sec-erro-56}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD nota_com_relacoes TYPE TEXT
+    SCOPE ITEM
+    RELATIONS
+        INFLUENCES: Efeito causal direto
+    END RELATIONS
+END FIELD
+```
+
+### Como corrigir
+
+Remova o bloco RELATIONS ou mude o tipo para CHAIN.
+:::
+
+
+## Erro 57 — Bloco FIELDS duplicado (ERRO) {#sec-erro-57}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definicao, grupo
+    OPTIONAL categoria
+END ONTOLOGY FIELDS
+
+ONTOLOGY FIELDS
+    OPTIONAL campo_extra
+END ONTOLOGY FIELDS
+```
+
+### Como corrigir
+
+Unifique tudo num único bloco ONTOLOGY FIELDS.
+:::
+
+
+## Erro 58 — Valor com espaços em VALUES (ERRO) {#sec-erro-58}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD status_espaco TYPE ENUMERATED
+    SCOPE ITEM
+    VALUES
+        Ativo : Valor com espaço antes dos dois pontos
+        Inativo: Válido
+    END VALUES
+END FIELD
+```
+
+O espaço antes de `:` em `Ativo ` faz com que o valor registrado seja `"Ativo "` (com espaço), que nunca será reconhecido ao ser usado nas anotações.
+
+### Como corrigir
+
+Remova espaços extras ao redor do nome do valor.
+:::
+
+
+## Erro 59 — Valor duplicado em VALUES (ERRO) {#sec-erro-59}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD status_duplicado TYPE ENUMERATED
+    SCOPE ITEM
+    VALUES
+        Ativo:   Atualmente em uso
+        Inativo: Não mais relevante
+        Ativo:   Declaração duplicada
+    END VALUES
+END FIELD
+```
+
+### Como corrigir
+
+Remova a entrada duplicada.
+:::
+
+
+## Erro 69 — Campo definido duas vezes (ERRO) {#sec-erro-69}
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+END FIELD
+
+# ...outros campos...
+
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Segunda definição duplicada.
+END FIELD
+```
+
+### Como corrigir
+
+Remova a definição duplicada ou renomeie um dos campos.
+:::
+
+
+# Estrutura do Projeto {#sec-estrutura}
+
+Erros no arquivo `.synp` e na relação entre arquivos do projeto. Projeto de teste: `T06`.
+
+
+## Erro 5 — Ontologia sem ONTOLOGY FIELDS (ERRO) {#sec-erro-5}
+
+O projeto inclui arquivos `.syno`, mas o template não declara `ONTOLOGY FIELDS`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Template sem seção de ontologia:
+
+```synesis
+TEMPLATE t06_no_ontology_fields
+
+SOURCE FIELDS
+    OPTIONAL summary
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED citation
+END ITEM FIELDS
+
+# ONTOLOGY FIELDS ausente
+
+FIELD summary TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+
+FIELD citation TYPE QUOTATION
+    SCOPE ITEM
+END FIELD
+```
+
+Usado com um projeto que inclui `.syno`.
+
+### Como corrigir
+
+Adicione ao template:
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definition, group
+END ONTOLOGY FIELDS
+```
+:::
+
+
+## Erro 61 — Anotações não incluídas (ERRO) {#sec-erro-61}
+
+Existem arquivos `.syn` mas o projeto não tem `INCLUDE ANNOTATIONS`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_No_Include_Annotations
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ONTOLOGY "t06.syno"
+    # INCLUDE ANNOTATIONS ausente
+END PROJECT
+```
+
+### Como corrigir
+
+Adicione: `INCLUDE ANNOTATIONS "arquivo.syn"`.
+:::
+
+
+## Erro 62 — Ontologia não incluída (ERRO) {#sec-erro-62}
+
+Existem arquivos `.syno` mas o projeto não tem `INCLUDE ONTOLOGY`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_No_Include_Ontology
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+    # INCLUDE ONTOLOGY ausente
+END PROJECT
+```
+
+### Como corrigir
+
+Adicione: `INCLUDE ONTOLOGY "arquivo.syno"`.
+:::
+
+
+## Erro 63 — Arquivo `.bib` não encontrado (ERRO) {#sec-erro-63}
+
+O caminho declarado em `INCLUDE BIBLIOGRAPHY` não existe.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_Missing_Bib
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "nao_existe.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+END PROJECT
+```
+
+### Como corrigir
+
+Verifique se o arquivo existe e se o caminho está correto (relativo à pasta do `.synp`).
+:::
+
+
+## Erro 65 — Projeto sem TEMPLATE (ERRO) {#sec-erro-65}
+
+O bloco PROJECT não declara nenhum template.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_No_Template
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+    INCLUDE ONTOLOGY "t06.syno"
+END PROJECT
+```
+
+### Como corrigir
+
+Adicione: `TEMPLATE "nome_do_arquivo.synt"`.
+:::
+
+
+## Erro 66 — Dois blocos PROJECT (ERRO) {#sec-erro-66}
+
+O arquivo `.synp` contém dois blocos PROJECT.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_Projeto_Um
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+END PROJECT
+
+PROJECT T06_Projeto_Dois
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+END PROJECT
+```
+
+### Como corrigir
+
+Mantenha apenas um bloco PROJECT, ou separe em arquivos `.synp` distintos.
+:::
+
+
+## Erro 67 — Data MODIFIED anterior a CREATED (AVISO) {#sec-erro-67}
+
+No bloco METADATA, a data de modificação é anterior à data de criação.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT T06_Metadata_Dates
+    TEMPLATE "t06.synt"
+    INCLUDE BIBLIOGRAPHY "t06.bib"
+    INCLUDE ANNOTATIONS "t06.syn"
+    INCLUDE ONTOLOGY "t06.syno"
+
+    METADATA
+        author: Pesquisador Teste
+        created: 2024-06-01
+        modified: 2023-01-10
+    END METADATA
+END PROJECT
+```
+
+### Como corrigir
+
+Corrija a data incorreta. O formato esperado é `AAAA-MM-DD`.
+:::
+
+
+# Índice Rápido {#sec-indice}
+
+| Erro | Nome | Nível | Seção |
+|---|---|---|---|
+| 1 | UnregisteredSource | AVISO | [Bibliografia](#sec-erro-1) |
+| 2 | OrphanItem | ERRO | [Bibliografia](#sec-erro-2) |
+| 3 | UndefinedCode | AVISO | [Ontologia](#sec-erro-3) |
+| 4 | UndefinedCode (chain) | AVISO | [Ontologia](#sec-erro-4) |
+| 5 | OntologyWithoutTemplateFields | ERRO | [Estrutura](#sec-erro-5) |
+| 7 | InvalidChainRelation | ERRO | [Chains](#sec-erro-7) |
+| 9 | SimpleChainWithRelationsRequired | ERRO | [Chains](#sec-erro-9) |
+| 10 | MalformedQualifiedChain | ERRO | [Chains](#sec-erro-10) |
+| 12 | ChainArityViolation | ERRO | [Chains](#sec-erro-12) |
+| 14 | ConceptNameMatchesRelation | ERRO | [Chains](#sec-erro-14) |
+| 15 | ConceptWithSpaces | ERRO | [Chains](#sec-erro-15) |
+| 16 | MissingBundleField | ERRO | [Bundles](#sec-erro-16) |
+| 17 | BundleCountMismatch | ERRO | [Bundles](#sec-erro-17) |
+| 18 | SingleFieldBundle | ERRO | [Bundles](#sec-erro-18) |
+| 19 | MissingRequiredField (bundle) | ERRO | [Bundles](#sec-erro-19) |
+| 20 | MissingRequiredField (ITEM) | ERRO | [Obrigatórios](#sec-erro-20) |
+| 21 | MissingRequiredField (SOURCE) | ERRO | [Obrigatórios](#sec-erro-21) |
+| 22 | MissingRequiredField (ONTOLOGY) | ERRO | [Obrigatórios](#sec-erro-22) |
+| 23 | EmptyItemBlock | ERRO | [Obrigatórios](#sec-erro-23) |
+| 24 | SourceWithoutItems | AVISO | [Bibliografia](#sec-erro-24) |
+| 25 | ScaleOutOfRange | ERRO | [Tipos](#sec-erro-25) |
+| 26 | DecimalInIntegerScale | ERRO | [Tipos](#sec-erro-26) |
+| 27 | InvalidEnumeratedValue | ERRO | [Tipos](#sec-erro-27) |
+| 28 | InvalidOrderedValue | ERRO | [Tipos](#sec-erro-28) |
+| 29 | InvalidDateFormat | ERRO | [Tipos](#sec-erro-29) |
+| 30 | NumericOnlyInTextField | ERRO | [Tipos](#sec-erro-30) |
+| 31 | DuplicateCodeInField | AVISO | [Tipos](#sec-erro-31) |
+| 32 | TopicWithSpaces | ERRO | [Tipos](#sec-erro-32) |
+| 33 | InvalidIdentifierChar | ERRO | [Tipos](#sec-erro-33) |
+| 34 | ForbiddenFieldPresent (ITEM→SOURCE) | ERRO | [Escopo](#sec-erro-34) |
+| 35 | ForbiddenFieldPresent (SOURCE→ITEM) | ERRO | [Escopo](#sec-erro-35) |
+| 36 | ForbiddenFieldPresent (ONTOLOGY→ITEM) | ERRO | [Escopo](#sec-erro-36) |
+| 37 | ForbiddenFieldPresent (TOPIC fora) | ERRO | [Escopo](#sec-erro-37) |
+| 38 | ForbiddenFieldPresent (CHAIN fora) | ERRO | [Escopo](#sec-erro-38) |
+| 39–41 | UndefinedFieldInScopeFields | ERRO | [Template](#sec-erro-39) |
+| 42 | OrphanFieldDefinition | AVISO | [Template](#sec-erro-42) |
+| 47 | ChainWithoutArity | ERRO | [Template](#sec-erro-47) |
+| 48 | ArityRelationsMismatch | ERRO | [Template](#sec-erro-48) |
+| 49 | OrderedWithoutValues | ERRO | [Template](#sec-erro-49) |
+| 50 | EnumeratedWithoutValues | ERRO | [Template](#sec-erro-50) |
+| 51 | ScaleWithoutFormat | ERRO | [Template](#sec-erro-51) |
+| 54 | FormatOnNonScale | ERRO | [Template](#sec-erro-54) |
+| 55 | ArityOnNonChain | ERRO | [Template](#sec-erro-55) |
+| 56 | RelationsOnNonChain | ERRO | [Template](#sec-erro-56) |
+| 57 | DuplicateScopeBlock | ERRO | [Template](#sec-erro-57) |
+| 58 | ValueWithWhitespace | ERRO | [Template](#sec-erro-58) |
+| 59 | DuplicateValue | ERRO | [Template](#sec-erro-59) |
+| 61 | MissingIncludeAnnotations | ERRO | [Estrutura](#sec-erro-61) |
+| 62 | MissingIncludeOntology | ERRO | [Estrutura](#sec-erro-62) |
+| 63 | MissingBibFile | ERRO | [Estrutura](#sec-erro-63) |
+| 65 | MissingTemplate | ERRO | [Estrutura](#sec-erro-65) |
+| 66 | DuplicateProjectBlock | ERRO | [Estrutura](#sec-erro-66) |
+| 67 | InvalidMetadataDates | AVISO | [Estrutura](#sec-erro-67) |
+| 68 | DuplicateOntologyConcept | ERRO | [Ontologia](#sec-erro-68) |
+| 69 | DuplicateFieldName | ERRO | [Template](#sec-erro-69) |
+| 70 | DuplicateSourceBibref | ERRO | [Bibliografia](#sec-erro-70) |
+| 71 | DuplicateOntologyDescription | AVISO | [Ontologia](#sec-erro-71) |
+
+::: {.callout-note}
+## Erros de sintaxe (43–46, 52–53, 60)
+Os erros 43, 44, 45, 46, 52, 53 e 60 são capturados diretamente pelo parser Lark antes de chegar à validação semântica. Eles geram uma `SynesisSyntaxError` com mensagem pedagógica, indicando a linha/coluna exata e os tokens esperados. Não é possível reproduzi-los com arquivos sintaticamente válidos — eles são, por definição, erros de gramática.
+:::
