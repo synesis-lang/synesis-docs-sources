@@ -1,0 +1,697 @@
+---
+title: "synesis-coder: Codificação Qualitativa com IA"
+subtitle: "Como gerar anotações, ontologias e processar corpora inteiros com o CLI"
+---
+
+# synesis-coder: Codificação Qualitativa com IA
+
+O `synesis-coder` automatiza a codificação qualitativa usando Claude como motor de inferência. A ferramenta lê o template do seu projeto (`.synt`) e gera blocos Synesis válidos --- ITEM, SOURCE, ONTOLOGY --- seguindo rigorosamente os campos, relações, valores permitidos e instruções metodológicas (GUIDELINES) do template.
+
+**Você deve usar este guia se:**
+
+- Quer codificar trechos de texto selecionados em um arquivo `.syn`
+- Precisa processar um corpus de abstracts (`.bib`) em lote
+- Quer codificar um documento longo (entrevista, relatório) com chunking automático
+- Precisa gerar definições ontológicas (`.syno`) a partir do corpus já anotado
+- Quer integrar a codificação ao fluxo de trabalho no VS Code (Synesis Explorer)
+
+:::{.callout-important}
+## Nada é hardcoded
+`synesis-coder` não contém nenhum nome de campo, relação ou valor fixo no código.
+Tudo é derivado dinamicamente de `result.template.field_specs` via `synesis.load()`.
+Se você mudar o template, a IA segue as novas regras --- sem modificar a ferramenta.
+:::
+
+---
+
+# Instalação {#sec-instalacao}
+
+## Requisitos
+
+- Python 3.10+
+- [synesis](https://github.com/synesis-lang/synesis) >= 0.3.0
+- Chave de API da Anthropic (`ANTHROPIC_API_KEY`)
+
+## Instalar o pacote
+
+```bash
+pip install synesis-coder
+```
+
+Verificar:
+
+```bash
+synesis-coder --version
+# synesis-coder, version 0.1.0
+```
+
+## Configurar a chave de API
+
+Crie um arquivo `.env` na raiz do seu projeto com a chave:
+
+```dotenv
+ANTHROPIC_API_KEY=sk-ant-...
+```
+
+O `.env` é carregado automaticamente. Nunca inclua este arquivo no controle de versão.
+
+:::{.callout-tip}
+## Modelo alternativo
+O modelo padrão é `claude-opus-4-6`. Para usar um modelo mais rápido (e mais barato), defina `SYNESIS_CODER_MODEL=claude-sonnet-4-6` no `.env` ou passe `--model claude-sonnet-4-6` na linha de comando.
+:::
+
+---
+
+# Os quatro modos de operação {#sec-modos}
+
+`synesis-coder` opera em quatro modos complementares, cada um projetado para uma etapa diferente do fluxo de pesquisa:
+
+| Modo | Entrada | Saída | Uso típico |
+|------|---------|-------|------------|
+| `item` | Texto + bibref | Bloco ITEM | Codificar um trecho selecionado |
+| `abstract` | Corpus `.bib` | Blocos SOURCE + ITEM | Processar abstracts em lote |
+| `document` | Documento `.txt`/`.md` | Blocos SOURCE + ITEM | Codificar entrevista ou relatório longo |
+| `ontology` | Corpus anotado | Arquivo `.syno` | Gerar definições ontológicas |
+
+: Modos de operação do synesis-coder {.striped .hover}
+
+---
+
+# Modo `item`: codificar um trecho de texto {#sec-item}
+
+O modo mais simples. Recebe um texto e uma referência bibliográfica, e retorna um bloco ITEM válido codificado de acordo com o template do projeto.
+
+## Uso básico
+
+```bash
+synesis-coder item \
+  --project social_acceptance.synp \
+  --bibref ashworth2019 \
+  --text "Community trust and environmental concern are the most important factors determining willingness to participate in renewable energy projects."
+```
+
+A saída é um bloco ITEM compilável, pronto para inserir em um arquivo `.syn`:
+
+```synesis
+ITEM @ashworth2019
+    text: Community trust and environmental concern are the most
+          important factors determining willingness to participate
+          in renewable energy projects.
+
+    note: Reveals dual-factor mechanism where trust and environmental
+          concern independently drive participation willingness
+    chain: Community_Trust -> INFLUENCES -> Participation
+
+    note: Environmental concern acts as value-based enabler of
+          engagement with renewable energy
+    chain: Environmental_Concern -> ENABLES -> Participation
+END ITEM
+```
+
+## Redirecionar para arquivo
+
+O formato `plain` (padrão) emite apenas o bloco Synesis, ideal para piping:
+
+```bash
+synesis-coder item \
+  --project social_acceptance.synp \
+  --bibref ashworth2019 \
+  --text "Local ownership models significantly reduce opposition." \
+  >> anotacoes/ashworth2019.syn
+```
+
+## Saída verbose
+
+O formato `verbose` inclui cabeçalho com status de validação:
+
+```bash
+synesis-coder item \
+  --project social_acceptance.synp \
+  --bibref ashworth2019 \
+  --text "Local ownership models significantly reduce opposition." \
+  --format verbose
+```
+
+```
+# synesis-coder item
+# bibref: @ashworth2019
+# model: claude-opus-4-6
+# validation: OK
+# timestamp: 2026-03-23T14:32:11
+
+ITEM @ashworth2019
+    text: Local ownership models significantly reduce opposition.
+    ...
+END ITEM
+```
+
+## Opções completas
+
+| Opção | Obrigatória | Descrição |
+|-------|:-----------:|-----------|
+| `--project` | sim | Caminho para o arquivo `.synp` |
+| `--bibref` | sim | Referência bibliográfica (sem `@`) |
+| `--text` | sim | Texto a ser codificado |
+| `--format` | não | `plain` (padrão) ou `verbose` |
+| `--model` | não | ID do modelo LLM |
+
+: Opções do modo `item` {.striped .hover}
+
+---
+
+# Modo `abstract`: processar corpus bibliográfico {#sec-abstract}
+
+Processa um arquivo `.bib` completo, gerando anotações SOURCE + ITEM para cada referência que contenha abstract.
+
+## Uso
+
+```bash
+synesis-coder abstract \
+  --project social_acceptance.synp \
+  --input corpus/references.bib \
+  --output anotacoes/ \
+  --concurrent 5
+```
+
+Para cada referência no `.bib` que tenha abstract, o modo `abstract`:
+
+1. Cria um bloco `SOURCE @bibref` com os metadados bibliográficos
+2. Analisa o abstract e gera blocos `ITEM @bibref` codificando os achados relevantes
+3. Valida cada bloco via `synesis.load()` antes de gravar
+
+## Processamento em lote e batches
+
+O modo `abstract` processa referências concorrentemente (padrão: 5 chamadas simultâneas) e organiza o trabalho em batches para evitar acúmulo de contexto:
+
+```bash
+synesis-coder abstract \
+  --project social_acceptance.synp \
+  --input corpus/references.bib \
+  --output anotacoes/ \
+  --concurrent 5 \
+  --batch-size 25
+```
+
+Entre cada batch, o projeto é recarregado via `synesis.load()` para incorporar as anotações já geradas --- o `code_index` e `topic_index` ficam progressivamente mais ricos ao longo do processamento.
+
+## Um arquivo por referência
+
+Por padrão, todas as anotações vão para um único arquivo `.syn`. Use `--per-reference` para gerar um arquivo `.syn` por referência:
+
+```bash
+synesis-coder abstract \
+  --project social_acceptance.synp \
+  --input corpus/references.bib \
+  --output anotacoes/ \
+  --per-reference
+```
+
+Resultado: `anotacoes/ashworth2019.syn`, `anotacoes/aly2019.syn`, etc.
+
+## Opções completas
+
+| Opção | Obrigatória | Descrição |
+|-------|:-----------:|-----------|
+| `--project` | sim | Caminho para o arquivo `.synp` |
+| `--input` | sim | Arquivo `.bib` com abstracts |
+| `--output` | sim | Diretório de saída |
+| `--concurrent` | não | Chamadas LLM simultâneas (padrão: 5) |
+| `--batch-size` | não | Referências por batch (padrão: 25) |
+| `--per-reference` | não | Um arquivo `.syn` por referência |
+| `--format` | não | `plain` (padrão) ou `verbose` |
+| `--model` | não | ID do modelo LLM |
+
+: Opções do modo `abstract` {.striped .hover}
+
+---
+
+# Modo `document`: codificar documentos longos {#sec-document}
+
+Processa um documento longo (entrevista transcrita, relatório, capítulo) com chunking automático --- divide o texto em segmentos com overlap para garantir cobertura completa.
+
+## Uso
+
+```bash
+synesis-coder document \
+  --project nave.synp \
+  --bibref entrevista_01 \
+  --input transcricoes/entrevista_01.txt \
+  --output anotacoes/entrevista_01.syn
+```
+
+## Controle de chunking
+
+O chunking divide o documento em segmentos de tamanho configurável. O overlap garante que passagens na fronteira entre chunks não sejam perdidas:
+
+```bash
+synesis-coder document \
+  --project nave.synp \
+  --bibref entrevista_01 \
+  --input transcricoes/entrevista_01.txt \
+  --output anotacoes/entrevista_01.syn \
+  --chunk-size 12000 \
+  --overlap 2400
+```
+
+- **`--chunk-size`**: tamanho máximo de cada segmento em caracteres (padrão: 12.000)
+- **`--overlap`**: sobreposição entre segmentos consecutivos em caracteres (padrão: 2.400)
+
+:::{.callout-tip}
+## Dimensionando o chunk
+O tamanho do chunk ideal depende da complexidade do template. Templates com muitos campos CHAIN e GUIDELINES extensas exigem mais tokens de contexto --- nesse caso, reduza o `--chunk-size` para 8.000--10.000 caracteres. Para templates simples, 12.000 funciona bem.
+:::
+
+## Opções completas
+
+| Opção | Obrigatória | Descrição |
+|-------|:-----------:|-----------|
+| `--project` | sim | Caminho para o arquivo `.synp` |
+| `--bibref` | sim | Referência bibliográfica para o documento |
+| `--input` | sim | Documento `.txt` ou `.md` |
+| `--output` | sim | Arquivo `.syn` de saída |
+| `--chunk-size` | não | Tamanho do chunk em caracteres (padrão: 12.000) |
+| `--overlap` | não | Overlap entre chunks (padrão: 2.400) |
+| `--concurrent` | não | Chunks simultâneos (padrão: 3) |
+| `--format` | não | `plain` (padrão) ou `verbose` |
+| `--model` | não | ID do modelo LLM |
+
+: Opções do modo `document` {.striped .hover}
+
+---
+
+# Modo `ontology`: gerar definições ontológicas {#sec-ontology}
+
+O modo mais sofisticado. Analisa o corpus já anotado, coleta evidência empírica para cada código conceitual (frequência, fontes, relações, co-ocorrências, exemplos), e gera entradas ONTOLOGY fundamentadas nos dados observados --- não em conhecimento genérico do LLM.
+
+## Uso básico
+
+```bash
+synesis-coder ontology \
+  --project social_acceptance.synp \
+  --output ontologia.syno
+```
+
+## O que é o semantic context?
+
+Para cada código pendente, o `synesis-coder` monta um contexto semântico derivado do corpus:
+
+- **Frequência**: quantas vezes o código aparece em blocos ITEM
+- **Fontes**: quantos SOURCEs distintos mencionam o código
+- **Relações**: triples do grafo de CHAIN envolvendo o código (até 15)
+- **Co-ocorrências**: outros códigos que aparecem nos mesmos ITEMs (até 20)
+- **Exemplos**: excertos concretos de campos QUOTATION/NOTE (até 3)
+
+Esse contexto é injetado no prompt do LLM, produzindo definições ontológicas que refletem o uso real no corpus, não definições enciclopédicas genéricas.
+
+## Exemplo real: código `Cost`
+
+O código `Cost` aparece em 96 itens de 66 fontes diferentes no projeto `Social_Acceptance`. O semantic context injetado no prompt inclui:
+
+- Relações: `Cost -> CONSTRAINS -> Deployment`, `Cost -> INFLUENCES -> Acceptance`, `Policy -> ENABLES -> Cost_Reduction`
+- Co-ocorrências: `Deployment`, `Acceptance`, `Policy`, `Technology`
+- Exemplos: "High initial investment costs remain the primary barrier to solar deployment in developing countries"
+
+A entrada ONTOLOGY gerada:
+
+```synesis
+ONTOLOGY Cost
+    topic: Economics
+    aspect: 11
+    dimension: 2
+    confidence: HIGH
+
+    reasoning: Aspect 11: Core economic factor representing financial
+               expenditure. Mainly constrains deployment/technology
+               development while enabling market penetration when
+               reduced. Co-occurs with Deployment and Acceptance,
+               indicating market-consumer relevance. Dimension 2:
+               Directly affects investors, consumers, and market
+               competitiveness. High frequency (96) across broad
+               sources (66) confirms central role.
+
+    description: Economic factor representing financial expenditure
+                 associated with energy technologies and systems.
+                 Acts as primary barrier constraining technology
+                 development, site selection, and deployment when
+                 high, while enabling market penetration, technology
+                 transition, and sustainable solutions when reduced.
+
+    rgt_element_a: Low_Cost
+    rgt_element_b: High_Cost
+    theoretical_significance: 0
+END ONTOLOGY
+```
+
+Observe como a classificação `aspect: 11` (Economic), `dimension: 2` (Market), `confidence: HIGH` --- todas derivadas das evidências empíricas no corpus, não de associações genéricas.
+
+## Modo incremental (`--update`)
+
+Quando a ontologia já contém definições e você quer gerar apenas os códigos novos (adicionados após novas rodadas de codificação):
+
+```bash
+synesis-coder ontology \
+  --project social_acceptance.synp \
+  --output ontologia.syno \
+  --update
+```
+
+Com `--update`, o `synesis-coder`:
+
+1. Carrega a ontologia existente via `synesis.load(load_ontology=True)`
+2. Compara os códigos usados no corpus contra os já definidos em `ontology_index`
+3. Gera entradas apenas para códigos pendentes
+
+## Backup automático
+
+Quando você executa **sem** `--update` e o arquivo `.syno` de destino já existe, o `synesis-coder` cria automaticamente um backup antes de sobrescrever:
+
+```
+ontologia.syno       →  ontologia_bkp.syno  (backup)
+ontologia.syno       ←  novo conteúdo gerado
+```
+
+Isso protege ontologias curadas manualmente contra sobrescrita acidental.
+
+## Requisito de template
+
+O template do projeto deve definir pelo menos um campo com `SCOPE ONTOLOGY`. Projetos sem escopo de ontologia (como `thompson_bible`) recebem um erro claro:
+
+```
+Erro: O template do projeto 'thompson_bible' não define campos ONTOLOGY.
+```
+
+## Opções completas
+
+| Opção | Obrigatória | Descrição |
+|-------|:-----------:|-----------|
+| `--project` | sim | Caminho para o arquivo `.synp` |
+| `--output` | sim | Arquivo `.syno` de saída |
+| `--update` | não | Gera apenas códigos ainda sem definição |
+| `--concurrent` | não | Chamadas LLM simultâneas (padrão: 5) |
+| `--format` | não | `plain` (padrão) ou `verbose` |
+| `--model` | não | ID do modelo LLM |
+
+: Opções do modo `ontology` {.striped .hover}
+
+---
+
+# Integração com VS Code {#sec-vscode}
+
+O modo `item` está integrado à extensão **Synesis Explorer** (v0.5.25+), permitindo codificar texto diretamente no editor sem abrir o terminal.
+
+## Como usar
+
+1. Abra um arquivo `.syn` no VS Code com a extensão Synesis Explorer instalada
+2. **Selecione** o trecho de texto que deseja codificar
+3. Clique com o botão direito → **Synesis: Code Selection**
+   - Ou use o atalho `Ctrl+Shift+I` / `Cmd+Shift+I`
+
+A extensão:
+
+- **Detecta o bibref automaticamente** a partir do bloco SOURCE ou ITEM sob o cursor
+- Chama `synesis-coder item` como subprocesso
+- **Substitui a seleção** pelo bloco ITEM gerado
+
+## Fluxo de trabalho típico
+
+O cenário mais comum é o pesquisador que cola trechos de sua revisão de literatura diretamente no arquivo `.syn`:
+
+```synesis
+SOURCE @ashworth2019
+    description: Comparative study of public attitudes toward CCS and
+                 low-carbon energy technologies in Australia and China.
+    epistemic_model: Social acceptance of energy technologies
+    method: Online survey (Australia n=2383, China n=1266)
+END SOURCE
+
+However, male respondents, those who perceived themselves to
+have higher knowledge of CCS, and those who valued economic
+outcomes over environmental protection were more likely to
+support CCS - as long as the risks were not perceived to
+outweigh the benefits.
+```
+
+O pesquisador seleciona o texto colado (a passagem abaixo do `END SOURCE`), executa **Synesis: Code Selection**, e o texto é substituído por:
+
+```synesis
+SOURCE @ashworth2019
+    description: Comparative study of public attitudes toward CCS and
+                 low-carbon energy technologies in Australia and China.
+    epistemic_model: Social acceptance of energy technologies
+    method: Online survey (Australia n=2383, China n=1266)
+END SOURCE
+
+ITEM @ashworth2019
+    text: However, male respondents, those who perceived themselves to
+          have higher knowledge of CCS, and those who valued economic
+          outcomes over environmental protection were more likely to
+          support CCS - as long as the risks were not perceived to
+          outweigh the benefits.
+
+    note: *complex* Four-factor convergence reveals multi-domain
+          determinants requiring integrated communication strategies
+    chain: Gender -> INFLUENCES -> CCS_Support
+
+    note: Self-assessed knowledge increases support, revealing
+          information deficit mechanism
+    chain: Knowledge -> INFLUENCES -> CCS_Support
+
+    note: Economic prioritization over environmental values predicts
+          support, indicating value-based acceptance mechanism
+    chain: Economic_Value -> INFLUENCES -> CCS_Support
+
+    note: Risk-benefit assessment constrains support, revealing
+          conditional acceptance mechanism
+    chain: Risk_Perception -> CONSTRAINS -> CCS_Support
+END ITEM
+```
+
+O bibref `@ashworth2019` foi detectado automaticamente do bloco SOURCE acima. O pesquisador não precisou digitar nada --- apenas selecionar e executar o comando.
+
+## Configuração do caminho do executável
+
+Se o `synesis-coder` não está no PATH do sistema, configure o caminho na extensão:
+
+**VS Code Settings** → `synesisExplorer.coder.path`:
+
+```json
+{
+  "synesisExplorer.coder.path": "C:/Python312/Scripts/synesis-coder.exe"
+}
+```
+
+## Cancelamento
+
+A operação pode ser cancelada a qualquer momento clicando **Cancel** na notificação de progresso. O subprocesso é terminado imediatamente.
+
+---
+
+# Como funciona internamente {#sec-arquitetura}
+
+O `synesis-coder` opera em um pipeline de cinco estágios. Entender esse pipeline ajuda a diagnosticar problemas e ajustar o fluxo de trabalho.
+
+```
+                    ┌─────────────────────────────┐
+                    │  synesis-coder item/ontology │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │   1. project_loader          │
+                    │      synesis.load()          │
+                    │      → ctx (template, fields,│
+                    │        code_index, relations) │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │   2. prompt_builder          │
+                    │      system (cacheável):     │
+                    │        regras + template     │
+                    │        + indexes + GUIDELINES│
+                    │      user (dinâmico):        │
+                    │        bibref + texto        │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │   3. llm_client              │
+                    │      Claude API (Anthropic)  │
+                    │      rate limiting RPM/TPM   │
+                    │      prompt caching ativo    │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │   4. validator               │
+                    │      synesis.load() valida   │
+                    │      ↻ até 3 tentativas      │
+                    │      temperatura crescente   │
+                    │      0.0 → 0.2 → 0.5        │
+                    └─────────────┬───────────────┘
+                                  │
+                    ┌─────────────▼───────────────┐
+                    │   5. stdout                  │
+                    │      Bloco(s) Synesis válido │
+                    └─────────────────────────────┘
+```
+
+## 1. project_loader
+
+`load_project()` invoca `synesis.load()` --- o compilador Synesis --- para extrair do projeto:
+
+- **template fields** separados por escopo (SOURCE, ITEM, ONTOLOGY)
+- **GUIDELINES** por campo --- instruções metodológicas do pesquisador
+- **code_index** --- conceitos existentes (de campos CODE e CHAIN)
+- **topic_index** --- tópicos existentes (de campos TOPIC)
+- **ontology_index** --- entradas ontológicas já definidas
+- **CHAIN relations** --- relações causais permitidas no projeto
+- **project description** --- descrição do projeto (bloco DESCRIPTION)
+
+Tudo é extraído dinamicamente do compilador. Se o pesquisador muda o template, o `synesis-coder` se adapta automaticamente.
+
+## 2. prompt_builder
+
+Constrói prompts em duas camadas:
+
+- **System prompt** (cacheável): regras absolutas do formato Synesis, descrição do projeto, instruções por campo (GUIDELINES > description > genérica por tipo), conceitos e tópicos existentes. Marcado com `cache_control: ephemeral` na API Anthropic --- o primeiro item de um batch paga o custo total, os demais reutilizam o cache.
+- **User prompt** (dinâmico): bibref + texto (modo `item`) ou código + semantic_ctx (modo `ontology`).
+
+A hierarquia de instruções por campo é: **GUIDELINES** (instrução metodológica do autor do template) > **description** (descrição do campo) > **instrução genérica** baseada no tipo de campo.
+
+## 3. llm_client
+
+Duas implementações:
+
+- `LLMClient` --- síncrono, usado no modo `item`
+- `AsyncLLMClient` --- assíncrono, usado nos modos `abstract`, `document` e `ontology` (processamento concorrente)
+
+Ambas compartilham rate limiting:
+
+- **RPM** (requests per minute): semáforo com janela deslizante de 60s
+- **TPM** (tokens per minute): contagem de tokens de entrada e saída
+
+## 4. validator
+
+Valida a saída do LLM compilando-a com `synesis.load()`. Se o output contém erros:
+
+1. Extrai apenas blocos Synesis relevantes (`_extract_item_blocks` / `_extract_ontology_blocks`) --- descarta markdown, SOURCE ou ONTOLOGY que o LLM eventualmente adicione
+2. Remove fences de código (`` ``` ``)
+3. Envia o output + diagnósticos do compilador de volta ao LLM para correção
+4. Temperatura escalona: `0.0 → 0.2 → 0.5` para evitar loops determinísticos
+5. Após 3 tentativas, retorna o melhor resultado com cabeçalho de erro comentado
+
+:::{.callout-note}
+## OrphanItem é ignorado
+No modo `item`, o validador ignora o diagnóstico `OrphanItem` (ITEM sem SOURCE correspondente). Isso é esperado --- o SOURCE existe no `.syn` do projeto, mas não é carregado na validação isolada para economizar tokens de contexto.
+:::
+
+---
+
+# Projetos de teste reais {#sec-testes}
+
+O `synesis-coder` é testado contra projetos reais com templates de complexidade variada:
+
+| Projeto | Template | Características |
+|---------|----------|-----------------|
+| `Social_Acceptance` | GUIDELINES, ORDERED, ENUMERATED, SCALE, CHAIN com 5 relações | Caso completo com ontologia multidimensional |
+| `aids_corpus` | CHAIN com relações em português, sem GUIDELINES | Template sem instruções metodológicas |
+| `nave` | Sem campo CHAIN | Template teológico minimalista |
+| `thompson_bible` | Sem ONTOLOGY scope | Projeto que rejeita modo `ontology` |
+
+: Projetos usados como fixtures de teste {.striped .hover}
+
+### Executar testes sem API
+
+Os testes de `project_loader`, `prompt_builder` e `validator` não chamam o LLM:
+
+```bash
+cd synesis-coder
+pytest tests/ -v -k "not integration"
+```
+
+### Executar testes de integração
+
+Requerem `ANTHROPIC_API_KEY` no ambiente:
+
+```bash
+pytest tests/ -v -m integration
+```
+
+### Cobertura
+
+```bash
+pytest tests/ --cov=synesis_coder --cov-report=term-missing
+```
+
+---
+
+# Variáveis de ambiente {#sec-env}
+
+| Variável | Obrigatória | Padrão | Descrição |
+|----------|:-----------:|--------|-----------|
+| `ANTHROPIC_API_KEY` | sim | --- | Chave da API Anthropic |
+| `SYNESIS_CODER_MODEL` | não | `claude-opus-4-6` | Modelo LLM padrão |
+| `SYNESIS_CODER_MAX_RETRIES` | não | `3` | Tentativas de correção por item |
+| `SYNESIS_CODER_TEMPERATURE` | não | `0.0` | Temperatura de geração |
+| `SYNESIS_CODER_RPM_LIMIT` | não | `50` | Requests por minuto |
+| `SYNESIS_CODER_TPM_LIMIT` | não | `100000` | Tokens por minuto |
+
+: Variáveis de ambiente do synesis-coder {.striped .hover}
+
+---
+
+# Erros comuns {#sec-erros}
+
+## `synesis-coder` não encontrado
+
+```
+'synesis-coder' is not recognized as an internal or external command
+```
+
+O executável não está no PATH. Soluções:
+
+- Verifique a instalação: `pip show synesis-coder`
+- Use o caminho completo: `python -m synesis_coder item ...`
+- No VS Code: configure `synesisExplorer.coder.path` com o caminho absoluto
+
+## Erro de configuração (API key)
+
+```
+Erro de configuração: ANTHROPIC_API_KEY não encontrada
+```
+
+Crie um arquivo `.env` no diretório de onde executa o comando, ou exporte a variável:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+## Template sem ONTOLOGY scope
+
+```
+Erro: O template do projeto 'thompson_bible' não define campos ONTOLOGY.
+```
+
+O modo `ontology` requer pelo menos um campo com `SCOPE ONTOLOGY` no template. Os modos `item`, `abstract` e `document` funcionam normalmente sem ontologia.
+
+## Validação falha após 3 tentativas
+
+O cabeçalho de erro é incluído como comentário no output:
+
+```synesis
+# synesis-coder: validation failed after 3 attempts
+# errors: Missing required field 'chain' in ITEM block
+ITEM @smith2024
+    text: ...
+    note: ...
+END ITEM
+```
+
+Revise o bloco gerado e corrija manualmente os campos faltantes. Isso é raro em templates com GUIDELINES bem escritas.
+
+---
+
+# Próximos passos {#sec-proximos}
+
+- [Codificação Assistida por IA](../explanation/codificacao_assistida_IA.qmd) --- caso real completo com o projeto Social_Acceptance
+- [Métricas da Pesquisa](../explanation/codificacao_assistida_IA_metricas.qmd) --- análise quantitativa dos resultados
+- [Como Definir uma Ontologia](definir_ontologia.qmd) --- curadoria manual das entradas geradas
+- [Como Criar e Validar Chains](criar_chains.qmd) --- regras de modelagem causal
+- [Tutorial Synesis Explorer](../tutorials/synesis_explorer_tutorial.qmd) --- configurar o ambiente VS Code

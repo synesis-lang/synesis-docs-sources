@@ -46,6 +46,8 @@ website:
         menu:
           - href: howto/guia_profissionais.qmd
             text: Guia para Profissionais
+          - href: howto/synesis_coder.qmd
+            text: Codificação com IA (synesis-coder)
           - href: howto/definir_ontologia.qmd
             text: Como Definir uma Ontologia
           - href: howto/criar_chains.qmd
