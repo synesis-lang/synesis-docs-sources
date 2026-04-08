@@ -84,6 +84,8 @@ website:
             text: Codificação Assistida por IA
           - href: explanation/codificacao_assistida_IA_metricas.qmd
             text: Métricas da Pesquisa
+          - href: explanation/codificacao_assistida_IA_comparacao.qmd
+            text: Comparação de Modelos de IA
           - href: explanation/knowledge_graphs.qmd
             text: Knowledge Graphs & GraphRAG
           - href: explanation/synesis_escrituras.qmd

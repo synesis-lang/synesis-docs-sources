@@ -1,0 +1,672 @@
+---
+title: "Comparação de Modelos de IA para Codificação Qualitativa"
+subtitle: "Avaliação sistemática de cinco modelos LLM na geração de anotações Synesis"
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+jupyter: python3
+---
+
+A codificação qualitativa assistida por IA depende criticamente do modelo de linguagem utilizado. Modelos diferentes produzem anotações com níveis distintos de precisão relacional, cobertura temática e conformidade sintática. Este documento apresenta uma avaliação comparativa de cinco modelos LLM aplicados ao mesmo abstract científico, usando como referência uma anotação-padrão revisada manualmente.
+
+:::{.callout-important}
+## Dados reais
+Todos os dados apresentados aqui são reais --- extraídos de um artigo científico publicado e processados pelo `synesis-coder` com os mesmos prompts e template. A anotação de referência foi revisada manualmente por um pesquisador.
+:::
+
+---
+
+# O caso de teste {#sec-caso-teste}
+
+O abstract utilizado como caso de teste pertence ao artigo de @agaton2020 sobre análises socioeconômicas e ambientais de transporte público sustentável nas Filipinas.
+
+## Abstract original (na íntegra)
+
+> Electric vehicles are regarded as energy transition technology towards more sustainable and environment-friendly transportation systems. Despite the benefits of reducing the dependence on fossil fuels and greenhouse gas emissions, the adoption of electric vehicles faces several obstacles ranging from financing issues, government policies, and public acceptance. This study aims to identify the economic, environmental, and social impact of the adoption of electric vehicles for public transportation. Using the Philippines as a case study, the findings highlight the economic advantage of investing in electric public transportation with high public acceptance. The results further identify significant decrease in air pollution, reduction of greenhouse gas emissions and encourage lowering the reliance on imported fossil fuels by shifting the public transport from conventional to electric transport system. This study recommends stricter implementation of government policies on modernized public transportation, stronger government support on financing mechanisms, establishment of charging stations in public and private terminals, and boosting programs for developing local-made electric vehicles. To make electric vehicle more environment-friendly, the government must accelerate the energy transition by increasing the electricity share from renewable sources and investing in more sustainable sources of energy.
+
+Este abstract foi escolhido por conter múltiplos mecanismos causais --- barreiras à adoção, relações habilitadoras, efeitos ambientais e recomendações políticas --- oferecendo um campo de teste rico para avaliar a capacidade analítica de cada modelo.
+
+---
+
+# Questões metodológicas {#sec-questoes-metodologicas}
+
+Antes de apresentar os resultados comparativos, é necessário contextualizar o que significa "variação" na codificação qualitativa --- e por que diferenças entre modelos (ou entre codificadores humanos) não invalidam necessariamente a análise.
+
+## Variação não é erro
+
+A pesquisa qualitativa e, consequentemente, a busca por objetividade e rigor, envolve uma série de questões. Em primeiro lugar, é preciso considerar que o fato de haverem destaques e codificações diferenciadas **não invalida o esforço de análise qualitativa**. Um dos pontos principais, como veremos a seguir, é a transparência e a rastreabilidade dos dados. Assim como toda pesquisa --- seja ela qualitativa ou quantitativa --- requer ciclos de revisão constantes, a codificação qualitativa assistida por IA não está isenta da mesma abordagem.
+
+A análise dos itens extraídos pelos modelos revela um esforço sofisticado para traduzir o texto em cadeias de relações causais e lógicas (chains), conforme as instruções de busca por relações causais no prompt (GUIDELINES). No entanto, embora a extração capture os temas do abstract, a precisão analítica oscila. Em vários momentos, a interpretação extrapola o texto original, forçando relações de causalidade e sequenciamento onde o texto apresenta apenas correlação ou listas paralelas.
+
+## O problema da granularidade ontológica
+
+O ideal seria que os códigos (fatores) atribuídos ao texto fossem retirados com a mesma nomenclatura utilizada no contexto original. Todavia, em um corpus extenso isso geraria alto grau de granularidade dos fatores, inviabilizando a análise. Neste caso, a aplicação de técnicas de *topic modelling* é fundamental para agrupar conceitos semanticamente próximos sob rótulos que preservem o sentido sem proliferar indefinidamente.
+
+No Synesis, o template define regras de **controle de granularidade** (*Factor Granularity Control*) que orientam tanto o pesquisador humano quanto o modelo de IA sobre quando preservar a especificidade de um termo e quando generalizá-lo. Ainda assim, como veremos nos resultados, cada modelo toma decisões diferentes sobre onde traçar essa fronteira.
+
+## Codificação como processo interpretativo
+
+Segundo @saldana2009 [p. 3], "na investigação qualitativa um código é na maioria das vezes uma palavra ou frase curta que simbolicamente confere um sumativo, uma saliência, que captura a essência, e/ou evoca um atributo para uma porção de dados visuais ou baseados em linguagem." É neste sentido que utilizamos o termo *fator* no Synesis.
+
+Crucialmente, o processo de codificação é diretamente influenciado pela perspectiva analítica de cada pesquisador; um mesmo conjunto de dados pode ser codificado de diversas maneiras diferentes [@saldana2009, p. 7--8]. Isso se aplica igualmente a modelos de IA: cada modelo possui vieses interpretativos próprios que afetam a seleção de excertos, a nomeação de conceitos e a escolha de relações.
+
+## Fatores como conceitos fuzzy
+
+A lógica de conjuntos difusos (*fuzzy sets*), introduzida por @zadeh1965, oferece uma base teórica para compreender por que a variação na codificação não é arbitrária. Segundo Zadeh, "as classes de objetos encontrados no mundo físico real não apresentam critérios de agrupamento precisamente definidos" [@zadeh1965, p. 338]. Diferente da álgebra booleana (onde um elemento pertence ou não a um conjunto), na lógica difusa o grau de pertença é um continuum.
+
+Na codificação qualitativa, termos similares --- como *uso balneário*, *acesso à praia*, *banho de mar* --- podem ser associados ao mesmo fator (Balneabilidade) com graus de afinidade variáveis, sem que isso constitua arbitrariedade. @ragin2008, aplicando essa lógica à sociologia, argumenta que "a análise qualitativa trata fundamentalmente de se estabelecer relações" [@ragin2008, p. 2] entre conjuntos teóricos, e que a atenção a conexões consistentes é a "pedra angular da técnica comumente conhecida como indução analítica" [@ragin2008, p. 2].
+
+Isso é diretamente relevante para esta comparação: quando dois modelos atribuem nomes diferentes a um mesmo conceito (e.g., `Financial_Barrier` vs. `Financing`), a questão não é qual nome está "certo", mas sim qual preserva melhor a função do conceito dentro da rede de relações do projeto.
+
+## Critérios de rigor para a codificação assistida por IA
+
+@shenton2004 propõe quatro critérios para fundamentar a pesquisa qualitativa, adaptados dos critérios tradicionais das ciências naturais:
+
+- **Credibilidade** (em vez de validade): quão congruentes são os achados com a realidade? Na codificação assistida por IA, isso se manifesta na **rastreabilidade** de cada chain ao texto-fonte --- nenhum dos modelos testados alucionou, o que é um indicador positivo de credibilidade.
+- **Transferibilidade** (em vez de generalização): os resultados são aplicáveis a outros contextos? A comparação com múltiplos modelos demonstra que os achados estruturais (barreiras, habilitadores, efeitos ambientais) são consistentes entre modelos, mesmo que a granularidade varie.
+- **Confiabilidade** (em vez de reprodutibilidade): o processo é explícito o suficiente para ser replicado? O uso de prompts padronizados, templates declarativos e linhas de comando documentadas garante confiabilidade processual.
+- **Confirmabilidade** (em vez de objetividade): as descobertas refletem os dados e não o viés do pesquisador? Nas palavras de Shenton, "as crenças que sustentam as decisões tomadas e os métodos adotados devem ser reconhecidas no relatório de pesquisa" [@shenton2004, p. 72]. No contexto de IA, isso se traduz na **trilha de auditoria** --- o registro de cada decisão interpretativa, que no Synesis é materializado pelo campo `note` de cada ITEM.
+
+## Trilha de auditoria como diferencial
+
+A trilha de auditoria é central para conferir rigor à codificação:
+
+> Os pesquisadores qualitativos usam a trilha de auditoria para estabelecer o rigor de um estudo, fornecendo os detalhes da análise de dados e algumas das decisões que os levaram aos resultados. [...] Este registro fornece evidências de que os dados brutos utilizados passaram por um processo de análise, redução e síntese. [@wolf2003, p. 175]
+
+No Synesis, a trilha de auditoria opera em múltiplos níveis: no campo `note` de cada ITEM (justificando a interpretação), nos memorandos de fatores (documentando fusões e divisões), e na ontologia (registrando a classificação modal de cada conceito). Isso significa que mesmo quando dois modelos produzem anotações diferentes, **ambas são auditáveis** --- o pesquisador pode rastrear cada decisão e avaliá-la criticamente.
+
+## Limitações técnicas
+
+A codificação assistida por IA envolve a aplicação de modelos avançados de LLM que ainda precisam ser calibrados para domínios específicos. Uma estratégia futura pode envolver a criação de corpus amplamente revisados por pesquisadores competentes, utilizados para calibrar modelos, promovendo melhoras significativas em termos de acurácia hermenêutica. É preciso, portanto, considerar as conquistas em termos de qualidade ao mesmo tempo em que se busca aprimoramento constante.
+
+:::{.callout-tip}
+## Implicação para a leitura dos resultados
+As diferenças quantitativas entre modelos (número de ITEMs, cobertura de chains) devem ser lidas à luz desta discussão: **mais ITEMs não significa necessariamente melhor análise**, assim como **menos chains não significa necessariamente pior cobertura**. O critério decisivo é a **qualidade interpretativa** --- a capacidade de identificar mecanismos causais corretos, selecionar relações adequadas e produzir notas analíticas que agreguem valor ao pesquisador.
+:::
+
+---
+
+# A anotação de referência {#sec-referencia}
+
+A anotação-padrão (`Padrão/agaton2020.syn`) foi produzida revisada manualmente e contém **12 ITEMs** com **13 cadeias causais (chains)**, organizadas em cinco eixos temáticos.
+
+:::{.callout-note}
+## Por que 12 ITEMs?
+A anotação de referência segue rigorosamente as GUIDELINES do template: fatores paralelos que convergem independentemente sobre o mesmo resultado são decompostos em ITEMs separados, cada um com seu próprio `note` descrevendo o mecanismo individual. Isso reflete o princípio de **cadeias paralelas vs. sequenciais** definido no template.
+:::
+
+## Eixos temáticos e chains de referência
+
+### Eixo 1 --- Barreiras à adoção (convergência de 3 fatores)
+
+Três fatores independentes restringem a adoção de veículos elétricos. O primeiro ITEM carrega a flag `*complex*` indicando a convergência:
+
+:::{.small}
+| # | Chain | Relação |
+|---|-------|---------|
+| 1 | `Financial_Barrier -> CONSTRAINS -> Technology_Adoption` | CONSTRAINS |
+| 2 | `Policy -> CONSTRAINS -> Technology_Adoption` | CONSTRAINS |
+| 3 | `Public_Acceptance -> CONSTRAINS -> Technology_Adoption` | CONSTRAINS |
+:::
+
+### Eixo 2 --- Benefício econômico e aceitação social
+
+:::{.small}
+| # | Chain | Relação |
+|---|-------|---------|
+| 4 | `Economic_Benefit -> RELATES-TO -> Public_Acceptance` | RELATES-TO |
+| 5 | `Economic_Advantage -> RELATES-TO -> Public_Acceptance` | RELATES-TO |
+:::
+
+### Eixo 3 --- Efeitos ambientais da eletrificação
+
+:::{.small}
+| # | Chain | Relação |
+|---|-------|---------|
+| 6 | `Transport_Electrification -> INFLUENCES -> Air_Pollution_Reduction` | INFLUENCES |
+| 7 | `Transport_Electrification -> INFLUENCES -> Fossil_Fuel_Dependence_Reduction` | INFLUENCES |
+:::
+
+### Eixo 4 --- Fatores habilitadores da adoção (convergência de 4 fatores)
+
+O primeiro ITEM deste eixo carrega a flag `*complex*`:
+
+:::{.small}
+| # | Chain | Relação |
+|---|-------|---------|
+| 8  | `Policy_Implementation -> ENABLES -> Technology_Adoption` | ENABLES |
+| 9  | `Financing_Support -> ENABLES -> Technology_Adoption` | ENABLES |
+| 10 | `Charging_Infrastructure -> ENABLES -> Technology_Adoption` | ENABLES |
+| 11 | `Local_Production -> ENABLES -> Technology_Adoption` | ENABLES |
+:::
+
+### Eixo 5 --- Energia renovável e sustentabilidade
+
+:::{.small}
+| # | Chain | Relação |
+|---|-------|---------|
+| 12 | `Renewable_Electricity -> ENABLES -> Environmental_Sustainability` | ENABLES |
+| 13 | `Sustainable_Energy_Investment -> ENABLES -> Renewable_Electricity` | ENABLES (*borderline*) |
+:::
+
+---
+
+# Modelos testados {#sec-modelos}
+
+Cinco modelos de linguagem foram avaliados, cobrindo três famílias:
+
+| Modelo | Família | Tipo | Acesso |
+|--------|---------|------|--------|
+| Claude Haiku 4.5 | Anthropic | Proprietário | API |
+| Claude Sonnet 4.6 | Anthropic | Proprietário | API |
+| Claude Opus 4.6 | Anthropic | Proprietário | API |
+| Gemma4:31b-cloud | Google (Ollama) | Open-weight | Ollama Cloud |
+| Qwen 3.5:397b-cloud | Alibaba (Ollama) | Open-weight | Ollama Cloud |
+
+Todos os modelos receberam exatamente o mesmo input: o abstract completo, o mesmo `--project` (com ontologia e template idênticos), e a mesma `--bibref`. O comando utilizado foi `synesis-coder item --format plain`.
+
+---
+
+# Metodologia de avaliação {#sec-metodologia}
+
+## Métricas
+
+| Métrica | Definição | Escala |
+|---------|-----------|--------|
+| **Cobertura temática** | Quantos dos 5 eixos temáticos da referência foram identificados | 0--5 |
+| **Cobertura de chains** | Quantas das 13 chains da referência foram reproduzidas (relação + direção corretas) | 0--13 |
+| **Precisão relacional** | Percentual de chains geradas pelo modelo que estão corretas (relação + direção) | 0--100% |
+| **Decomposição paralela** | O modelo decompôs fatores paralelos em ITEMs separados (como a referência)? | Sim/Parcial/Não |
+| **Cadeias multi-hop** | Capacidade de gerar cadeias sequenciais (A -> R -> B -> R -> C) | Contagem |
+| **Formato válido** | Conformidade com a sintaxe Synesis (sem aspas indevidas, campos corretos) | Válido/Inválido |
+| **Qualidade analítica** | Profundidade interpretativa nos campos `note` | 1--5 |
+| **Alucinação** | Informação ausente no texto-fonte mas presente na anotação | Contagem |
+
+## Eixos temáticos de referência (checklist)
+
+1. Barreiras à adoção (Financial_Barrier, Policy, Public_Acceptance → CONSTRAINS)
+2. Relação benefício econômico ↔ aceitação social (RELATES-TO)
+3. Efeitos ambientais da eletrificação (INFLUENCES)
+4. Fatores habilitadores (Policy, Financing, Infrastructure, Local_Production → ENABLES)
+5. Energia renovável → sustentabilidade (ENABLES)
+
+---
+
+# Análise detalhada por modelo {#sec-analise}
+
+## Claude Haiku 4.5 {#sec-haiku}
+
+**ITEMs gerados:** 5 | **Chains geradas:** 5
+
+```{mermaid}
+%%| label: fig-haiku
+%%| fig-cap: "Grafo de relações --- Claude Haiku 4.5"
+graph LR
+    FB[Financing_Barrier] -->|CONSTRAINS| EA[EV_Adoption]
+    GS[Government_Support] -->|ENABLES| CI[Charging_Infrastructure]
+    CI -->|ENABLES| EA
+    PA[Public_Acceptance] -->|INFLUENCES| EA
+    RE[Renewable_Energy] -->|ENABLES| EB[Environmental_Benefit]
+    EA -->|INFLUENCES| ER[Emission_Reduction]
+    style PA stroke:#e74c3c,stroke-width:2px
+```
+
+:::{.small}
+| Chain gerada | Eixo correspondente | Avaliação |
+|---|---|---|
+| `Financing_Barrier -> CONSTRAINS -> EV_Adoption` | Eixo 1 | Correto |
+| `Government_Support -> ENABLES -> Charging_Infrastructure -> ENABLES -> EV_Adoption` | Eixo 4 (parcial) | Parcial --- captura 2 de 4 fatores habilitadores |
+| `Public_Acceptance -> INFLUENCES -> EV_Adoption` | Eixo 1 (relação errada) | **Incorreto** --- deveria ser CONSTRAINS |
+| `Renewable_Energy -> ENABLES -> Environmental_Benefit` | Eixo 5 | Correto |
+| `EV_Adoption -> INFLUENCES -> Emission_Reduction` | Eixo 3 (variante) | Válido |
+:::
+
+**Cobertura temática:** 4/5 eixos (falta Eixo 2: benefício econômico ↔ aceitação)
+**Cobertura de chains:** 3/13 chains exatas
+**Precisão relacional:** 3/5 chains corretas = 60%
+**Decomposição paralela:** Não --- agrupou barreiras em ITEM único
+**Formato:** Válido
+**Qualidade analítica:** 3/5 --- notas descritivas mas pouco interpretativas
+**Alucinação:** 0
+
+---
+
+## Claude Sonnet 4.6 {#sec-sonnet}
+
+**ITEMs gerados:** 5 | **Chains geradas:** 5
+
+```{mermaid}
+%%| label: fig-sonnet
+%%| fig-cap: "Grafo de relações --- Claude Sonnet 4.6"
+graph LR
+    FB[Financial_Barrier] -->|CONSTRAINS| A[Adoption]
+    EB1[Economic_Benefit] -->|INFLUENCES| A
+    A -->|INFLUENCES| ER[Emission_Reduction]
+    GS[Government_Support] -->|ENABLES| A
+    RE[Renewable_Energy] -->|ENABLES| EVB[Environmental_Benefit]
+    EVB -->|INFLUENCES| A
+    EB2[Economic_Benefit] -->|INFLUENCES| PA[Public_Acceptance]
+    style GS stroke:#e74c3c,stroke-width:2px
+```
+
+:::{.small}
+| Chain gerada | Eixo correspondente | Avaliação |
+|---|---|---|
+| `Financial_Barrier -> CONSTRAINS -> Adoption` | Eixo 1 (1 de 3) | Correto |
+| `Economic_Benefit -> INFLUENCES -> Adoption -> INFLUENCES -> Emission_Reduction` | Eixo 2+3 (mistura) | Parcial --- relação econômica correta mas encadeia com emissões |
+| `Government_Support -> ENABLES -> Adoption` | Eixo 4 (simplificada) | Parcial --- perde a cadeia sequencial e 3 dos 4 fatores |
+| `Renewable_Energy -> ENABLES -> Environmental_Benefit -> INFLUENCES -> Adoption` | Eixo 5 (estendida) | Correto + extensão válida |
+| `Economic_Benefit -> INFLUENCES -> Public_Acceptance` | Eixo 2 | Correto (mas RELATES-TO na referência) |
+:::
+
+**Cobertura temática:** 4/5 eixos (Eixo 1 incompleto: só Financial_Barrier)
+**Cobertura de chains:** 2/13 chains exatas
+**Precisão relacional:** 3/5 chains corretas = 60%
+**Decomposição paralela:** Não --- não decompôs barreiras nem fatores habilitadores
+**Formato:** **Inválido** --- aspas duplas no campo `text`; caracteres em-dash corrompidos (ÔÇö)
+**Qualidade analítica:** 4/5 --- notas interpretativas ricas; uso adequado de `*complex*` e `*borderline*`
+**Alucinação:** 0
+
+---
+
+## Claude Opus 4.6 {#sec-opus}
+
+**ITEMs gerados:** 12 | **Chains geradas:** 13
+
+```{mermaid}
+%%| label: fig-opus
+%%| fig-cap: "Grafo de relações --- Claude Opus 4.6"
+graph LR
+    FB[Financial_Barrier] -->|CONSTRAINS| TA[Technology_Adoption]
+    PO[Policy] -->|CONSTRAINS| TA
+    PA[Public_Acceptance] -->|CONSTRAINS| TA
+    EB[Economic_Benefit] -->|RELATES-TO| PA
+    EA[Economic_Advantage] -->|RELATES-TO| PA
+    TE1[Transport_Electrification] -->|INFLUENCES| APR[Air_Pollution_Reduction]
+    TE2[Transport_Electrification] -->|INFLUENCES| FFR[Fossil_Fuel_Dependence_Reduction]
+    PI[Policy_Implementation] -->|ENABLES| TA
+    FS[Financing_Support] -->|ENABLES| TA
+    ChI[Charging_Infrastructure] -->|ENABLES| TA
+    LP[Local_Production] -->|ENABLES| TA
+    REl[Renewable_Electricity] -->|ENABLES| ES[Environmental_Sustainability]
+    SEI[Sustainable_Energy_Investment] -->|ENABLES| REl
+```
+
+:::{.callout-tip}
+## Correspondência com a referência
+O Opus 4.6 é o **único modelo que reproduziu a estrutura completa da anotação de referência**: 12 ITEMs, 13 chains, decomposição paralela em todos os eixos, e uso correto de RELATES-TO para a relação benefício econômico ↔ aceitação social.
+:::
+
+:::{.small}
+| Chain gerada | Eixo correspondente | Avaliação |
+|---|---|---|
+| `Financial_Barrier -> CONSTRAINS -> Technology_Adoption` | Eixo 1 | Correto |
+| `Policy -> CONSTRAINS -> Technology_Adoption` | Eixo 1 | Correto |
+| `Public_Acceptance -> CONSTRAINS -> Technology_Adoption` | Eixo 1 | Correto |
+| `Economic_Benefit -> RELATES-TO -> Public_Acceptance` | Eixo 2 | Correto |
+| `Economic_Advantage -> RELATES-TO -> Public_Acceptance` | Eixo 2 | Correto |
+| `Transport_Electrification -> INFLUENCES -> Air_Pollution_Reduction` | Eixo 3 | Correto |
+| `Transport_Electrification -> INFLUENCES -> Fossil_Fuel_Dependence_Reduction` | Eixo 3 | Correto |
+| `Policy_Implementation -> ENABLES -> Technology_Adoption` | Eixo 4 | Correto |
+| `Financing_Support -> ENABLES -> Technology_Adoption` | Eixo 4 | Correto |
+| `Charging_Infrastructure -> ENABLES -> Technology_Adoption` | Eixo 4 | Correto |
+| `Local_Production -> ENABLES -> Technology_Adoption` | Eixo 4 | Correto |
+| `Renewable_Electricity -> ENABLES -> Environmental_Sustainability` | Eixo 5 | Correto |
+| `Sustainable_Energy_Investment -> ENABLES -> Renewable_Electricity` | Eixo 5 | Correto |
+:::
+
+**Cobertura temática:** 5/5 eixos (100%)
+**Cobertura de chains:** 13/13 chains (100%)
+**Precisão relacional:** 13/13 = 100%
+**Decomposição paralela:** Sim --- decomposição completa em todos os eixos
+**Formato:** Válido
+**Qualidade analítica:** 5/5 --- notas densas, uso correto de `*complex*` e `*borderline*`
+**Alucinação:** 0
+
+---
+
+## Gemma4:31b-cloud {#sec-gemma4}
+
+**ITEMs gerados:** 5 | **Chains geradas:** 5 (sendo 1 multi-hop)
+
+```{mermaid}
+%%| label: fig-gemma4
+%%| fig-cap: "Grafo de relações --- Gemma4:31b-cloud"
+graph LR
+    F[Financing] -->|CONSTRAINS| A[Adoption]
+    PO[Policy] -->|CONSTRAINS| A
+    PA[Public_Acceptance] -->|ENABLES| A
+    PO2[Policy] -->|ENABLES| FI[Financing]
+    FI -->|ENABLES| D[Deployment]
+    RE[Renewable_Energy] -->|ENABLES| EB[Environmental_Benefit]
+    style PA stroke:#e74c3c,stroke-width:2px
+```
+
+:::{.small}
+| Chain gerada | Eixo correspondente | Avaliação |
+|---|---|---|
+| `Financing -> CONSTRAINS -> Adoption` | Eixo 1 | Correto |
+| `Policy -> CONSTRAINS -> Adoption` | Eixo 1 | Correto |
+| `Public_Acceptance -> ENABLES -> Adoption` | Eixo 1 (relação invertida) | **Incorreto** --- o texto fala de obstáculos; deveria ser CONSTRAINS |
+| `Policy -> ENABLES -> Financing -> ENABLES -> Deployment` | Eixo 4 (parcial, multi-hop) | Parcial --- captura 2 de 4 fatores habilitadores |
+| `Renewable_Energy -> ENABLES -> Environmental_Benefit` | Eixo 5 | Correto |
+:::
+
+**Cobertura temática:** 3/5 eixos (faltam Eixos 2 e 3)
+**Cobertura de chains:** 3/13 chains exatas
+**Precisão relacional:** 4/5 chains corretas = 80% (mas o erro em Public_Acceptance é grave)
+**Decomposição paralela:** Parcial --- decompôs barreiras (3 ITEMs) mas não os fatores habilitadores
+**Formato:** **Inválido** --- aspas simples no campo `text`
+**Qualidade analítica:** 3.5/5 --- notas competentes; referência a convergência adequada
+**Alucinação:** 0
+
+:::{.callout-warning}
+## Erro semântico crítico
+O Gemma4 classificou `Public_Acceptance -> ENABLES -> Adoption` quando o texto original afirma explicitamente que a aceitação pública é um **obstáculo** ("faces several obstacles ranging from... public acceptance"). Este erro inverte o sentido analítico da relação.
+:::
+
+---
+
+## Qwen 3.5:397b-cloud {#sec-qwen}
+
+**ITEMs gerados:** 6 | **Chains geradas:** 6
+
+```{mermaid}
+%%| label: fig-qwen
+%%| fig-cap: "Grafo de relações --- Qwen 3.5:397b-cloud"
+graph LR
+    F[Financing] -->|CONSTRAINS| A[Adoption]
+    PO[Policy] -->|CONSTRAINS| A
+    PA[Public_Acceptance] -->|CONSTRAINS| A
+    PA -->|ENABLES| I[Investment]
+    TS[Technology_Substitution] -->|INFLUENCES| ER[Emission_Reduction]
+    RE[Renewable_Energy] -->|ENABLES| EB[Environmental_Benefit]
+```
+
+:::{.small}
+| Chain gerada | Eixo correspondente | Avaliação |
+|---|---|---|
+| `Financing -> CONSTRAINS -> Adoption` | Eixo 1 | Correto |
+| `Policy -> CONSTRAINS -> Adoption` | Eixo 1 | Correto |
+| `Public_Acceptance -> CONSTRAINS -> Adoption` | Eixo 1 | Correto |
+| `Public_Acceptance -> ENABLES -> Investment` | Eixo 2 (variante) | Parcial --- captura a relação social→econômica mas inverte a direção |
+| `Technology_Substitution -> INFLUENCES -> Emission_Reduction` | Eixo 3 (variante) | Válido |
+| `Renewable_Energy -> ENABLES -> Environmental_Benefit` | Eixo 5 | Correto |
+:::
+
+**Cobertura temática:** 4/5 eixos (falta Eixo 4: fatores habilitadores)
+**Cobertura de chains:** 4/13 chains exatas
+**Precisão relacional:** 5/6 chains corretas = 83%
+**Decomposição paralela:** Sim para barreiras (3 ITEMs com CONSTRAINS) --- não para habilitadores
+**Formato:** Válido
+**Qualidade analítica:** 3.5/5 --- notas competentes mas nenhuma cadeia multi-hop
+**Alucinação:** 0
+
+---
+
+# Comparação consolidada {#sec-comparacao}
+
+## Tabela resumida
+
+| Métrica | Haiku | Sonnet | **Opus** | Gemma4 | Qwen |
+|---------|:-----:|:------:|:--------:|:------:|:----:|
+| **ITEMs gerados** | 5 | 5 | **12** | 5 | 6 |
+| **Chains geradas** | 5 | 5 | **13** | 5 | 6 |
+| **Cobertura de eixos** (0--5) | 4 | 4 | **5** | 3 | 4 |
+| **Cobertura de chains** (0--13) | 3 | 2 | **13** | 3 | 4 |
+| **Precisão relacional** | 60% | 60% | **100%** | 80% | 83% |
+| **Decomposição paralela** | Não | Não | **Sim** | Parcial | Parcial |
+| **Cadeias multi-hop** | 1 | 2 | 0^[O Opus utilizou a estratégia de decomposição paralela em vez de multi-hop, o que está alinhado com as GUIDELINES do template.] | 1 | 0 |
+| **Formato válido** | Sim | **Não** | **Sim** | **Não** | Sim |
+| **Qualidade analítica** (1--5) | 3 | 4 | **5** | 3.5 | 3.5 |
+| **Alucinação** | 0 | 0 | 0 | 0 | 0 |
+
+## Cobertura por eixo temático
+
+O mapa de calor abaixo mostra o grau de cobertura de cada eixo temático por modelo. Valores: **2** = cobertura completa, **1** = parcial, **0** = ausente, **−1** = presente mas com erro semântico grave.
+
+```{python}
+#| label: fig-heatmap-cobertura
+#| fig-cap: "Cobertura dos eixos temáticos por modelo (2=completo, 1=parcial, 0=ausente, −1=erro semântico)"
+#| echo: true
+#| code-fold: true
+
+import plotly.graph_objects as go
+
+modelos = ["Haiku 4.5", "Sonnet 4.6", "Opus 4.6 ★", "Gemma4:31b", "Qwen 3.5:397b"]
+eixos = [
+    "1. Barreiras<br>(CONSTRAINS)",
+    "2. Benefício ↔ Aceitação<br>(RELATES-TO)",
+    "3. Efeitos ambientais<br>(INFLUENCES)",
+    "4. Habilitadores<br>(ENABLES)",
+    "5. Renovável → Sustent.<br>(ENABLES)",
+]
+
+# Linhas = eixos, Colunas = modelos
+# 2=completo, 1=parcial, 0=ausente, -1=erro semântico grave
+z = [
+    # Eixo 1: Barreiras (3 chains: Financial, Policy, Public_Acc → CONSTRAINS)
+    # Gemma4 = -1: acerta 2/3 mas inverte Public_Acc (ENABLES em vez de CONSTRAINS)
+    [1, 1, 2, -1, 2],
+    # Eixo 2: Benefício ↔ Aceitação (RELATES-TO)
+    [0, 1, 2, 0, 1],
+    # Eixo 3: Efeitos ambientais (INFLUENCES)
+    [1, 1, 2, 0, 1],
+    # Eixo 4: Habilitadores (4 chains → ENABLES)
+    [1, 1, 2, 1, 0],
+    # Eixo 5: Renovável → Sustentabilidade (ENABLES)
+    [2, 2, 2, 2, 2],
+]
+
+# Textos descritivos por célula
+text = [
+    ["1/3 chains<br>CONSTRAINS", "1/3 chains<br>CONSTRAINS", "3/3 chains<br>CONSTRAINS", "2/3 (1 ENABLES!)<br>erro semântico", "3/3 chains<br>CONSTRAINS"],
+    ["ausente", "parcial<br>(INFLUENCES)", "2 chains<br>RELATES-TO", "ausente", "parcial<br>(invertida)"],
+    ["1/2 chains", "1/2 chains", "2/2 chains<br>INFLUENCES", "ausente", "1/2 chains"],
+    ["1/4 fatores<br>multi-hop", "1/4 fatores<br>simplificado", "4/4 fatores<br>completo", "1/4 fatores<br>multi-hop", "ausente"],
+    ["completo", "completo<br>+extensão", "completo<br>+cadeia invest.", "completo", "completo"],
+]
+
+colorscale = [
+    [0.0,  "#d73027"],   # -1 → vermelho (erro grave)
+    [0.25, "#d73027"],
+    [0.25, "#f7f7f7"],   # 0 → cinza claro (ausente)
+    [0.5,  "#f7f7f7"],
+    [0.5,  "#fee090"],   # 1 → amarelo (parcial)
+    [0.75, "#fee090"],
+    [0.75, "#4575b4"],   # 2 → azul (completo)
+    [1.0,  "#4575b4"],
+]
+
+fig = go.Figure(data=go.Heatmap(
+    z=z,
+    x=modelos,
+    y=eixos,
+    text=text,
+    texttemplate="%{text}",
+    colorscale=colorscale,
+    zmin=-1, zmax=2,
+    showscale=True,
+    colorbar=dict(
+        tickvals=[-1, 0, 1, 2],
+        ticktext=["Erro grave", "Ausente", "Parcial", "Completo"],
+        title="Cobertura",
+    ),
+    hoverongaps=False,
+))
+
+fig.update_layout(
+    title="Cobertura dos Eixos Temáticos por Modelo",
+    xaxis_title="Modelo",
+    yaxis_title="Eixo Temático",
+    height=380,
+    margin=dict(l=220, r=60, t=60, b=40),
+    font=dict(size=12),
+    yaxis=dict(autorange="reversed"),
+)
+
+fig.show()
+```
+
+## Desempenho comparativo por dimensão
+
+O gráfico abaixo compara os cinco modelos em seis dimensões de qualidade, todas normalizadas para a escala 0--10. Cada grupo de barras representa uma dimensão; cada barra representa um modelo.
+
+```{python}
+#| label: fig-barras-desempenho
+#| fig-cap: "Desempenho por dimensão — comparação entre modelos (escala 0–10)"
+#| echo: true
+#| code-fold: true
+
+import plotly.graph_objects as go
+
+dimensoes = [
+    "Cobertura<br>de chains",
+    "Precisão<br>relacional",
+    "Decomposição<br>paralela",
+    "Formato<br>válido",
+    "Qualidade<br>analítica",
+    "Cobertura<br>de eixos",
+]
+
+# Dados normalizados 0–10
+# Cobertura chains: n/13 * 10
+# Precisão relacional: já em escala 0–100, dividir por 10
+# Decomposição: Sim=10, Parcial=5, Não=0
+# Formato: Válido=10, Inválido=0
+# Qualidade analítica: /5 * 10
+# Cobertura eixos: /5 * 10
+modelos = ["Haiku 4.5", "Sonnet 4.6", "Opus 4.6 ★", "Gemma4:31b", "Qwen 3.5:397b"]
+
+dados = {
+    "Cobertura<br>de chains":    [ 3/13*10,  2/13*10, 10.0,  3/13*10,  4/13*10],
+    "Precisão<br>relacional":    [      6.0,      6.0, 10.0,      8.0,      8.3],
+    "Decomposição<br>paralela":  [      0.0,      0.0, 10.0,      5.0,      5.0],
+    "Formato<br>válido":         [     10.0,      0.0, 10.0,      0.0,     10.0],
+    "Qualidade<br>analítica":    [      6.0,      8.0, 10.0,      7.0,      7.0],
+    "Cobertura<br>de eixos":     [      8.0,      8.0, 10.0,      6.0,      8.0],
+}
+
+cores = [
+    "rgb(31, 119, 180)",   # Haiku
+    "rgb(255, 127, 14)",   # Sonnet
+    "rgb(44, 160, 44)",    # Opus
+    "rgb(214, 39, 40)",    # Gemma4
+    "rgb(148, 103, 189)",  # Qwen
+]
+
+fig = go.Figure()
+
+for i, modelo in enumerate(modelos):
+    valores = [dados[dim][i] for dim in dimensoes]
+    fig.add_trace(go.Bar(
+        name=modelo,
+        x=dimensoes,
+        y=valores,
+        marker_color=cores[i],
+        text=[f"{v:.1f}" for v in valores],
+        textposition="outside",
+        textfont=dict(size=10),
+    ))
+
+fig.update_layout(
+    barmode="group",
+    title="Desempenho por Dimensão (0–10)",
+    xaxis=dict(title="", tickfont=dict(size=11)),
+    yaxis=dict(title="Pontuação (0–10)", range=[0, 12], tickvals=[0, 2, 4, 6, 8, 10]),
+    legend=dict(orientation="h", yanchor="bottom", y=-0.35, xanchor="center", x=0.5),
+    height=480,
+    margin=dict(t=60, b=120, l=50, r=20),
+    bargap=0.15,
+    bargroupgap=0.05,
+)
+
+fig.show()
+```
+
+---
+
+# Observações qualitativas {#sec-observacoes}
+
+## Seleção de relações
+
+O diferencial mais importante entre os modelos está na escolha da **relação** (CONSTRAINS vs. ENABLES vs. INFLUENCES vs. RELATES-TO). A referência utiliza:
+
+- **CONSTRAINS** para os três fatores-barreira (financiamento, política, aceitação pública)
+- **RELATES-TO** para a associação benefício econômico ↔ aceitação social (associação genérica, não causal)
+- **INFLUENCES** para os efeitos da eletrificação sobre o ambiente
+- **ENABLES** para os fatores habilitadores e a cadeia energética
+
+O **Opus** reproduziu esta seleção com exatidão. Os demais modelos cometeram erros de polaridade:
+
+| Modelo | Erro | Impacto |
+|--------|------|---------|
+| Haiku | `Public_Acceptance -> INFLUENCES` (deveria ser CONSTRAINS) | Perde a semântica de barreira |
+| Sonnet | `Economic_Benefit -> INFLUENCES` (referência usa RELATES-TO) | Impõe causalidade onde há associação |
+| Gemma4 | `Public_Acceptance -> ENABLES` (deveria ser CONSTRAINS) | **Inverte o sentido** do texto-fonte |
+| Qwen | `Public_Acceptance -> ENABLES -> Investment` | Captura mecanismo diferente (válido, mas não corresponde à referência) |
+
+## Decomposição paralela vs. compressão
+
+A referência decompõe fatores paralelos em ITEMs separados --- três ITEMs para as barreiras (Eixo 1) e quatro ITEMs para os habilitadores (Eixo 4). Isso segue as GUIDELINES do template, que instruem:
+
+> *PARALLEL (X,Y,Z→A): Create SEPARATE ITEM blocks when multiple factors independently affect the same outcome.*
+
+- **Opus:** Decomposição completa (12 ITEMs) --- idêntica à referência
+- **Qwen:** Decomposição parcial --- decompôs barreiras (3 ITEMs) mas não habilitadores
+- **Gemma4:** Decomposição parcial --- decompôs barreiras mas com erro relacional
+- **Haiku e Sonnet:** Comprimiram tudo em 5 ITEMs --- não decompostos
+
+## Formato e encoding
+
+Dois modelos produziram saída com problemas de formato:
+
+- **Sonnet:** Adicionou aspas duplas (`"..."`) no campo `text`, o que pode causar erro no compilador Synesis. Também apresentou caracteres em-dash corrompidos (`ÔÇö` em vez de `---`).
+- **Gemma4:** Adicionou aspas simples (`'...'`) no campo `text`, inconsistente com a convenção Synesis.
+
+:::{.callout-note}
+## Encoding UTF-16
+Todos os arquivos de saída dos modelos Anthropic apresentaram encoding UTF-16LE BOM. Isso é um artefato do redirecionamento PowerShell (`>>`), não do modelo em si.
+:::
+
+---
+
+# Ranking final {#sec-ranking}
+
+| Posição | Modelo | Nota | Justificativa |
+|:-------:|--------|:----:|---------------|
+| 1 | **Claude Opus 4.6** | 10/10 | Reproduziu integralmente a anotação de referência: 12 ITEMs, 13 chains, 100% de precisão relacional, decomposição paralela completa, formato válido, notas analíticas de alta qualidade. |
+| 2 | **Qwen 3.5:397b** | 6.5/10 | Boa decomposição das barreiras (CONSTRAINS correto nos 3 fatores), cobertura de 4/5 eixos. Perdeu completamente o Eixo 4 (habilitadores) e não gerou cadeias multi-hop. |
+| 3 | **Claude Haiku 4.5** | 5.5/10 | Formato limpo, zero alucinação, 1 cadeia multi-hop. Comprimiu tudo em 5 ITEMs sem decomposição; errou a relação Public_Acceptance (INFLUENCES em vez de CONSTRAINS). |
+| 4 | **Gemma4:31b-cloud** | 5.0/10 | Boa cobertura parcial e cadeia multi-hop. Erro semântico grave (ENABLES em vez de CONSTRAINS para Public_Acceptance) e aspas no campo `text`. |
+| 5 | **Claude Sonnet 4.6** | 4.5/10 | Notas analíticas de alta qualidade (4/5), mas comprimiu excessivamente (5 ITEMs), perdeu múltiplos eixos, e produziu formato inválido (aspas duplas, encoding corrompido). |
+
+:::{.callout-important}
+## Nota sobre o ranking
+A posição do Sonnet 4.6 (5.o lugar) pode surpreender, pois suas notas analíticas são de alta qualidade. O baixo ranking reflete a **cobertura de chains** (2/13) e os problemas de formato --- critérios que impactam diretamente a usabilidade das anotações no compilador Synesis. Em contextos onde a qualidade interpretativa das notas é mais importante que a completude estrutural, o Sonnet seria melhor posicionado.
+:::
+
+---
+
+# Conclusões {#sec-conclusoes}
+
+1. **O Opus 4.6 é o único modelo que reproduziu a estratégia analítica da referência humana.** A decomposição paralela, a seleção correta de relações, e o uso de flags `*complex*`/`*borderline*` demonstram compreensão profunda das GUIDELINES do template.
+
+2. **Nenhum modelo alucionou.** Todos os cinco modelos geraram anotações rastreáveis ao texto-fonte --- um indicador positivo da confiabilidade dos prompts do `synesis-coder`.
+
+3. **A relação CONSTRAINS vs. ENABLES é o diferencial de qualidade.** Modelos que erraram a polaridade da relação (Haiku: INFLUENCES; Gemma4: ENABLES) demonstram compreensão superficial do contexto de barreiras descrito no texto.
+
+4. **Modelos menores comprimem em vez de decompor.** A tendência a gerar 5--6 ITEMs (em vez dos 12 da referência) indica que modelos menores priorizam síntese sobre decomposição analítica --- o oposto do que as GUIDELINES instruem para fatores paralelos.
+
+5. **Formato é um critério eliminatório.** Aspas no campo `text` (Sonnet, Gemma4) podem causar erros de parsing no compilador. Para uso em produção, apenas Opus, Haiku e Qwen produziram saída diretamente compilável.
+
+## Recomendações práticas
+
+- **Para produção (corpus final):** Claude Opus 4.6 --- precisão relacional e cobertura estrutural superiores.
+- **Para rascunho rápido / triagem:** Claude Haiku 4.5 --- formato limpo, velocidade alta, custo baixo; requer revisão humana de relações e decomposição.
+- **Para ambientes sem API comercial:** Qwen 3.5:397b --- melhor modelo open-weight testado, com boa decomposição de barreiras; requer revisão dos eixos habilitadores.
+
+---
+
+## Referências {.unnumbered}
