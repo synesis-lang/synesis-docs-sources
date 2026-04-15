@@ -12,9 +12,9 @@ Essa pergunta perseguiu o mesmo pesquisador por mais de uma década — e cada t
 
 ## Linha do tempo {#sec-linha-do-tempo}
 
-### 1985 — Primeiros contatos com programação
+### 1986 — Primeiros contatos com programação
 
-Christian Maciel De Britto, aos 13 anos, começa a estudar informática. Os primeiros contatos são com **Basic** e noções de **COBOL** — uma linguagem de blocos com delimitadores explícitos de início e fim. Essa estrutura reapareceria décadas depois na sintaxe do Synesis: `SOURCE ... END SOURCE`, `ITEM ... END ITEM`.
+Christian Maciel De Britto, aos 13 anos, começa a estudar informática. Os primeiros contatos são com **Basic** e noções de **COBOL** — uma linguagem de blocos com delimitadores explícitos de início e fim. Essa estrutura reapareceria décadas depois na sintaxe do Synesis: `SOURCE ... END SOURCE`, `ITEM ... END ITEM`. Realizei on New York Institute de Belo Horizonte os cursos de Basic I e II. 
 
 ### 1989–1997 — Clipper, sistemas profissionais e a FUMSOFT
 
@@ -23,7 +23,10 @@ A descoberta do **dBase II Plus** e do **Clipper** (Autumn 86, Summer 87, Clippe
 - Um sistema de **gestão escolar** (dados acadêmicos, notas, históricos)
 - O **SAGA — Sistema de Automação de Postos de Combustível**, que chegou a ter mais de cem clientes ativos
 
-Entre 1995 e 1997, a empresa é incubada na [FUMSOFT](https://fumsoft.org.br/), incubadora de software de Belo Horizonte, com apoio da Universidade Federal de Minas Gerais (UFMG).
+Para se ter uma ideia da contribuição intelectual e profissional proporcionada pelo ambiente de programação Clipper (xBase) e sistema operacional MS-DOS, [leia este artigo](https://www.linkedin.com/pulse/o-rei-do-dos-hist%C3%B3ria-completa-de-como-clipper-e-perdeu-brandini-bqbff/). 
+
+Entre 1995 e 1997, a empresa é incubada na InsoftBH, Incubadora de Empresas de Base Tecnológica em INformática, sediada em Belo Horizonte - MG, com apoio da Sociedade Mineira de Software - [FUMSOFT](https://fumsoft.org.br/) e da Universidade Federal de Minas Gerais (UFMG).
+- Realização do curso de "Qualidade de produtos de software: normas NBR ISO 13.596 e ISO/IEC 12.119", ministrado pela MSc. Márcia Silveira de Almeida(UFMG). 
 
 ### 1999 — Mudança de rumo
 
@@ -47,7 +50,7 @@ Os conceitos que reapareceriam no Synesis já estavam presentes: fonte, item, fa
 
 ### 2020 — SocioAtlas para Google Sheets
 
-Se a antiga solução exigia instalação local, por que não reconstruir a essência do método numa plataforma acessível a qualquer pessoa? O **SocioAtlas para Google Sheets** — um complemento em **Google Apps Script** publicado no Google Workspace Marketplace — transformava uma planilha comum em banco de conhecimento. O pesquisador marcava trechos em Google Docs, e o sistema importava, organizava e gerava matrizes de análise multimodal automaticamente.
+Se a antiga solução exigia instalação local, por que não reconstruir a essência do método numa plataforma acessível a qualquer pessoa? O **SocioAtlas para Google Sheets** — um complemento em **Google Apps Script** publicado no Google Workspace Marketplace — transformava uma planilha comum em banco de conhecimento. O pesquisador marcava trechos em Google Docs, e o sistema importava, organizava e gerava matrizes de análise multimodal automaticamente. O link para esta antiga versão ainda está [*disponível aqui*](https://workspace.google.com/marketplace/app/socioatlas/113414702386), e o site com [a documentação está aqui](https://www.socioatlas.xyz/).
 
 A colaboração em equipe foi conquistada. A profundidade, não. A planilha é um ambiente tabular — projetado para dados em linhas e colunas. Anotações aninhadas, relações tipadas e hierarquias de conceitos geravam fricção constante. Cada exigência metodológica demandava soluções frágeis. Uma ferramenta metodológica não pode ser ao mesmo tempo poderosa e quebrável.
 
@@ -67,7 +70,7 @@ estruturas de poder político.!]
 
 O sistema funcionava. Mas era difícil de ler, frágil a erros de digitação (`[#Energy Sistem#]` criava um fator duplicado sem aviso), e qualquer mudança na metodologia ou nos campos exigia reescrever scripts, banco de dados e plataforma web. O formato estava preso a um modelo específico de pesquisa.
 
-### 2025 — Nasce o Synesis
+### 2025 — Nasce a linguagem Synesis
 
 A primeira tentativa de solução foi modesta: um parser mais robusto para o formato DGT7. Mas ao definir regras claras sobre como os arquivos deveriam ser escritos, a percepção foi tomando forma: por que não criar uma linguagem de verdade?
 
@@ -92,7 +95,7 @@ Qualquer pessoa consegue ler esse arquivo. E se o pesquisador escrever `Governan
 
 Ao se tornar uma linguagem formal com gramática LALR(1), o Synesis herdou o que nenhum script poderia oferecer sozinho: validação em tempo real no editor, autocomplete de campos, exportação para JSON, CSV e Excel, e portabilidade para qualquer tipo de pesquisa qualitativa.
 
-O que começou como um banco de dados local, virou um ecosistema de análise, foisimplificado em uma planilha de anotações tornou-se, finalmente, uma ferramenta metodológica genérica.
+O que começou como um banco de dados local, foi simplificado em uma planilha de anotações e tornou-se, finalmente, uma ferramenta metodológica genérica.
 
 
 ## Duas trajetórias, um ponto de convergência
@@ -101,7 +104,9 @@ O Synesis é o ponto onde duas trajetórias se encontram: décadas de prática e
 
 A linguagem em blocos do COBOL. A orientação a dados do Clipper. A arquitetura de domínio construída ao longo de sistemas reais. A compreensão das exigências da pesquisa qualitativa. E, por fim, o uso de IA como parceira de implementação — não para substituir o conhecimento de domínio, mas para executá-lo.
 
-O ecossistema Synesis — compilador, servidor LSP, extensão VS Code, pipeline Neo4j, plugin Zotero, documentação — foi integralmente desenvolvido com codificação assistida por IA. A experiência acumulada nos projetos anteriores definiu *o que* construir; a IA viabilizou, por sua vez, viabilizou a construção em escala e ritmo excepcional. Pelo caminho tradicional de desenvolvimento solo, o mesmo resultado teria demandado anos.
+O ecossistema Synesis — compilador, servidor LSP, extensão VS Code, pipeline Neo4j, plugin Zotero, documentação — foi integralmente desenvolvido com codificação assistida por IA, utilizando exclusivamente recursos próprios do autor, sem vinculação a projetos, laboratórios ou financiamentos institucionais.A experiência acumulada nos projetos anteriores definiu *o que* construir; a IA viabilizou, por sua vez, a construção em escala e ritmo excepcional. Pelo caminho tradicional de desenvolvimento solo, o mesmo resultado teria demandado anos.
+
+Dr. Christian Maciel De Britto
 
 O [currículo completo do autor](https://lattes.cnpq.br/2334832147379385) está disponível na plataforma Lattes.
 
