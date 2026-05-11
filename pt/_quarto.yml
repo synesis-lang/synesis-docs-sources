@@ -92,6 +92,9 @@ website:
             text: Synesis e as Escrituras
           - href: explanation/dsap.qmd
             text: Diagnóstico Socioambiental Participativo
+          - text: "— Para o Direito —"
+          - href: explanation/synesis_para_direito.qmd
+            text: Synesis para Profissionais do Direito
           - text: "— Para Desenvolvedores —"
           - href: explanation/fluxo_compilacao_interno.qmd
             text: Por Dentro do Compilador

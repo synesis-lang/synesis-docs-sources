@@ -1,0 +1,214 @@
+---
+title: "Synesis para Profissionais do Direito"
+subtitle: "Como uma linguagem estruturada transforma o conhecimento jurídico em patrimônio institucional auditável"
+---
+
+O conhecimento humano é naturalmente intrincado, repleto de nuances e conexões profundas. Ao longo do seu trabalho, profissionais do direito acumulam análises contratuais, pareceres lidos e comentados, jurisprudências, anotações de reuniões e registros de audiências — além de uma infinidade de conhecimento de natureza qualitativa.
+
+## Uma linguagem que tanto humanos quanto computadores entendem
+
+Profissionais do direito já convivem com linguagens especializadas. O **Latim Jurídico** é o exemplo mais claro: expressões não utilizadas no idioma cotidiano, mas com vocabulário rico e regras próprias de uso que qualquer jurista compreende com exatidão.
+
+Synesis é uma linguagem computacional de domínio específico (DSL — *Domain-Specific Language*) que cumpre papel análogo para o conhecimento de natureza textual. Sua gramática é reconhecida tanto por humanos quanto por computadores. Ela impõe estrutura sobre as anotações, de modo que o computador consiga verificar automaticamente se estão em conformidade com um contrato pré-estabelecido — o **template**.
+
+Esse template é flexível o suficiente para atender a configurações completamente diferentes, definidas conforme a necessidade de cada profissional ou equipe. Um advogado pode criar uma configuração para organizar seus processos e documentos, classificá-los em categorias e estabelecer conexões explícitas entre elas. Em um banco de processos, por exemplo, é possível identificar temas, conceitos recorrentes e relações entre partes envolvidas.
+
+Synesis permite registrar não apenas **o quê** — um fato, um argumento, uma posição doutrinária —, mas também **por quê** e **como isso se conecta a outras coisas**. Um profissional do direito pode documentar, por exemplo, que a ausência de boa-fé objetiva numa relação contratual tende a comprometer a execução do contrato — e vincular essa interpretação diretamente ao trecho do contrato que a sustenta, ao artigo doutrinário que a embasou e ao precedente jurisprudencial que a confirma. Essa teia de relações causais e conceituais, antes dispersa em múltiplos documentos e na memória do profissional, passa a existir de forma explícita, verificável e compartilhável.
+
+
+## O ecossistema Synesis
+
+A linguagem em si é apenas o ponto de partida. O **ecossistema Synesis** é o conjunto de ferramentas que torna esse processo prático, cobrindo diversas etapas do processo de governança do conhecimento.
+
+**Criação e validação das anotações.** Um ambiente de edição dedicado assiste o profissional enquanto ele anota: verifica em tempo real se os campos obrigatórios estão preenchidos, se os valores estão corretos e se as referências entre documentos são consistentes. Problemas são sinalizados imediatamente, antes que se acumulem.
+
+**Organização e exportação do conhecimento.** O conhecimento acumulado pode ser convertido para os formatos mais comuns de uso profissional em ciência de dados — planilhas, formatos estruturados especializados —, tornando-se disponível para análise, compartilhamento ou integração com outras ferramentas. Para projetos de maior porte, é possível visualizar graficamente a rede completa de conceitos e relações construída ao longo do trabalho.
+
+**Consulta por linguagem natural.** O acervo compilado torna-se consultável como uma conversa. Um profissional pode perguntar quais decisões tratam de determinado tema, quais conceitos se conectam a um precedente específico ou como um entendimento evoluiu ao longo do tempo — e obter respostas diretamente rastreáveis até as fontes originais.
+
+
+## O que Synesis não é
+
+É importante dizer também o que Synesis **não** é. Um compilador valida estrutura — garante que os campos obrigatórios estão presentes e que os valores declarados são válidos. O conteúdo intelectual — a interpretação de um acórdão, a identificação de uma *ratio decidendi*, a construção de uma cadeia argumentativa — esse trabalho é e permanece sendo humano. 
+
+As anotações são armazenadas em arquivos de texto simples, legíveis por qualquer editor, sem dependência de plataforma ou formato proprietário. É possível, entretanto, que anotações sejam feitas com o auxílio de Inteligência Artificial, agilizando o processo de curadoria do conhecimento em um processo que pode ser fácilmente auditado por humanos.
+
+Para um escritório de advocacia, isso significa que o conhecimento construído por um sócio experiente ao longo de décadas não fica preso em sua memória ou perdido em arquivos desorganizados. Ele se torna **patrimônio institucional**, auditável e evolutivo.
+
+---
+
+## Exemplos práticos
+
+### A estrutura de uma anotação
+
+Uma anotação em Synesis é composta por três blocos que, juntos, capturam a totalidade do conhecimento produzido sobre um documento. O exemplo a seguir parte de um acórdão do STJ sobre direito à privacidade.
+
+**Bloco SOURCE — a origem rastreável**
+
+Registra a fonte do documento com todos os seus metadados. Não há ITEM sem SOURCE correspondente — a rastreabilidade é estruturalmente imposta.
+
+```synesis
+SOURCE @stj_peticao_1234
+    access_date: 2026-02-17
+    document_type: ACORDAO
+    tribunal: STJ
+    numero_processo: 1234/2025
+    relator: Min. Fulano de Tal
+    data_julgamento: 2025-11-10
+    data_publicacao: 2025-11-20
+    orgao_julgador: Terceira Turma
+    resultado: PROVIDO
+    url: https://processo.stj.jus.br/processo/pesquisa/?tipoPesquisa=tipoPesquisaNumeroRegistro&termo=1234
+END SOURCE
+```
+
+**Bloco ITEM — o trecho e sua interpretação**
+
+Registra o trecho relevante, a interpretação do profissional e as conexões causais com outros conceitos. O campo `chain` expressa relações explícitas entre conceitos — não apenas que dois temas aparecem no mesmo documento, mas como um prevalece sobre o outro.
+
+```synesis
+ITEM @stj_peticao_1234
+    locus: CF/88 Art. 5, inc. X
+    quote: "são invioláveis a intimidade, a vida privada, a honra e a imagem das pessoas"
+    note: O dispositivo consagra o direito à privacidade como direito fundamental absoluto, fundamento ratio decidendi da decisão recorrida.
+    chain: Direito_a_Privacidade -> OVERRULES -> Exposicao_Nao_Autorizada
+END ITEM
+```
+
+**Bloco ONTOLOGY — o vocabulário controlado**
+
+Define os conceitos utilizados nas anotações. Garante que todos os membros de uma equipe usem os mesmos termos com o mesmo significado — eliminando na raiz a fragmentação por sinonímia.
+
+```synesis
+ONTOLOGY Direito_a_Privacidade
+    topic: Direitos_da_Personalidade
+    description: Direito subjetivo fundamental que assegura ao indivíduo o controle sobre sua esfera íntima, dados pessoais e vida privada, vedando interferências não consentidas de terceiros ou do Estado. Fundamento: CF/88, art. 5º, inc. X; CC, art. 21; LGPD, art. 2º, I.
+END ONTOLOGY
+```
+
+### O template — contrato que governa toda a análise
+
+O template define quais campos são obrigatórios, quais são opcionais e quais valores são aceitos. É ele que permite ao compilador validar automaticamente cada anotação. Embora sua sintaxe pareça técnica, o template é normalmente definido uma única vez no início do projeto — com apoio de profissional especializado ou com o auxílio de inteligência artificial.
+
+```synesis
+TEMPLATE jurisprudencia_privacidade version: "1.0"
+
+SOURCE FIELDS
+    REQUIRED document_type, tribunal, numero_processo,
+             data_julgamento, resultado
+    OPTIONAL relator, orgao_julgador, data_publicacao,
+             url, access_date
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED locus, quote, note
+    OPTIONAL chain
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED description
+    OPTIONAL topic
+END ONTOLOGY FIELDS
+
+FIELD document_type TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Tipo do documento jurídico
+    VALUES
+        ACORDAO:  Acórdão de tribunal
+        SENTENCA: Sentença de primeiro grau
+        PARECER:  Parecer jurídico
+        LEI:      Texto normativo
+    END VALUES
+END FIELD
+
+FIELD resultado TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Resultado do julgamento
+    VALUES
+        PROVIDO:        Recurso provido
+        IMPROVIDO:      Recurso improvido
+        PARCIAL:        Provimento parcial
+        NAO_CONHECIDO:  Recurso não conhecido
+    END VALUES
+END FIELD
+
+FIELD tribunal TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Tribunal ou órgão emissor do documento
+END FIELD
+
+FIELD numero_processo TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Número de identificação do processo
+END FIELD
+
+FIELD data_julgamento TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Data do julgamento
+END FIELD
+
+FIELD relator TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Nome do ministro ou juiz relator
+END FIELD
+
+FIELD orgao_julgador TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Turma, câmara ou órgão responsável pelo julgamento
+END FIELD
+
+FIELD data_publicacao TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Data de publicação da decisão
+END FIELD
+
+FIELD url TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Endereço de acesso ao documento no sistema do tribunal
+END FIELD
+
+FIELD access_date TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Data de acesso ao documento
+END FIELD
+
+FIELD locus TYPE TEXT
+    SCOPE ITEM
+    DESCRIPTION Localização topográfica do trecho na norma ou decisão
+END FIELD
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Trecho extraído literalmente do documento
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Interpretação e análise do profissional sobre o trecho anotado
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relação entre conceitos jurídicos identificados no trecho
+    RELATIONS
+        OVERRULES:        Tese prevalece sobre entendimento anterior
+        CITES_PRECEDENT:  Decisão fundamentada em caso anterior
+        DISTINGUISHES:    Caso atual distinguido da regra geral
+    END RELATIONS
+END FIELD
+
+FIELD description TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definição do conceito jurídico, incluindo fundamentos normativos
+END FIELD
+
+FIELD topic TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Ramo ou domínio jurídico ao qual o conceito pertence
+END FIELD
+```
+
+Este é apenas um exemplo entre inúmeras configurações possíveis. Um advogado trabalhista pode estruturar sua base de jurisprudência de forma completamente diferente. Um departamento jurídico corporativo pode criar um template para gestão de contratos, outro para monitoramento regulatório e outro para registro de pareceres internos. Um pesquisador de direito pode mapear a evolução doutrinária de um conceito ao longo de décadas.
+
+A gramática é a mesma. O que muda é o que cada profissional decide construir dentro dela.
