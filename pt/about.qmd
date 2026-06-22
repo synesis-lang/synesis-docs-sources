@@ -7,7 +7,7 @@ subtitle: "Da planilha à linguagem — a trajetória real de um projeto nascido
 
 Como organizar, de forma rigorosa e replicável, os dados de uma pesquisa qualitativa com centenas de fontes, dezenas de conceitos e relações complexas entre eles?
 
-Essa pergunta perseguiu o mesmo pesquisador por mais de uma década — e cada tentativa de resposta se tornou um degrau na construção do que hoje é o Synesis.
+Essa pergunta perseguiu o mesmo pesquisador por mais de uma década — e cada tentativa de resposta se tornou um degrau na construção do que hoje é a linguagem Synesis.
 
 
 ## Linha do tempo {#sec-linha-do-tempo}
@@ -23,6 +23,8 @@ A descoberta do **dBase II Plus** e do **Clipper** (Autumn 86, Summer 87, Clippe
 - Um sistema de **gestão escolar** (dados acadêmicos, notas, históricos)
 - O **SAGA — Sistema de Automação de Postos de Combustível**, que chegou a ter mais de cem clientes ativos
 
+![SAGA - Sistema de automação para postos de combustível](../../images/synesis_history/saga.png)
+
 Para se ter uma ideia da contribuição intelectual e profissional proporcionada pelo ambiente de programação Clipper (xBase) e sistema operacional MS-DOS, [leia este artigo](https://www.linkedin.com/pulse/o-rei-do-dos-hist%C3%B3ria-completa-de-como-clipper-e-perdeu-brandini-bqbff/). 
 
 Entre 1995 e 1997, a empresa é incubada na InsoftBH, Incubadora de Empresas de Base Tecnológica em INformática, sediada em Belo Horizonte - MG, com apoio da Sociedade Mineira de Software - [FUMSOFT](https://fumsoft.org.br/) e da Universidade Federal de Minas Gerais (UFMG).
@@ -32,31 +34,73 @@ Entre 1995 e 1997, a empresa é incubada na InsoftBH, Incubadora de Empresas de 
 
 A atividade comercial de desenvolvimento é encerrada. O foco se volta para estudos e práticas teológicas — um realinhamento intelectual e profissional que, na perspectiva de hoje, alimentou a sensibilidade hermeneutica, epistemológica e filosófica que mais tarde encontraria expressão na aplicação da filosofia de Herman Dooyeweerd e Dirk Vollenhoven ao método de pesquisa. Um sistema em **Delphi 5** para controle financeiro, desenvolvido sem fins comerciais, mantém vivo o vínculo com a prática de programação.
 
-### 2013 — BDM: o primeiro protótipo
+### 2011-2013 — BDM: o primeiro protótipo
 
 Na dissertação de mestrado [*Sustentabilidade e Intradisciplinaridade*](https://doi.org/10.13140/RG.2.2.10686.10563) (UFPR), dedicada aos impactos socioambientais da indústria parapetrolífera em Pontal do Paraná, surge o **BDM — Banco de Dados Multimodal**.
 
+![Formulário de entrada de fontes](../../images/synesis_history/bdm_sources.png)
+
 Tecnicamente simples — um front-end em **Microsoft Access 2010** conectado a **PostgreSQL** — o BDM era uma solução local e individual. Mas o fluxo de trabalho já continha o embrião do que viria depois: **fontes** classificadas por tipo, **fatores** vinculados a modalidades filosóficas, **itens** relacionados a pares de fatores com nexos positivos ou negativos, e geração automática de sumários e grafos de relações.
+
+![Formulário de entrada de itens](../../images/synesis_history/bdm_itens.png)
 
 Limitação reconhecida pelo próprio autor: o BDM só permitia pares de fatores por item. A pergunta que ficou em aberto — como representar redes mais ricas de relações sem perder o rigor? — moldou tudo que veio depois.
 
-### 2018 — SocioAtlas: um ecosistema CAQDAS sob medida
+![Formulário de análise de ontologia](../../images/synesis_history/bdm_ontologia.png)
+
+De forma ainda embrionária, o BDM já contava com uma estrutura que organizava o conhecimento enm "blocos" de fontes, itens e ontologia, gerando ao final um modelo análitico, um grafo de conhecimento, possibilitado pelo uso da [biblioteca GraphViz](https://graphviz.org/).
+
+![Grafo de conhecimento](../../images/synesis_history/bdm_grafo.png)
+
+### 2018 — SocioAtlas: um ecossistema CAQDAS sob medida
 
 Na tese de doutorado [*Pensamento Sistêmico Multimodal*](https://doi.org/10.13140/RG.2.2.26449.17760) (UFPR), a resposta foi mais ambiciosa: o **SocioAtlas**, um ecosistema com partes desenvolvidas em **Free Pascal/Lazarus** com banco de dados **Firebird**.
 
+![Sistema de anotações via Zotero](../../images/synesis_history/zotero_anotacoes_etiquetadas.png)
+
 A solução era um CAQDAS (*Computer-Assisted Qualitative Data Analysis Software*) construído sob medida para o Método Sistêmico Multimodal (MSM). Importava dados do **Zotero**, organizava fontes, itens e fatores, vinculava cada fator a uma modalidade, e incluía uma camada de georeferenciamento com exportação em arquivos KML para o Google Earth Desktop. A plataforma web *SocioAtlas* tornava os mapas acessíveis ao público.
+
+![Sistema de anotações via Zotero](../../images/synesis_history/zotero_marcacoes.png)
+
+Os conceitos eram anotados no Zotero, conceitos, comentários, memorandos analíticos, eram identificados por meio de um sistema de marcadores, criado para a solução. Assim, um conceito como {[Políticas Públicas]} poderia ser distinguido de {|um comentário analítico|}. Estas foram as marcações adotadas:
+
+```
+{[ ]} - Destaque para conceitos.
+{! !} - Trilhas de auditoria, memorandos analíticos.
+{" "} - Citações
+{# #} - COmentários gerais.
+```
+
+![Tela principal do SocioAtlas](../../images/synesis_history/smcube_tela_principal.png)
+
+
+![Construção do modelo analítico, a ontologia](../../images/synesis_history/smcube_modelo_sistemico.png)
+
+Havia uma grande inovação, com relação à solução BDM, a possibilidade de incorporação de dados georreferenciados. Daí o nome SocioAtlas.
+
+![Dados georreferenciados, uma inovação](../../images/synesis_history/ge_atlas.png)
 
 Os conceitos que reapareceriam no Synesis já estavam presentes: fonte, item, fator, trilha de auditoria, integração com Zotero. O que faltava era **portabilidade metodológica** — a estrutura estava acoplada ao MSM e às suas dezoito modalidades. Adaptar o sistema para uma pesquisa diferente exigiria reescrever o software.
 
+![Grafo de conheciento](../../images/synesis_history/socioatlas_grafo.png)
+
 ### 2020 — SocioAtlas para Google Sheets
 
-Se a antiga solução exigia instalação local, por que não reconstruir a essência do método numa plataforma acessível a qualquer pessoa? O **SocioAtlas para Google Sheets** — um complemento em **Google Apps Script** publicado no Google Workspace Marketplace — transformava uma planilha comum em banco de conhecimento. O pesquisador marcava trechos em Google Docs, e o sistema importava, organizava e gerava matrizes de análise multimodal automaticamente. O link para esta antiga versão ainda está [*disponível aqui*](https://workspace.google.com/marketplace/app/socioatlas/113414702386), e o site com [a documentação está aqui](https://www.socioatlas.xyz/).
+Se a antiga solução exigia instalação local, por que não reconstruir a essência do método numa plataforma acessível a qualquer pessoa? O **SocioAtlas para Google Sheets** — um complemento em **Google Apps Script** publicado no Google Workspace Marketplace — transformava uma planilha comum em banco de conhecimento. O pesquisador marcava trechos em Google Docs, e o sistema importava, organizava e gerava matrizes de análise multimodal automaticamente. O link para esta antiga versão ainda está [disponível aqui](https://workspace.google.com/marketplace/app/socioatlas/113414702386), e o site com [a documentação está aqui](https://www.socioatlas.xyz/).
+
+As anotações eram feitas no Google Docs, onde os itens eram destacados e comentados. Os conceitos eram identificados com tags! ;)
+
+![Sistema de anotação no Google Docs](https://www.socioatlas.xyz/itemizacao.gif)
+
+O SocioAtlas fazia a leitura dos documentos analisados, importava os dados para uma planilha Google Sheets para análise e geração do grafo de cohecimento. 
+
+![Sistema de anotação no Google Docs](https://www.socioatlas.xyz/tela_grafico.gif)
 
 A colaboração em equipe foi conquistada. A profundidade, não. A planilha é um ambiente tabular — projetado para dados em linhas e colunas. Anotações aninhadas, relações tipadas e hierarquias de conceitos geravam fricção constante. Cada exigência metodológica demandava soluções frágeis. Uma ferramenta metodológica não pode ser ao mesmo tempo poderosa e quebrável.
 
 ### 2024 — Pipeline DGT7: o formato proprietário para representação de conhecimento
 
-Para analisar 453 artigos sobre aceitação social de tecnologias no contexto da transição energética, foi criado um novo pipeline em **Python** com banco **MySQL** e uma linguagem de marcação própria:
+Para analisar 453 artigos sobre aceitação social de tecnologias no contexto da transição energética, foi criado um novo pipeline em **Python** com banco **MySQL** e uma linguagem de marcação própria. Se lembra do sistema de marcação criado para o SocioAtlas? Aqui, ele entra em ação novamente:
 
 ```
 [-begin-]
@@ -76,7 +120,7 @@ A primeira tentativa de solução foi modesta: um parser mais robusto para o for
 
 A inovação central foi separar **método** e **conteúdo**. No sistema antigo, os campos estavam embutidos nos scripts. No Synesis, um **arquivo de template** define quais campos existem, quais são obrigatórios, de que tipo. O pesquisador configura as regras da sua pesquisa, e o sistema se adapta.
 
-O mesmo trecho, na nova linguagem:
+O mesmo trecho, agora em forma de nova linguagem:
 
 ```synesis
 SOURCE @burke2018
@@ -108,6 +152,8 @@ O ecossistema Synesis — compilador, servidor LSP, extensão VS Code, pipeline 
 
 Dr. Christian Maciel De Britto
 
-O [currículo completo do autor](https://lattes.cnpq.br/2334832147379385) está disponível na plataforma Lattes.
+[Currículo completo do autor](https://lattes.cnpq.br/2334832147379385) está disponível na plataforma Lattes.
+
+[ORCID](https://orcid.org/0000-0003-1431-3924)
 
 ---
