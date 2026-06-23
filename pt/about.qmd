@@ -23,7 +23,7 @@ A descoberta do **dBase II Plus** e do **Clipper** (Autumn 86, Summer 87, Clippe
 - Um sistema de **gestão escolar** (dados acadêmicos, notas, históricos)
 - O **SAGA — Sistema de Automação de Postos de Combustível**, que chegou a ter mais de cem clientes ativos
 
-![SAGA - Sistema de automação para postos de combustível](../../images/synesis_history/saga.png)
+![SAGA - Sistema de automação para postos de combustível](../images/synesis_history/saga.png)
 
 Para se ter uma ideia da contribuição intelectual e profissional proporcionada pelo ambiente de programação Clipper (xBase) e sistema operacional MS-DOS, [leia este artigo](https://www.linkedin.com/pulse/o-rei-do-dos-hist%C3%B3ria-completa-de-como-clipper-e-perdeu-brandini-bqbff/). 
 
@@ -38,29 +38,29 @@ A atividade comercial de desenvolvimento é encerrada. O foco se volta para estu
 
 Na dissertação de mestrado [*Sustentabilidade e Intradisciplinaridade*](https://doi.org/10.13140/RG.2.2.10686.10563) (UFPR), dedicada aos impactos socioambientais da indústria parapetrolífera em Pontal do Paraná, surge o **BDM — Banco de Dados Multimodal**.
 
-![Formulário de entrada de fontes](../../images/synesis_history/bdm_sources.png)
+![Formulário de entrada de fontes](../images/synesis_history/bdm_sources.png)
 
 Tecnicamente simples — um front-end em **Microsoft Access 2010** conectado a **PostgreSQL** — o BDM era uma solução local e individual. Mas o fluxo de trabalho já continha o embrião do que viria depois: **fontes** classificadas por tipo, **fatores** vinculados a modalidades filosóficas, **itens** relacionados a pares de fatores com nexos positivos ou negativos, e geração automática de sumários e grafos de relações.
 
-![Formulário de entrada de itens](../../images/synesis_history/bdm_itens.png)
+![Formulário de entrada de itens](../images/synesis_history/bdm_itens.png)
 
 Limitação reconhecida pelo próprio autor: o BDM só permitia pares de fatores por item. A pergunta que ficou em aberto — como representar redes mais ricas de relações sem perder o rigor? — moldou tudo que veio depois.
 
-![Formulário de análise de ontologia](../../images/synesis_history/bdm_ontologia.png)
+![Formulário de análise de ontologia](../images/synesis_history/bdm_ontologia.png)
 
 De forma ainda embrionária, o BDM já contava com uma estrutura que organizava o conhecimento enm "blocos" de fontes, itens e ontologia, gerando ao final um modelo análitico, um grafo de conhecimento, possibilitado pelo uso da [biblioteca GraphViz](https://graphviz.org/).
 
-![Grafo de conhecimento](../../images/synesis_history/bdm_grafo.png)
+![Grafo de conhecimento](../images/synesis_history/bdm_grafo.png)
 
 ### 2018 — SocioAtlas: um ecossistema CAQDAS sob medida
 
 Na tese de doutorado [*Pensamento Sistêmico Multimodal*](https://doi.org/10.13140/RG.2.2.26449.17760) (UFPR), a resposta foi mais ambiciosa: o **SocioAtlas**, um ecosistema com partes desenvolvidas em **Free Pascal/Lazarus** com banco de dados **Firebird**.
 
-![Sistema de anotações via Zotero](../../images/synesis_history/zotero_anotacoes_etiquetadas.png)
+![Sistema de anotações via Zotero](../images/synesis_history/zotero_anotacoes_etiquetadas.png)
 
 A solução era um CAQDAS (*Computer-Assisted Qualitative Data Analysis Software*) construído sob medida para o Método Sistêmico Multimodal (MSM). Importava dados do **Zotero**, organizava fontes, itens e fatores, vinculava cada fator a uma modalidade, e incluía uma camada de georeferenciamento com exportação em arquivos KML para o Google Earth Desktop. A plataforma web *SocioAtlas* tornava os mapas acessíveis ao público.
 
-![Sistema de anotações via Zotero](../../images/synesis_history/zotero_marcacoes.png)
+![Sistema de anotações via Zotero](../images/synesis_history/zotero_marcacoes.png)
 
 Os conceitos eram anotados no Zotero, conceitos, comentários, memorandos analíticos, eram identificados por meio de um sistema de marcadores, criado para a solução. Assim, um conceito como {[Políticas Públicas]} poderia ser distinguido de {|um comentário analítico|}. Estas foram as marcações adotadas:
 
@@ -71,18 +71,18 @@ Os conceitos eram anotados no Zotero, conceitos, comentários, memorandos analí
 {# #} - COmentários gerais.
 ```
 
-![Tela principal do SocioAtlas](../../images/synesis_history/smcube_tela_principal.png)
+![Tela principal do SocioAtlas](../images/synesis_history/smcube_tela_principal.png)
 
 
-![Construção do modelo analítico, a ontologia](../../images/synesis_history/smcube_modelo_sistemico.png)
+![Construção do modelo analítico, a ontologia](../images/synesis_history/smcube_modelo_sistemico.png)
 
 Havia uma grande inovação, com relação à solução BDM, a possibilidade de incorporação de dados georreferenciados. Daí o nome SocioAtlas.
 
-![Dados georreferenciados, uma inovação](../../images/synesis_history/ge_atlas.png)
+![Dados georreferenciados, uma inovação](../images/synesis_history/ge_atlas.png)
 
 Os conceitos que reapareceriam no Synesis já estavam presentes: fonte, item, fator, trilha de auditoria, integração com Zotero. O que faltava era **portabilidade metodológica** — a estrutura estava acoplada ao MSM e às suas dezoito modalidades. Adaptar o sistema para uma pesquisa diferente exigiria reescrever o software.
 
-![Grafo de conheciento](../../images/synesis_history/socioatlas_grafo.png)
+![Grafo de conheciento](../images/synesis_history/socioatlas_grafo.png)
 
 ### 2020 — SocioAtlas para Google Sheets
 
