@@ -55,25 +55,32 @@ Se retornar a mensagem, está funcionando!
 
 ---
 
-## Passo 2: Instalar synesis2graph
+## Passo 2: Instalar synesis-graph
 
 ```bash
-pip install synesis2graph
+pip install "synesis-graph[neo4j]"
 ```
+
+O extra `[neo4j]` instala o driver do banco de dados.
 
 Verifique a instalação:
 
 ```bash
-synesis2graph --version
+synesis-graph --version
 ```
 
-Deve retornar: `synesis2graph version 0.1.2`
+Deve retornar: `synesis-graph, version 0.3.1`
+
+:::{.callout-note}
+## Nome anterior
+Esta ferramenta chamava-se `synesis2graph` (e antes `synesis2neo4j`). O pacote foi renomeado para `synesis-graph` e o comando agora usa subcomandos por backend — `synesis-graph neo4j`, `synesis-graph html`. Se você tem a versão antiga instalada, remova-a com `pip uninstall synesis2graph`.
+:::
 
 ---
 
 ## Passo 3: Criar Arquivo de Configuração
 
-Crie um arquivo `neo4j_config.toml` no diretório do seu projeto:
+Crie um arquivo `config.toml` no diretório do seu projeto:
 
 ### Para Neo4j Desktop:
 
@@ -97,9 +104,9 @@ database = "neo4j"
 
 :::{.callout-warning}
 ## Segurança
-NUNCA comite `neo4j_config.toml` para Git! Adicione ao `.gitignore`:
+NUNCA comite `config.toml` para Git! Adicione ao `.gitignore`:
 ```bash
-echo "neo4j_config.toml" >> .gitignore
+echo "config.toml" >> .gitignore
 ```
 :::
 
@@ -108,7 +115,13 @@ echo "neo4j_config.toml" >> .gitignore
 ## Passo 4: Executar a Exportação
 
 ```bash
-synesis2graph --project meu_projeto.synp --config neo4j_config.toml
+synesis-graph neo4j --project meu_projeto.synp --config config.toml
+```
+
+Como `config.toml` é o valor padrão, o `--config` pode ser omitido:
+
+```bash
+synesis-graph neo4j --project meu_projeto.synp
 ```
 
 **Output esperado:**
@@ -126,12 +139,16 @@ synesis2graph --project meu_projeto.synp --config neo4j_config.toml
   [████████████████████████] 100% - 234 nós, 156 arestas
 
 📊 Calculando métricas...
-✓ Degree Centralidade
-✓ Betweenness Centralidade
-✓ Closeness Centralidade
+✓ Métricas nativas (degree, mention_count, source_count)
+✓ Métricas GDS (pagerank, betweenness, community)
 
 ✅ Exportação concluída em 3.2s
 ```
+
+:::{.callout-note}
+## Sem o plugin GDS
+A linha de métricas GDS só aparece se o plugin estiver instalado (ver Passo 8). Sem ele, o pipeline emite um aviso e conclui normalmente — as métricas nativas são calculadas de qualquer forma.
+:::
 
 :::{.callout-note}
 ## Checkpoint ✓
@@ -154,47 +171,62 @@ RETURN n
 LIMIT 100
 ```
 
-### Visualizar Código Específico
+:::{.callout-important}
+## Os rótulos são derivados do seu template
+O `synesis-graph` não usa rótulos fixos. O nó de conceito recebe o rótulo do **nome do campo** no template: um campo `category` gera nós `:Category`; um campo `criterio` gera `:Criterio`. As consultas abaixo omitem o rótulo (`MATCH (c)`) para funcionar em qualquer projeto — substitua pelo rótulo do seu campo se quiser restringir. Ver [synesis-graph](../reference/synesis_graph.qmd#sec-modelo).
+:::
+
+### Visualizar Conceito Específico
 
 ```cypher
-MATCH (c:Code {name: "Custo"})
+MATCH (c {name: "Custo"})
 RETURN c
 ```
 
-### Visualizar Relações de um Código
+### Visualizar Relações de um Conceito
 
 ```cypher
-MATCH path = (c:Code {name: "Custo"})-[r]->(target)
+MATCH path = (c {name: "Custo"})-[r]->(target)
 RETURN path
 ```
 
-### Ver Anotações Conectadas a um Código
+### Ver Anotações Conectadas a um Conceito
 
 ```cypher
-MATCH (i:Item)-[:HAS_CODE]->(c:Code {name: "Custo"})
-RETURN i.quote AS citacao, i.memo AS interpretacao
+MATCH (i:Item)-[:MENTIONS]->(c {name: "Custo"})
+RETURN i.citation AS citacao, i.description AS interpretacao
 ```
 
 ---
 
 ## Passo 6: Consultas Analíticas Úteis
 
-### Top 10 Códigos Mais Frequentes
+### Top 10 Conceitos Mais Frequentes
 
 ```cypher
-MATCH (i:Item)-[:HAS_CODE]->(c:Code)
-RETURN c.name AS codigo, count(i) AS frequencia
+MATCH (i:Item)-[:MENTIONS]->(c)
+RETURN c.name AS conceito, count(i) AS frequencia
 ORDER BY frequencia DESC
 LIMIT 10
 ```
 
-### Códigos que Co-ocorrem Frequentemente
+O pipeline também grava essa contagem como propriedade, o que dispensa a agregação:
 
 ```cypher
-MATCH (i:Item)-[:HAS_CODE]->(c1:Code)
-MATCH (i)-[:HAS_CODE]->(c2:Code)
+MATCH (c)
+WHERE c.mention_count IS NOT NULL
+RETURN c.name AS conceito, c.mention_count AS frequencia, c.source_count AS fontes
+ORDER BY frequencia DESC
+LIMIT 10
+```
+
+### Conceitos que Co-ocorrem Frequentemente
+
+```cypher
+MATCH (i:Item)-[:MENTIONS]->(c1)
+MATCH (i)-[:MENTIONS]->(c2)
 WHERE c1 <> c2
-RETURN c1.name AS codigo1, c2.name AS codigo2, count(i) AS coocorrencia
+RETURN c1.name AS conceito1, c2.name AS conceito2, count(i) AS coocorrencia
 ORDER BY coocorrencia DESC
 LIMIT 20
 ```
@@ -202,20 +234,25 @@ LIMIT 20
 ### Chains Mais Comuns
 
 ```cypher
-MATCH (c1:Code)-[r:CHAIN_RELATION]->(c2:Code)
-RETURN c1.name AS origem, r.relation_type AS relacao, c2.name AS destino, count(r) AS frequencia
+MATCH (c1)-[r:RELATES_TO]->(c2)
+RETURN c1.name AS origem, r.type AS relacao, c2.name AS destino, count(r) AS frequencia
 ORDER BY frequencia DESC
 ```
 
 ### Nós Mais Centrais (Bridges)
 
 ```cypher
-MATCH (c:Code)
-WHERE c.betweenness_centrality IS NOT NULL
-RETURN c.name AS codigo, c.betweenness_centrality AS centralidade
+MATCH (c)
+WHERE c.betweenness IS NOT NULL
+RETURN c.name AS conceito, c.betweenness AS centralidade
 ORDER BY centralidade DESC
 LIMIT 10
 ```
+
+:::{.callout-note}
+## `betweenness` exige o plugin GDS
+Esta propriedade só existe se o Graph Data Science estiver instalado (Passo 8). Sem ele, use `degree` — disponível sempre, calculado em Cypher puro.
+:::
 
 :::{.callout-tip}
 ## Interpretação
@@ -224,45 +261,26 @@ Códigos com alta betweenness centralidade são "pontes" — conceitos que conec
 
 ---
 
-## Passo 7: Atualizar o Grafo (Sincronização Incremental)
+## Passo 7: Atualizar o Grafo
 
-Se você adicionar novas anotações ao seu projeto Synesis:
-
-### Modo Replace (Padrão)
+Se você adicionar novas anotações ao projeto Synesis, execute o mesmo comando novamente:
 
 ```bash
-# Apaga tudo e recria
-synesis2graph --project meu_projeto.synp --config neo4j_config.toml
+synesis-graph neo4j --project meu_projeto.synp
 ```
 
-### Modo Merge (Atualização Incremental)
+A sincronização é **completa**: o pipeline recompila o projeto em memória e regrava o grafo. Não há modo incremental — e isso é deliberado.
 
-Edite `neo4j_config.toml`:
+:::{.callout-note}
+## Por que não há sincronização incremental
+O grafo é um **artefato derivado**, não uma base de dados que se edita. A fonte de verdade são os arquivos `.syn` versionados em Git. Regravar por completo garante que o grafo corresponde exatamente ao estado atual do corpus, sem resíduos de conceitos renomeados ou anotações removidas — um risco real num modo incremental.
 
-```toml
-[sync]
-mode = "merge"  # Atualiza apenas o que mudou
-```
-
-Execute novamente:
-
-```bash
-synesis2graph --project meu_projeto.synp --config neo4j_config.toml
-```
-
-**Quando usar cada modo:**
-
-| Modo | Quando Usar |
-|------|-------------|
-| `replace` | Mudanças estruturais (novo template, ontologia refatorada) |
-| `merge` | Adição de novas anotações sem mudanças estruturais |
-| `append` | Apenas adicionar (nunca atualiza nós existentes) |
+Se a regravação demora, o gargalo costuma ser a compilação, não a escrita: valide antes com `synesis compile meu_projeto.synp --stats`.
+:::
 
 ---
 
 ## Passo 8: Calcular Métricas Avançadas (Graph Data Science)
-
-Se você tem Neo4j Enterprise ou instalou o plugin GDS:
 
 ### Instalar GDS Plugin (Neo4j Desktop)
 
@@ -270,30 +288,28 @@ Se você tem Neo4j Enterprise ou instalou o plugin GDS:
 2. Instale "Graph Data Science Library"
 3. Reinicie o banco de dados
 
-### Habilitar no Config
-
-Edite `neo4j_config.toml`:
-
-```toml
-[metrics]
-native = true
-gds = true  # Agora habilitado
-```
+Não há nada a configurar: o pipeline **detecta** o plugin automaticamente. Se o GDS estiver presente, as métricas avançadas são calculadas; se não estiver, o pipeline emite um aviso e continua normalmente com as métricas nativas.
 
 ### Métricas Disponíveis
 
 Após exportar com GDS habilitado:
 
 ```cypher
-MATCH (c:Code)
+MATCH (c)
+WHERE c.pagerank IS NOT NULL
 RETURN c.name AS codigo,
-       c.degree_centrality AS degree,
+       c.degree AS degree,
        c.pagerank AS pagerank,
-       c.betweenness_centrality AS betweenness,
-       c.community_louvain AS comunidade
+       c.betweenness AS betweenness,
+       c.community AS comunidade
 ORDER BY pagerank DESC
 LIMIT 20
 ```
+
+:::{.callout-tip}
+## Por que a consulta não filtra por rótulo
+O rótulo dos nós de conceito é **derivado do nome do campo** no seu template — um campo `category` gera nós `:Category`, um campo `ordem_2a` gera `:Ordem_2a`. Como não há um rótulo fixo `:Code`, filtrar pela presença da propriedade (`WHERE c.pagerank IS NOT NULL`) funciona em qualquer projeto. Ver [synesis-graph](../reference/synesis_graph.qmd#sec-modelo) para o modelo completo.
+:::
 
 **Interpretação:**
 
@@ -318,11 +334,11 @@ neo4j start
 
 ### Erro: `Authentication failed`
 
-**Causa:** Senha incorreta em `neo4j_config.toml`.
+**Causa:** Senha incorreta em `config.toml`.
 
 **Solução:**
 1. Verifique a senha no Neo4j Desktop (Settings → "Show Password")
-2. Atualize `neo4j_config.toml`
+2. Atualize `config.toml`
 
 ### Erro: `Database not found: neo4j`
 
@@ -333,7 +349,7 @@ Execute no Neo4j Browser:
 ```cypher
 SHOW DATABASES
 ```
-Use o nome correto em `neo4j_config.toml`.
+Use o nome correto em `config.toml`.
 
 ### Erro: `synesis.load() failed: Template not found`
 
@@ -416,8 +432,14 @@ RETURN date(time) AS data, count(i) AS anotacoes_por_dia
 
 ## Referências
 
+Para o modelo de dados completo e todas as opções da ferramenta:
+- [synesis-graph — Referência](../reference/synesis_graph.qmd)
+
 Para conceitos sobre grafos de conhecimento:
 - [Conceitos de Knowledge Graphs](../explanation/knowledge_graphs.qmd)
+
+Para cruzar corpora distintos num único grafo:
+- [Como Ligar Projetos Independentes](ligar_projetos.qmd)
 
 Para detalhes da API Synesis:
 - [API Synesis (synesis.load)](../reference/synesis_load.qmd)
@@ -425,6 +447,17 @@ Para detalhes da API Synesis:
 Para Cypher Query Language:
 - [Neo4j Cypher Manual](https://neo4j.com/docs/cypher-manual/)
 
+:::{.callout-tip}
+## Não precisa de banco de dados?
+Para explorar o grafo visualmente sem instalar o Neo4j, o backend HTML gera um arquivo único e autocontido:
+
+```bash
+synesis-graph html --project meu_projeto.synp --output grafo.html
+```
+
+Ver [synesis-graph](../reference/synesis_graph.qmd#sec-html).
+:::
+
 ---
 
-**Ficou com dúvidas?** Abra uma issue no [repositório synesis2graph](https://github.com/synesis-lang/synesis2graph) ou consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions).
+**Ficou com dúvidas?** Abra uma issue no [repositório synesis-graph](https://github.com/synesis-lang/synesis-graph) ou consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions).

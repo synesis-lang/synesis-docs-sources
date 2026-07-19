@@ -29,7 +29,7 @@ Se você mudar o template, a IA segue as novas regras --- sem modificar a ferram
 ## Requisitos
 
 - Python 3.10+
-- [synesis](https://github.com/synesis-lang/synesis) >= 0.3.0
+- [synesis](https://github.com/synesis-lang/synesis) >= 0.6.0
 - Chave de API da Anthropic (`ANTHROPIC_API_KEY`)
 
 ## Instalar o pacote
@@ -42,7 +42,7 @@ Verificar:
 
 ```bash
 synesis-coder --version
-# synesis-coder, version 0.1.0
+# synesis-coder, version 0.7.7
 ```
 
 ## Configurar a chave de API
@@ -62,18 +62,42 @@ O modelo padrão é `claude-opus-4-6`. Para usar um modelo mais rápido (e mais 
 
 ---
 
-# Os quatro modos de operação {#sec-modos}
+# Os modos de operação {#sec-modos}
 
-`synesis-coder` opera em quatro modos complementares, cada um projetado para uma etapa diferente do fluxo de pesquisa:
+`synesis-coder` organiza seus comandos em três grupos, cobrindo o ciclo completo da pesquisa — da extração inicial à revisão e consolidação:
+
+## Ingestão e extração
 
 | Modo | Entrada | Saída | Uso típico |
 |------|---------|-------|------------|
 | `item` | Texto + bibref | Bloco ITEM | Codificar um trecho selecionado |
 | `abstract` | Corpus `.bib` | Blocos SOURCE + ITEM | Processar abstracts em lote |
 | `document` | Documento `.txt`/`.md` | Blocos SOURCE + ITEM | Codificar entrevista ou relatório longo |
-| `ontology` | Corpus anotado | Arquivo `.syno` | Gerar definições ontológicas |
 
-: Modos de operação do synesis-coder {.striped .hover}
+: Modos de ingestão {.striped .hover}
+
+## Estruturação e LLM
+
+| Modo | Entrada | Saída | Uso típico |
+|------|---------|-------|------------|
+| `ontology` | Corpus anotado | Arquivo `.syno` | Gerar definições ontológicas |
+| `suggest` | Trecho de texto | Lista de códigos | Sugerir códigos relevantes para um excerto |
+| `finetune` | Dataset Alpaca | JSONL enriquecido | Preparar dados para fine-tuning de modelos |
+
+: Modos de estruturação {.striped .hover}
+
+## Pipeline ACT (revisão e consolidação)
+
+| Fase | Modo | Entrada | Saída | LLM? |
+|:----:|------|---------|-------|:----:|
+| 2 | `critique` | `.syn` | `.synr` com blocos `# REVISION` | Sim |
+| 3 | `normalize` | `.synr` | `.synr` com códigos canonizados | Sim |
+| 4 | `incorporate` | `.synr` | `.syn` final validado | **Não** |
+| R | `refine` | `.syn` | `.syn` refinado | Sim (opt-in) |
+
+: Pipeline ACT {.striped .hover}
+
+O pipeline ACT é descrito em detalhe em @sec-act.
 
 ---
 
@@ -169,9 +193,14 @@ Processa um arquivo `.bib` completo, gerando anotações SOURCE + ITEM para cada
 synesis-coder abstract \
   --project social_acceptance.synp \
   --input corpus/references.bib \
-  --output anotacoes/ \
+  --output-dir anotacoes/ \
   --concurrent 5
 ```
+
+:::{.callout-warning}
+## `--output-dir`, não `--output`
+Esta flag sempre foi um **diretório** de saída, mas o nome anterior (`--output`) induzia ao erro de passar um nome de arquivo — o que criava uma *pasta* com esse nome e provocava um `PermissionError` confuso na execução seguinte. A flag foi renomeada para `--output-dir`; `--output` continua funcionando como alias retrocompatível.
+:::
 
 Para cada referência no `.bib` que tenha abstract, o modo `abstract`:
 
@@ -187,7 +216,7 @@ O modo `abstract` processa referências concorrentemente (padrão: 5 chamadas si
 synesis-coder abstract \
   --project social_acceptance.synp \
   --input corpus/references.bib \
-  --output anotacoes/ \
+  --output-dir anotacoes/ \
   --concurrent 5 \
   --batch-size 25
 ```
@@ -202,7 +231,7 @@ Por padrão, todas as anotações vão para um único arquivo `.syn`. Use `--per
 synesis-coder abstract \
   --project social_acceptance.synp \
   --input corpus/references.bib \
-  --output anotacoes/ \
+  --output-dir anotacoes/ \
   --per-reference
 ```
 
@@ -214,12 +243,13 @@ Resultado: `anotacoes/ashworth2019.syn`, `anotacoes/aly2019.syn`, etc.
 |-------|:-----------:|-----------|
 | `--project` | sim | Caminho para o arquivo `.synp` |
 | `--input` | sim | Arquivo `.bib` com abstracts |
-| `--output` | sim | Diretório de saída |
+| `--output-dir` | sim | Diretório de saída (alias: `--output`) |
 | `--concurrent` | não | Chamadas LLM simultâneas (padrão: 5) |
 | `--batch-size` | não | Referências por batch (padrão: 25) |
 | `--per-reference` | não | Um arquivo `.syn` por referência |
 | `--format` | não | `plain` (padrão) ou `verbose` |
 | `--model` | não | ID do modelo LLM |
+| `--debug` | não | Log DEBUG com resposta bruta do LLM |
 
 : Opções do modo `abstract` {.striped .hover}
 
@@ -372,6 +402,32 @@ ontologia.syno       ←  novo conteúdo gerado
 
 Isso protege ontologias curadas manualmente contra sobrescrita acidental.
 
+## Blocos rejeitados não contaminam o `.syno` {#sec-rejeitados}
+
+Se um bloco ONTOLOGY não passa na validação após todas as tentativas de correção, ele **não** é gravado no arquivo final. Blocos rejeitados vão para um arquivo separado:
+
+```
+ontologia.syno              ←  apenas blocos válidos
+ontologia.syno.rejeitados   ←  blocos que falharam (sobrescrito a cada execução)
+```
+
+:::{.callout-important}
+## Por que isso importa
+Antes, todos os resultados eram concatenados no `.syno` final — inclusive os que continham o comentário `# ERRO: validação falhou` seguido de texto malformado. Um único código mal-extraído **corrompia o arquivo inteiro** para qualquer `compile` ou `load` posterior. Agora o `.syno` gerado é sempre compilável, e o resumo da execução aponta o arquivo de rejeitados quando há falhas.
+:::
+
+## Geração estruturada (JSON Schema) {#sec-json-schema}
+
+Quando o modelo suporta *structured outputs*, o `synesis-coder` não pede ao LLM que escreva o bloco inteiro. Em vez disso:
+
+1. Deriva um **JSON Schema** dos campos `ONTOLOGY FIELDS` do template
+2. Pede ao LLM apenas os **valores** dos campos
+3. Monta o bloco `ONTOLOGY ... END ONTOLOGY` deterministicamente, em código
+
+O LLM nunca digita as palavras `ONTOLOGY`, `END ONTOLOGY` ou os nomes de campo — o que **elimina por construção** uma classe inteira de alucinações de sintaxe. O schema usa `additionalProperties: false`, então qualquer chave inventada é descartada antes da montagem. Quando há tópicos já definidos no projeto, o campo TOPIC vira um `enum` restrito a eles.
+
+O caminho estruturado está disponível nos backends `anthropic` (via `output_config`) e `openai` (via `response_format`). Se o SDK instalado não suportar, a ferramenta **cai automaticamente** no caminho de texto livre — o comportamento anterior, sem quebrar nada. A validação com `synesis.load()` roda igual nos dois caminhos.
+
 ## Requisito de template
 
 O template do projeto deve definir pelo menos um campo com `SCOPE ONTOLOGY`. Projetos sem escopo de ontologia (como `thompson_bible`) recebem um erro claro:
@@ -392,6 +448,169 @@ Erro: O template do projeto 'thompson_bible' não define campos ONTOLOGY.
 | `--model` | não | ID do modelo LLM |
 
 : Opções do modo `ontology` {.striped .hover}
+
+---
+
+# O pipeline ACT: revisão e consolidação {#sec-act}
+
+A extração inicial (`item`, `abstract`, `document`) produz anotações que **precisam ser revisadas**. O pipeline ACT organiza essa revisão em fases explícitas, cada uma com um artefato próprio — nada é sobrescrito silenciosamente.
+
+O formato intermediário é o **`.synr`** (*Synesis revision*): um `.syn` acrescido de blocos `# REVISION` com sugestões de correção. É um tipo de arquivo reconhecido pelo compilador e pela extensão do VS Code.
+
+```
+.syn  ──critique──▶  .synr  ──normalize──▶  .synr  ──incorporate──▶  .syn
+       (fase 2)              (fase 3)                (fase 4)
+```
+
+## Fase 2 — `critique`: revisar as anotações
+
+Um segundo modelo relê cada ITEM contra o texto-fonte e o template, atribuindo um **escore de suspeita**. ITEMs acima do limiar recebem um bloco `# REVISION` com a correção sugerida.
+
+```bash
+synesis-coder critique anotacoes/entrevista_01.syn \
+  --project nave.synp \
+  --threshold 0.20
+```
+
+Saída: `anotacoes/entrevista_01.synr`.
+
+| Opção | Descrição |
+|-------|-----------|
+| `--project` | `.synp` do projeto (autodetectado a partir da pasta do `.syn`) |
+| `--output` | Caminho do `.synr` (padrão: mesmo nome, extensão `.synr`) |
+| `--threshold` | Escore mínimo para emitir `# REVISION` (padrão: `0.20`) |
+| `--concurrent` | Chamadas simultâneas (padrão: 3) |
+| `--model` | Modelo crítico (`SYNESIS_CODER_CRITIQUE_MODEL`) |
+| `--debug` | Log com resposta bruta por ITEM |
+
+: Opções do modo `critique` {.striped .hover}
+
+:::{.callout-tip}
+## Modelo crítico separado
+A crítica pode usar um modelo diferente do que gerou as anotações — configurável via `SYNESIS_CODER_CRITIQUE_MODEL`. Um segundo modelo, com contexto próprio, tende a encontrar problemas que o gerador original não veria por reproduzir os mesmos vieses.
+:::
+
+## Fase 3 — `normalize`: canonizar códigos
+
+Corpora processados em lotes distintos acumulam variantes do mesmo conceito — `Custo`, `custo`, `Custo_Alto`. Esta fase analisa os códigos de **todos** os `.synr` juntos e propõe a forma canônica.
+
+```bash
+synesis-coder normalize anotacoes/*.synr \
+  --project social_acceptance.synp \
+  --confidence 0.65 \
+  --inventory inventario_codigos.txt
+```
+
+| Opção | Descrição |
+|-------|-----------|
+| `--output-dir` | Diretório dos `.synr` normalizados (padrão: o de entrada) |
+| `--confidence` | Confiança mínima para aceitar a canonização (padrão: `0.65`) |
+| `--inventory` | Salva o inventário de códigos em um arquivo TXT |
+| `--model` | Modelo de normalização (`SYNESIS_CODER_NORMALIZATION_MODEL`) |
+
+: Opções do modo `normalize` {.striped .hover}
+
+## Fase 4 — `incorporate`: aplicar as revisões
+
+Aplica os blocos `# REVISION` e emite o `.syn` final, validado. **Esta fase não usa LLM** — é determinística e reproduzível.
+
+```bash
+synesis-coder incorporate anotacoes/entrevista_01.synr \
+  --output anotacoes/entrevista_01_final.syn
+```
+
+| Opção | Descrição |
+|-------|-----------|
+| `--output` | Caminho do `.syn` final (padrão: mesmo nome, extensão `.syn`) |
+| `--overwrite` | Sobrescreve sem confirmação |
+| `--backup` | Cria cópia `.bak` antes de sobrescrever |
+
+: Opções do modo `incorporate` {.striped .hover}
+
+## Fase R — `refine`: reextrair os ITEMs problemáticos
+
+Alternativa **opcional** às fases 3–4. Em vez de aplicar correções pontuais, reextrai do zero os ITEMs marcados como suspeitos, agora com o *feedback* da crítica no prompt. Itera até convergir.
+
+```bash
+synesis-coder refine anotacoes/entrevista_01.syn \
+  --project nave.synp \
+  --max-iter 2 \
+  --threshold 0.20
+```
+
+| Opção | Descrição |
+|-------|-----------|
+| `--max-iter` | Iterações máximas por ITEM (padrão: 2) |
+| `--threshold` | Escore abaixo do qual o ITEM é considerado convergido (padrão: `0.20`) |
+| `--critique-model` | Modelo crítico |
+| `--refine-model` | Modelo gerador da reextração |
+| `--thinking-budget` | Tokens de *extended thinking* na reextração (`0` = desligado) |
+| `--overwrite` / `--backup` | Controle de sobrescrita |
+
+: Opções do modo `refine` {.striped .hover}
+
+Saída padrão: `<nome>_refined.syn`.
+
+:::{.callout-important}
+## O arquivo de entrada nunca é sobrescrito por acidente
+Se `--output` apontar para o próprio arquivo de entrada, o comando **falha** com mensagem explícita, a menos que você passe `--overwrite --backup` deliberadamente. Uma reextração que apagasse a anotação original seria irreversível.
+:::
+
+## Fluxo completo
+
+```bash
+# 1. Extrair
+synesis-coder abstract --project estudo.synp \
+  --input corpus.bib --output-dir anotacoes/
+
+# 2. Criticar
+synesis-coder critique anotacoes/annotations.syn --project estudo.synp
+
+# 3. Canonizar códigos
+synesis-coder normalize anotacoes/*.synr --project estudo.synp
+
+# 4. Consolidar
+synesis-coder incorporate anotacoes/annotations.synr \
+  --output anotacoes/final.syn
+
+# 5. Compilar
+synesis compile estudo.synp --json resultado.json
+```
+
+---
+
+# Outros modos {#sec-outros-modos}
+
+## `suggest`: sugerir códigos para um trecho
+
+Retorna os códigos do projeto mais relevantes para um excerto, sem gerar um bloco ITEM completo. Útil para explorar a ontologia durante a codificação manual.
+
+```bash
+synesis-coder suggest \
+  --project social_acceptance.synp \
+  --text "Local ownership models significantly reduce opposition."
+```
+
+## `finetune`: enriquecer dataset para fine-tuning
+
+Gera ou enriquece um dataset Alpaca (JSONL) a partir do projeto compilado, para treinar um modelo próprio.
+
+```bash
+synesis-coder finetune \
+  --project social_acceptance.synp \
+  --output dataset_enriquecido.jsonl \
+  --enrich vary --enrich didactic
+```
+
+| Tipo de enriquecimento | Efeito |
+|------------------------|--------|
+| `vary` (padrão) | Variações de formulação do mesmo exemplo |
+| `didactic` | Versões com explicação do raciocínio |
+| `counterfactual` | Contraexemplos para reforçar fronteiras conceituais |
+
+: Opções de `--enrich` (repetível) {.striped .hover}
+
+A entrada pode ser um `.synp` (o dataset é gerado pelo compilador) ou um JSONL pré-existente via `--input`.
 
 ---
 
@@ -599,11 +818,11 @@ O `synesis-coder` é testado contra projetos reais com templates de complexidade
 
 ### Executar testes sem API
 
-Os testes de `project_loader`, `prompt_builder` e `validator` não chamam o LLM:
+Testes de integração (que consomem tokens) são **excluídos por padrão**. Executar a suíte normalmente não gera custo de API:
 
 ```bash
 cd synesis-coder
-pytest tests/ -v -k "not integration"
+pytest
 ```
 
 ### Executar testes de integração
@@ -627,13 +846,36 @@ pytest tests/ --cov=synesis_coder --cov-report=term-missing
 | Variável | Obrigatória | Padrão | Descrição |
 |----------|:-----------:|--------|-----------|
 | `ANTHROPIC_API_KEY` | sim | --- | Chave da API Anthropic |
+| `SYNESIS_CODER_BACKEND` | não | `anthropic` | Backend LLM (`anthropic` ou `openai`) |
 | `SYNESIS_CODER_MODEL` | não | `claude-opus-4-6` | Modelo LLM padrão |
 | `SYNESIS_CODER_MAX_RETRIES` | não | `3` | Tentativas de correção por item |
 | `SYNESIS_CODER_TEMPERATURE` | não | `0.0` | Temperatura de geração |
 | `SYNESIS_CODER_RPM_LIMIT` | não | `50` | Requests por minuto |
 | `SYNESIS_CODER_TPM_LIMIT` | não | `100000` | Tokens por minuto |
 
-: Variáveis de ambiente do synesis-coder {.striped .hover}
+: Variáveis de ambiente gerais {.striped .hover}
+
+## Modelo por fase
+
+Cada fase do pipeline pode usar um modelo diferente. A variável específica tem precedência sobre `SYNESIS_CODER_MODEL`:
+
+| Variável | Fase |
+|----------|------|
+| `SYNESIS_CODER_CRITIQUE_MODEL` | `critique` e a crítica dentro de `refine` |
+| `SYNESIS_CODER_REFINE_MODEL` | Reextração em `refine` |
+| `SYNESIS_CODER_NORMALIZATION_MODEL` | `normalize` |
+
+: Modelos por fase {.striped .hover}
+
+## Limiares do pipeline ACT
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `SYNESIS_CODER_SUSPICION_THRESHOLD` | `0.20` | Escore mínimo para emitir `# REVISION` |
+| `SYNESIS_CODER_MERGE_CONFIDENCE_THRESHOLD` | `0.65` | Confiança mínima para canonizar um código |
+| `SYNESIS_CODER_REFINE_MAX_ITER` | `2` | Iterações máximas por ITEM em `refine` |
+
+: Limiares configuráveis {.striped .hover}
 
 ---
 
@@ -694,4 +936,5 @@ Revise o bloco gerado e corrija manualmente os campos faltantes. Isso é raro em
 - [Métricas da Pesquisa](../explanation/codificacao_assistida_IA_metricas.qmd) --- análise quantitativa dos resultados
 - [Como Definir uma Ontologia](definir_ontologia.qmd) --- curadoria manual das entradas geradas
 - [Como Criar e Validar Chains](criar_chains.qmd) --- regras de modelagem causal
+- [Como Ligar Projetos Independentes](ligar_projetos.qmd) --- cruzar corpora anotados separadamente
 - [Tutorial Synesis Explorer](../tutorials/synesis_explorer_tutorial.qmd) --- configurar o ambiente VS Code

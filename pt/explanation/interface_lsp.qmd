@@ -287,6 +287,24 @@ O Synesis Explorer é uma extensão VS Code que oferece uma interface visual par
 
 Todos esses comandos dependem do `WorkspaceCache` — primeiro é necessário chamar `loadProject` para compilar e cachear o projeto.
 
+### O contrato LSP ↔ extensão
+
+As respostas desses comandos customizados são descritas por **JSON Schemas versionados**. O servidor valida o que produz; a extensão valida o que consome, contra uma cópia dos mesmos schemas.
+
+O ganho é que uma mudança de formato no servidor não chega ao usuário como um painel vazio ou um erro obscuro no editor: ela quebra o CI dos **dois** repositórios ao mesmo tempo, no momento da mudança.
+
+### Tipos de arquivo reconhecidos
+
+| Extensão | Conteúdo | Papel no LSP |
+|---|---|---|
+| `.synp` | Projeto | Ponto de entrada; salvar invalida o cache do workspace |
+| `.synt` | Template | Define as regras; salvar revalida todos os arquivos abertos |
+| `.syn` | Anotações | Validação em tempo real |
+| `.syno` | Ontologia | Validação e fonte das definições de conceito |
+| `.synr` | Revisão | Anotações com blocos `# REVISION` produzidos pelo `synesis-coder` |
+
+O tipo `.synr` é o formato intermediário do pipeline ACT (ver [synesis-coder](../howto/synesis_coder.qmd#sec-act)). Como é um `.syn` acrescido de blocos de revisão, recebe o mesmo tratamento de diagnóstico e renomeação — o pesquisador revisa as sugestões dentro do editor, com validação ativa, antes de consolidá-las.
+
 
 ## Estratégias de performance {#sec-performance}
 
@@ -327,6 +345,32 @@ Quando o contexto muda (ex: o template foi editado e salvo), todos os arquivos a
 ### 4. Fingerprint de workspace
 
 Em vez de calcular SHA1 de todos os arquivos do projeto, o `WorkspaceCache` usa uma fingerprint simples: `{contagem_de_arquivos}:{mtime_mais_recente}`. Isso é suficiente para detectar mudanças na maioria dos casos e custa microsegundos em vez de milissegundos.
+
+
+## O caso da ontologia compartilhada {#sec-shared-ontology}
+
+A introdução de `INCLUDE SHARED ONTOLOGY` — uma ontologia que vive **fora** da pasta do projeto — quebrou duas premissas que o LSP assumia. Vale documentar porque a solução envolveu reverter uma decisão arquitetural anterior.
+
+### A premissa quebrada: projetos são auto-contidos
+
+Os observadores de arquivo (`FileSystemWatcher`) haviam sido **removidos** do projeto por serem redundantes: `onDidSaveTextDocument` já disparava a revalidação, e tudo que um projeto lia estava dentro de sua própria pasta.
+
+`INCLUDE SHARED ONTOLOGY` invalida essa premissa. O evento de salvamento só dispara para **documentos abertos no editor**. Uma ontologia compartilhada alterada por `git pull`, por outra janela do VS Code ou por outro processo nunca disparava nada — o projeto que a inclui ficava obsoleto **em silêncio**.
+
+A extensão voltou a instalar observadores, agora escopados: um por alvo externo, usando o índice reverso `alvo → projetos` que o servidor devolve. Quando um alvo muda, apenas os projetos que o declaram são recarregados, com *debounce* de 300ms — um `git pull` pode reescrever o arquivo várias vezes seguidas.
+
+:::{.callout-note}
+## Reversão consciente, não regressão
+A remoção original dos observadores estava correta **para a premissa da época**. O que mudou foi a premissa, não a qualidade da decisão. A reintrodução é escopada aos alvos externos, não um observador amplo sobre todo o workspace — mantém-se o ganho de performance original onde ele ainda se aplica.
+:::
+
+### A premissa quebrada: tudo que importa está sob a raiz do workspace
+
+Havia um segundo defeito, mais sutil, que o observador sozinho **não** resolveria. A fingerprint do workspace (@sec-performance) percorria apenas a raiz do workspace. A ontologia compartilhada, morando fora dela, simplesmente não entrava no cálculo — editá-la não invalidava o cache.
+
+O resultado seria um observador inútil: ele dispararia o recarregamento, que consultaria o cache, que devolveria o dado velho. **Corrigir a fingerprint é pré-requisito do observador**, não um refinamento posterior.
+
+Hoje os alvos de `INCLUDE SHARED` entram na fingerprint, e uma edição puramente externa chega corretamente ao contexto do servidor.
 
 
 ## Ciclo de vida de um arquivo {#sec-ciclo}
@@ -407,6 +451,16 @@ synesis-lsp (servidor)
 ```
 
 O `lsp_adapter.py` foi colocado dentro do compilador (e não no LSP) porque precisa acessar internamente o parser, o transformer e o validador — componentes que não fazem parte da API pública do compilador. Ele funciona como uma **fachada interna**: expõe `validate_single_file()` como uma operação atômica que esconde toda a complexidade do pipeline de 8 estágios.
+
+### A fronteira do agregado multiprojeto
+
+Há uma capacidade do compilador que o LSP deliberadamente **não** usa: o passo de linkagem entre projetos (`synesis compile p1.synp p2.synp`, ver [Ligar Projetos](../howto/ligar_projetos.qmd)).
+
+O servidor sempre trabalha com projetos **isolados**. Se ele mantivesse o agregado em memória, cada gravação num `.syn` recompilaria o estudo inteiro — exatamente o custo que a arquitetura de dois modos (@sec-modos) existe para evitar. Um estudo com seis corpora grandes ficaria inutilizável no editor.
+
+O efeito prático é que as arestas resolvidas não aparecem no editor. Isso é aceitável porque elas são um **resultado de análise**, produzido na exportação — não algo que se consulta enquanto se anota. Um projeto que declara `REFERS TO` recebe, na compilação isolada, apenas uma nota informativa (`SYNESIS_I080`), nunca um erro ou aviso recorrente.
+
+A ontologia compartilhada é o caso oposto e vale contrastar: ela **é** carregada pelo servidor, com autocompletar e validação de códigos, porque faz parte do contexto de edição de cada projeto individualmente (@sec-shared-ontology).
 
 ::: {.callout-tip}
 ## Para contribuidores

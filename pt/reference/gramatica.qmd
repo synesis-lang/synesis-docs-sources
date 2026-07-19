@@ -100,11 +100,22 @@ KW_DATE.5: /date/i
 KW_SCALE.5: /scale/i
 KW_ENUMERATED.5: /enumerated/i
 KW_ORDERED.5: /ordered/i
-KW_TOPIC.5: /topic/i
+KW_TOPIC.5: /topic(?![\p{L}\p{N}_-])/i
 KW_GUIDELINES.5: /guidelines/i
+KW_SHARED.5: /shared(?![\p{L}\p{N}_-])/i
+KW_IDENTIFIES.5: /identifies(?![\p{L}\p{N}_-])/i
+KW_REFERS.5: /refers(?![\p{L}\p{N}_-])/i
+KW_TO.5: /to(?![\p{L}\p{N}_-])/i
+KW_ON.5: /on(?![\p{L}\p{N}_-])/i
 ```
 
 A prioridade `.5` garante que keywords tenham preferência sobre `IDENTIFIER` e `FIELD_NAME` (prioridade `.1`) quando há ambiguidade. Isso é crítico — sem essa prioridade, `SOURCE` seria reconhecido como um identificador genérico em vez de uma keyword.
+
+### Lookahead de fronteira
+
+Algumas keywords trazem o sufixo `(?![\p{L}\p{N}_-])` — um *negative lookahead* que impede o token de casar como **prefixo de um nome maior**. Sem ele, um campo chamado `topic_principal` teria seu início consumido pela keyword `TOPIC`, e o restante (`_principal`) viraria lixo sintático.
+
+O cuidado é especialmente necessário nas palavras curtas introduzidas pela ligação entre projetos: `TO` e `ON` casariam dentro de nomes comuns como `to_do`, `total`, `on_hold` ou `onset`. Com o lookahead, `FIELD total TYPE TEXT` continua sendo um nome de campo, não a keyword `TO` seguida de `tal`.
 
 
 ## Bloco PROJECT {#sec-project}
@@ -127,7 +138,7 @@ Aceita um nome (`IDENTIFIER`), seguido de declarações internas: includes, meta
 ```lark
 include_stmt: KW_TEMPLATE STRING NEWLINE
             | KW_INCLUDE include_type STRING NEWLINE
-include_type: KW_BIBLIOGRAPHY | KW_ANNOTATIONS | KW_ONTOLOGY
+include_type: KW_SHARED? (KW_BIBLIOGRAPHY | KW_ANNOTATIONS | KW_ONTOLOGY)
 ```
 
 O TEMPLATE é declarado diretamente; os demais arquivos usam `INCLUDE tipo "caminho"`.
@@ -139,8 +150,17 @@ PROJECT demo
     INCLUDE BIBLIOGRAPHY "references.bib"
     INCLUDE ANNOTATIONS "annotations.syn"
     INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
 END PROJECT
 ```
+
+::: {.callout-note}
+## Por que a gramática é permissiva com `SHARED`
+
+`KW_SHARED?` aparece antes de **qualquer** tipo de inclusão, embora `SHARED` só seja válido para `ONTOLOGY`. A restrição é **semântica**, não sintática: `INCLUDE SHARED BIBLIOGRAPHY "..."` faz o parse normalmente e depois recebe o erro 84, com mensagem explicando por que a exceção existe apenas para ontologia.
+
+Codificar a restrição na gramática produziria um "token inesperado" cru — sintaticamente correto, mas pedagogicamente inútil. A escolha é deliberada: **erro de gramática não ensina; erro semântico sim.**
+:::
 
 ### Metadata e Description
 
@@ -281,6 +301,8 @@ field_list: (requirement_clause | NEWLINE)*
 requirement_clause: KW_REQUIRED bundle_modifier? field_names
                   | KW_OPTIONAL field_names
                   | KW_FORBIDDEN field_names
+                  | KW_REQUIRED field_key KW_ON KW_BIBLIOGRAPHY
+                  | KW_OPTIONAL field_key KW_ON KW_BIBLIOGRAPHY
 
 bundle_modifier: KW_BUNDLE
 field_names: field_key ("," field_key)*
@@ -294,6 +316,16 @@ ITEM FIELDS
     REQUIRED citation, note, code
 END ITEM FIELDS
 ```
+
+O sufixo `ON BIBLIOGRAPHY` declara que o valor do campo vem da entrada `.bib` do SOURCE, não do texto do documento:
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+Note que as duas alternativas com `ON BIBLIOGRAPHY` usam `field_key` (singular), não `field_names` (lista). Isso é deliberado: numa lista, `REQUIRED a, b, c ON BIBLIOGRAPHY` seria ambíguo — o sufixo se aplicaria a `c` apenas, ou aos três? A gramática resolve a ambiguidade eliminando o caso: **lista + `ON BIBLIOGRAPHY` é erro de sintaxe.**
 
 ### Definição de campo individual
 
@@ -317,6 +349,10 @@ field_props: KW_SCOPE scope_type
            | KW_VALUES value_list KW_END KW_VALUES
            | KW_RELATIONS relation_list KW_END KW_RELATIONS
            | guidelines_block
+           | KW_IDENTIFIES entity_label
+           | KW_REFERS KW_TO entity_label
+
+entity_label: FIELD_NAME
 ```
 
 Cada tipo de campo usa propriedades diferentes:
@@ -331,6 +367,26 @@ Cada tipo de campo usa propriedades diferentes:
 | `ENUMERATED` | SCOPE, VALUES, DESCRIPTION |
 | `TOPIC` | SCOPE, DESCRIPTION |
 | `DATE` | SCOPE, DESCRIPTION |
+
+### Modificadores de ligação
+
+`IDENTIFIES` e `REFERS TO` declaram a participação do campo na ligação entre projetos independentes:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher      # chave primária da entidade
+END FIELD
+
+FIELD autor_id TYPE TEXT
+    SCOPE SOURCE
+    REFERS TO researcher       # chave estrangeira para a entidade
+END FIELD
+```
+
+O rótulo da entidade (`entity_label`) reusa o token `FIELD_NAME` — mesma classe léxica de um nome de campo. Como qualquer propriedade em `field_props`, os dois modificadores são aceitos pela gramática em campos de **qualquer** escopo; a restrição a `SCOPE SOURCE` é semântica (erro 78), pela mesma razão pedagógica do `SHARED`.
+
+Ver [Ligação entre Projetos](guia_referencia.qmd) no Guia de Referência para a semântica completa.
 
 ### VALUES e RELATIONS
 

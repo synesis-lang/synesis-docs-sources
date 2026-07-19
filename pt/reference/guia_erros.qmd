@@ -12,8 +12,10 @@ Cada erro mostra: o que aconteceu, por que é problema, e como corrigir — com 
 
 - **(ERRO)** — impede a compilação e bloqueia a exportação
 - **(AVISO)** — algo incompleto ou incomum; não bloqueia, mas deve ser investigado
+- **(INFO)** — informação de contexto; não indica defeito algum. Usado quando o compilador precisa registrar uma condição esperada, como uma referência entre projetos que só se resolve na linkagem (@sec-erro-80)
 - Erros marcados com **[implementado]** já são detectados pelo compilador; **[pendente]** ainda não
 - Erros de template (39–60, 69) são problemas na definição das regras do projeto, não nas anotações
+- Erros de caminho (73–76) tratam da resolução de arquivos declarados no `.synp`; erros de ligação (77–84) tratam da conexão entre projetos independentes
 
 
 ## Formato das mensagens
@@ -1379,6 +1381,413 @@ Corrija a data incorreta. O formato esperado é `AAAA-MM-DD`.
 :::
 
 
+# Arquivos e Caminhos {#sec-caminhos}
+
+Erros na resolução dos caminhos declarados em `TEMPLATE` e `INCLUDE`. Todos os caminhos são resolvidos **relativos à pasta onde está o arquivo `.synp`**.
+
+::: {.callout-note}
+## Por que o compilador restringe caminhos
+Arquivos `.synp` e `.syn` circulam entre pesquisadores e são gerados automaticamente pelo `synesis-coder`. Um caminho como `"../../documentos/pessoais.txt"` faria o compilador ler e incorporar ao projeto um arquivo que o pesquisador nunca pretendeu publicar — e qualquer exportador o levaria adiante. Por isso o compilador só lê arquivos contidos na pasta do projeto, com uma única exceção declarada explicitamente: `INCLUDE SHARED ONTOLOGY` (ver @sec-erro-84).
+:::
+
+
+## Erro 73 — Arquivo de anotações não encontrado (ERRO) {#sec-erro-73}
+
+O caminho declarado em `INCLUDE ANNOTATIONS` não existe no disco.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT Estudo_Aceitacao
+    TEMPLATE "modelo.synt"
+    INCLUDE BIBLIOGRAPHY "referencias.bib"
+    INCLUDE ANNOTATIONS "entrevistas/entrevista_07.syn"
+END PROJECT
+```
+
+Mas o arquivo `entrevistas/entrevista_07.syn` não existe.
+
+### Como corrigir
+
+Verifique o nome e o caminho, que deve ser relativo à pasta do `.synp`. Um `INCLUDE` quebrado não impede mais o parsing dos demais arquivos: o compilador reporta o arquivo ausente e segue processando o resto do projeto.
+:::
+
+
+## Erro 74 — Arquivo de ontologia não encontrado (ERRO) {#sec-erro-74}
+
+O caminho declarado em `INCLUDE ONTOLOGY` não existe no disco.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT Estudo_Aceitacao
+    TEMPLATE "modelo.synt"
+    INCLUDE BIBLIOGRAPHY "referencias.bib"
+    INCLUDE ANNOTATIONS "anotacoes.syn"
+    INCLUDE ONTOLOGY "ontologia/conceitos.syno"
+END PROJECT
+```
+
+Mas `ontologia/conceitos.syno` não existe.
+
+### Como corrigir
+
+Verifique o nome e o caminho. Sem o arquivo de ontologia, os códigos usados nas anotações não podem ser validados — as anotações continuam sendo lidas, mas sem validação conceitual.
+:::
+
+
+## Erro 75 — Caminho aponta para fora do projeto (ERRO) {#sec-erro-75}
+
+Um caminho em `TEMPLATE` ou `INCLUDE` escapa da pasta do projeto.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT Estudo_Aceitacao
+    TEMPLATE "modelo.synt"
+    INCLUDE BIBLIOGRAPHY "referencias.bib"
+    INCLUDE ANNOTATIONS "../outro_projeto/anotacoes.syn"
+END PROJECT
+```
+
+O mesmo vale para padrões glob que escapem — `INCLUDE ANNOTATIONS "../../*.syn"` é recusado com o mesmo erro.
+
+### Como corrigir
+
+Mova o arquivo para dentro da pasta do projeto (ou de uma subpasta) e ajuste o caminho. Subpastas são sempre válidas: `INCLUDE ANNOTATIONS "entrevistas/*.syn"`.
+
+Se o objetivo é **compartilhar uma ontologia entre vários projetos**, use `INCLUDE SHARED ONTOLOGY` — a única forma autorizada de apontar para fora da pasta do projeto. Ver @sec-ligacao.
+:::
+
+
+## Erro 76 — Arquivo incluído não pode ser lido (ERRO) {#sec-erro-76}
+
+O arquivo existe, mas o compilador não conseguiu lê-lo ou interpretá-lo.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Três situações produzem este erro:
+
+1. **Codificação inválida** — o arquivo não está em UTF-8 (por exemplo, salvo em ANSI/Latin-1 com acentos)
+2. **Erro de sintaxe** — o arquivo `.syn` ou `.syno` incluído tem sintaxe inválida
+3. **Arquivo grande demais** — acima de 32 MB, recusado para não travar o editor
+
+```synesis
+# anotacoes.syn com bloco malformado
+ITEM @silva2024
+    citation: Trecho da entrevista.
+# falta o END ITEM
+```
+
+### Como corrigir
+
+A mensagem indica qual arquivo e qual foi a causa. Salve o arquivo em UTF-8, corrija a sintaxe apontada, ou divida um arquivo excessivamente grande em vários menores.
+
+::: {.callout-tip}
+## Por que o limite de 32 MB
+O servidor LSP é um processo de longa duração dentro do editor. Um arquivo de vários gigabytes — por engano ou gerado automaticamente — travaria o VS Code inteiro. O limite protege a sessão de edição.
+:::
+:::
+
+
+# Ligação entre Projetos {#sec-ligacao}
+
+Erros dos modificadores `IDENTIFIES` / `REFERS TO` e do passo de linkagem multiprojeto. Ver o guia [Ligar Projetos Independentes](../howto/ligar_projetos.qmd) para o fluxo completo.
+
+::: {.callout-important}
+## Dois momentos distintos
+Os erros **77, 78, 79 e 84** e o informativo **80** aparecem na compilação **isolada** de um projeto (`synesis compile projeto.synp`). Os erros **81, 82** e o aviso **83** só aparecem no **passo de linkagem**, quando dois ou mais projetos são compilados juntos (`synesis compile p1.synp p2.synp`).
+:::
+
+
+## Erro 77 — Valor de identidade duplicado (ERRO) {#sec-erro-77}
+
+Dois SOURCEs do mesmo projeto têm o mesmo valor num campo `IDENTIFIES`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Template declarando a chave primária da entidade:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher
+END FIELD
+```
+
+Anotação com o mesmo valor em dois SOURCEs:
+
+```synesis
+SOURCE @curriculo_maria
+    lattes_id: 3474000000000167
+END SOURCE
+
+SOURCE @curriculo_maria_2020
+    lattes_id: 3474000000000167
+END SOURCE
+```
+
+### Como corrigir
+
+`IDENTIFIES` declara uma **chave primária**: cada valor deve identificar um único SOURCE. Se os dois blocos são a mesma entidade, unifique-os num só SOURCE. Se são entidades distintas, corrija o valor duplicado.
+
+A comparação é por igualdade exata após remover espaços nas pontas — sem normalização de maiúsculas/minúsculas.
+:::
+
+
+## Erro 78 — Modificador de ligação fora de SOURCE (ERRO) {#sec-erro-78}
+
+`IDENTIFIES` ou `REFERS TO` usado em campo que não é `SCOPE SOURCE`.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+FIELD autor_citado TYPE TEXT
+    SCOPE ITEM
+    REFERS TO researcher
+END FIELD
+```
+
+### Como corrigir
+
+A ligação entre projetos opera sobre **SOURCEs** — as unidades de coleta —, não sobre ITEMs ou conceitos da ontologia. Mova o modificador para um campo `SCOPE SOURCE`, ou remova-o:
+
+```synesis
+FIELD autor_citado TYPE TEXT
+    SCOPE SOURCE
+    REFERS TO researcher
+END FIELD
+```
+:::
+
+
+## Erro 79 — Valor obrigatório ausente na bibliografia (ERRO) {#sec-erro-79}
+
+Um campo declarado `REQUIRED ... ON BIBLIOGRAPHY` não tem valor correspondente na entrada `.bib` do SOURCE.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+Template exigindo que o valor venha do `.bib`, não do texto:
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+Entrada `.bib` sem o campo:
+
+```bibtex
+@misc{curriculo_maria,
+    author = {Silva, Maria},
+    title  = {Currículo Lattes},
+    year   = {2026}
+    % lattes_id ausente
+}
+```
+
+### Como corrigir
+
+Adicione o campo à entrada `.bib`:
+
+```bibtex
+@misc{curriculo_maria,
+    author   = {Silva, Maria},
+    title    = {Currículo Lattes},
+    year     = {2026},
+    lattes_id = {3474000000000167}
+}
+```
+
+Ou remova a exigência `ON BIBLIOGRAPHY` do template.
+
+::: {.callout-note}
+## Por que `ON BIBLIOGRAPHY`
+Alguns identificadores (ID Lattes, ORCID, CNPJ) são metadados da fonte, não conteúdo extraível do texto do documento. Declarar `ON BIBLIOGRAPHY` diz ao compilador que o valor vive na entrada `.bib` — exigi-lo no bloco SOURCE mentiria sobre a natureza do dado. Campos assim são excluídos da verificação do erro 21 (campo obrigatório ausente no SOURCE).
+:::
+:::
+
+
+## Informativo 80 — Referência externa declarada (INFO) {#sec-erro-80}
+
+O projeto declara `REFERS TO` para uma entidade que não existe nele. **Não é erro nem aviso.**
+
+::: {.panel-tabset}
+### Quando aparece
+
+```synesis
+FIELD autor_id TYPE TEXT
+    SCOPE SOURCE
+    REFERS TO researcher
+END FIELD
+```
+
+Ao compilar este projeto sozinho:
+
+```
+INFO  abstracts.synp
+  Este projeto referencia a entidade externa `researcher` (`REFERS TO` em `autor_id`).
+  As ligacoes nao estao materializadas neste artefato. Para resolve-las,
+  compile este projeto junto com o projeto que declara `IDENTIFIES researcher`.
+```
+
+### O que fazer
+
+Nada — é o comportamento esperado. Uma referência externa só se resolve no passo de linkagem:
+
+```bash
+synesis compile lattes.synp abstracts.synp
+```
+
+A mensagem é emitida **uma vez por entidade**, em nível INFO, justamente para documentar que há ligações a materializar sem poluir o painel de problemas com um aviso recorrente.
+:::
+
+
+## Erro 81 — Entidade com dono duplicado (ERRO) {#sec-erro-81}
+
+Dois projetos declaram `IDENTIFIES` do mesmo rótulo de entidade. Aparece apenas no passo de linkagem.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+`lattes.synt`:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher
+END FIELD
+```
+
+`orcid.synt`:
+
+```synesis
+FIELD orcid TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher
+END FIELD
+```
+
+### Como corrigir
+
+Cada rótulo de entidade tem **um único corpus proprietário** — é a chave primária. Se são esquemas de identificação distintos da mesma pessoa (Lattes e ORCID), o corpus proprietário mantém o `IDENTIFIES` e o outro passa a apontar para ele:
+
+```synesis
+# orcid.synt — passa a referenciar, não a identificar
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    REFERS TO researcher
+END FIELD
+```
+:::
+
+
+## Erro 82 — Tipos divergentes na ligação (ERRO) {#sec-erro-82}
+
+Campos que participam da mesma entidade têm `TYPE` diferente. Aparece apenas no passo de linkagem.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+`lattes.synt`:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher
+END FIELD
+```
+
+`abstracts.synt`:
+
+```synesis
+FIELD autor_id TYPE NUMBER
+    SCOPE SOURCE
+    REFERS TO researcher
+END FIELD
+```
+
+### Como corrigir
+
+Todos os campos da mesma entidade — o `IDENTIFIES` e todos os `REFERS TO` — devem declarar o mesmo `TYPE`. A divergência indica que os dois lados não modelam a mesma coisa. Alinhe os tipos nos templates.
+
+Este é um **erro duro**: a linkagem não prossegue, porque comparar valores de tipos distintos produziria casamentos arbitrários.
+:::
+
+
+## Aviso 83 — Referência órfã (AVISO) {#sec-erro-83}
+
+Um valor de `REFERS TO` não casa com nenhum `IDENTIFIES`. Aparece apenas no passo de linkagem.
+
+::: {.panel-tabset}
+### Quando aparece
+
+```
+AVISO  abstracts.synp
+  O valor `3474000000000999` (`REFERS TO researcher` em `abstracts`) nao tem
+  `IDENTIFIES researcher` correspondente — e uma referencia orfa.
+  Pode ser esperado (ex. autor externo sem curriculo no corpus). Nenhum no e criado.
+```
+
+Órfãos são frequentemente **legítimos**: um artigo citando um autor que não tem currículo no corpus é exatamente isso. Por isso é aviso, não erro.
+
+### Quase-casamento
+
+Quando o valor casaria apenas sob normalização de maiúsculas/minúsculas, o aviso é enriquecido:
+
+```
+AVISO  abstracts.synp
+  O valor `orcid-0000-1234` (`REFERS TO researcher` em `abstracts`) nao tem
+  `IDENTIFIES researcher` correspondente — e uma referencia orfa.
+  Casamento proximo: `ORCID-0000-1234` difere apenas em caixa/invisiveis.
+  Se sao a mesma entidade, canonize o valor na origem (.bib/SOURCE) — o
+  compilador nao normaliza automaticamente (evita fundir entidades distintas).
+```
+
+### Como corrigir
+
+Se o órfão é esperado, nada a fazer. Se o quase-casamento indica a mesma entidade, **corrija o valor na origem** (no `.bib` ou no bloco SOURCE).
+
+::: {.callout-important}
+## Por que o compilador não normaliza sozinho
+Normalizar caixa automaticamente fundiria entidades que a fonte considera distintas — dois códigos de projeto `AB-100` e `ab-100` podem ser deliberadamente diferentes. O compilador detecta e sugere, mas **nunca funde**. A decisão é do pesquisador, registrada na fonte.
+:::
+:::
+
+
+## Erro 84 — `SHARED` usado fora de ONTOLOGY (ERRO) {#sec-erro-84}
+
+A palavra `SHARED` foi aplicada a um `INCLUDE` que não é de ontologia.
+
+::: {.panel-tabset}
+### Exemplo que causa o erro
+
+```synesis
+PROJECT Estudo_Aceitacao
+    TEMPLATE "modelo.synt"
+    INCLUDE SHARED BIBLIOGRAPHY "../compartilhado/referencias.bib"
+END PROJECT
+```
+
+### Como corrigir
+
+`INCLUDE SHARED` só é válido para `ONTOLOGY`:
+
+```synesis
+INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
+```
+
+A palavra `SHARED` autoriza um alvo **fora** da pasta do projeto. Essa exceção existe para compartilhar o **vocabulário conceitual** entre projetos do mesmo estudo — deixá-la valer para bibliografia ou anotações abriria a contenção para casos que a motivação não pediu. Remova o `SHARED` e mova o arquivo para dentro da pasta do projeto.
+:::
+
+
 # Índice Rápido {#sec-indice}
 
 | Erro | Nome | Nível | Seção |
@@ -1440,6 +1849,18 @@ Corrija a data incorreta. O formato esperado é `AAAA-MM-DD`.
 | 69 | DuplicateFieldName | ERRO | [Template](#sec-erro-69) |
 | 70 | DuplicateSourceBibref | ERRO | [Bibliografia](#sec-erro-70) |
 | 71 | DuplicateOntologyDescription | AVISO | [Ontologia](#sec-erro-71) |
+| 73 | MissingAnnotationsFile | ERRO | [Caminhos](#sec-erro-73) |
+| 74 | MissingOntologyFile | ERRO | [Caminhos](#sec-erro-74) |
+| 75 | IncludePathEscapesProject | ERRO | [Caminhos](#sec-erro-75) |
+| 76 | UnreadableIncludedFile | ERRO | [Caminhos](#sec-erro-76) |
+| 77 | DuplicateIdentityValue | ERRO | [Ligação](#sec-erro-77) |
+| 78 | LinkageModifierOutsideSource | ERRO | [Ligação](#sec-erro-78) |
+| 79 | MissingBibliographyValue | ERRO | [Ligação](#sec-erro-79) |
+| 80 | ExternalReferenceDeclared | INFO | [Ligação](#sec-erro-80) |
+| 81 | DuplicateEntityOwner | ERRO | [Ligação](#sec-erro-81) |
+| 82 | TypeMismatchInLinkage | ERRO | [Ligação](#sec-erro-82) |
+| 83 | OrphanReference | AVISO | [Ligação](#sec-erro-83) |
+| 84 | SharedOnlyForOntology | ERRO | [Ligação](#sec-erro-84) |
 
 ::: {.callout-note}
 ## Erros de sintaxe (43–46, 52–53, 60)

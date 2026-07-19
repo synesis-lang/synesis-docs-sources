@@ -52,6 +52,8 @@ website:
             text: Como Definir uma Ontologia
           - href: howto/criar_chains.qmd
             text: Como Criar e Validar Chains
+          - href: howto/ligar_projetos.qmd
+            text: Como Ligar Projetos Independentes
           - href: howto/exportar_neo4j.qmd
             text: Exportar para Neo4j
       - text: "Reference"
@@ -64,6 +66,8 @@ website:
             text: Guia de Erros
           - href: reference/synesis_load.qmd
             text: API Synesis
+          - href: reference/synesis_graph.qmd
+            text: synesis-graph
           - href: reference/fluxo_compilacao.qmd
             text: O fluxo de compilação
       - text: "Explanation"

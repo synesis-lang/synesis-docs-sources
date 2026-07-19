@@ -2,6 +2,22 @@
 
 **Ideias:** Propostas de especificação de Extensões da Linguagem
 
+::: {.callout-important}
+## O que está neste documento
+Este é um documento de **propostas** — especificações desenhadas, mas ainda **não implementadas**. Nada aqui está disponível no compilador atual.
+
+Para o que já funciona, veja a [Referência da Linguagem](../reference/guia_referencia.qmd) e a [Gramática](../reference/gramatica.qmd).
+:::
+
+::: {.callout-tip}
+## Propostas que saíram do papel
+Duas necessidades tratadas historicamente como "ideias" já foram **implementadas** e têm documentação própria:
+
+- **Agregação de projetos paralelos** — a proposta original (um bloco `STUDY` / *master project* que tornaria o agregado uma unidade de compilação) foi **descartada** por sobrecarregar o editor. A solução adotada foi outra: projetos independentes ligados por `IDENTIFIES` / `REFERS TO`, resolvidos num passo de linkagem na CLI. Ver [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd).
+- **Vocabulário compartilhado entre projetos** — implementado como `INCLUDE SHARED ONTOLOGY`. Ver [Referência da Linguagem](../reference/guia_referencia.qmd).
+
+O registro é útil: a proposta descartada e a solução adotada resolvem a mesma necessidade, mas a segunda preserva a autonomia de compilação que a primeira sacrificava.
+:::
 
 ---
 

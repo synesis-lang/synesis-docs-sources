@@ -88,6 +88,9 @@ INCLUDE BIBLIOGRAPHY "filename.bib"
 INCLUDE ANNOTATIONS "filename.syn"
 INCLUDE ONTOLOGY "filename.syno"
 
+# Ontologia compartilhada entre projetos — alvo FORA da pasta do projeto
+[INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"]
+
 # Colchetes indicam que todo o bloco METADATA é opcional
 [METADATA
     version: 1.0
@@ -112,8 +115,28 @@ END PROJECT
 - **INCLUDE BIBLIOGRAPHY**: Caminho para arquivo `.bib` com referências
 - **INCLUDE ANNOTATIONS**: Caminho para arquivo(s) `.syn` com anotações
 - **INCLUDE ONTOLOGY**: Caminho para arquivo(s) `.syno` com definições ontológicas
+- **INCLUDE SHARED ONTOLOGY**: Ontologia compartilhada entre projetos, localizada **fora** da pasta do projeto
 - **METADATA**: Bloco opcional com metadados do projeto
 - **DESCRIPTION**: Bloco opcional com descrição livre do projeto
+
+Todos os caminhos são resolvidos **relativos à pasta onde está o arquivo `.synp`**. Por segurança, o compilador só lê arquivos contidos nessa pasta ou em suas subpastas — um caminho que escape produz o erro 75.
+
+### Ontologia compartilhada
+
+`INCLUDE SHARED ONTOLOGY` é a **única** exceção à regra de contenção. Ela permite que vários projetos de um mesmo estudo usem um único vocabulário conceitual sem duplicá-lo:
+
+```synesis
+INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
+INCLUDE SHARED ONTOLOGY "Z:/estudo/ontologia.syno"
+INCLUDE SHARED ONTOLOGY "\\servidor\equipe\ontologia.syno"
+```
+
+A autorização mora na **declaração** — a palavra `SHARED`, versionada e auditável no `.synp` — e não na geometria do caminho. É por isso que aceita rede, outro drive ou `..`: nenhuma âncora de pasta conseguiria autorizar esses casos.
+
+::: {.callout-warning}
+## `SHARED` vale apenas para ONTOLOGY
+`INCLUDE SHARED BIBLIOGRAPHY` ou `INCLUDE SHARED ANNOTATIONS` produzem o erro 84. A exceção existe para compartilhar vocabulário conceitual; estendê-la a outros tipos abriria a contenção para casos que a motivação não pediu.
+:::
 
 ---
 
@@ -234,7 +257,11 @@ A declaração FIELD especifica o tipo, escopo e restrições de cada campo.
 FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE | DATE]
     SCOPE [SOURCE | ITEM | ONTOLOGY]
     [DESCRIPTION description text]
-    
+
+    # Modificadores de ligação entre projetos — exclusivos de SCOPE SOURCE
+    [IDENTIFIES entity_label]    # chave primária da entidade
+    [REFERS TO entity_label]     # chave estrangeira para a entidade
+
     # Propriedade exclusiva para TYPE CHAIN
     [ARITY operator number] 
     [RELATIONS
@@ -630,6 +657,127 @@ END ONTOLOGY
 
 ---
 
+## Ligação entre Projetos (IDENTIFIES / REFERS TO)
+
+Permite triangular corpora heterogêneos — currículos, abstracts, perfis institucionais — **sem** transformá-los numa única unidade de compilação. Cada projeto continua independente, rápido e autônomo; a ligação é declarada no template e resolvida num passo explícito na CLI.
+
+O modelo é o do **linker de C/C++**: cada projeto compila isolado e expõe suas referências externas não resolvidas; um passo de linkagem (`synesis compile p1.synp p2.synp`) resolve as referências entre eles e produz o agregado.
+
+### Os dois modificadores
+
+| Modificador | Papel relacional | Semântica |
+|-------------|------------------|-----------|
+| `IDENTIFIES <entidade>` | Chave primária (PK) | O campo **identifica** a entidade. Cada valor corresponde a um único SOURCE. Cria o nó. |
+| `REFERS TO <entidade>` | Chave estrangeira (FK) | O campo **aponta** para a entidade. Pode repetir. Não cria nó. |
+
+Ambos são exclusivos de campos `SCOPE SOURCE` — a ligação opera sobre SOURCEs, as unidades de coleta. Usá-los em `SCOPE ITEM` ou `SCOPE ONTOLOGY` produz o erro 78.
+
+### Sintaxe
+
+O projeto **proprietário** da entidade declara a chave primária:
+
+```synesis
+# lattes.synt — o corpus de currículos é dono da entidade "researcher"
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Identificador Lattes do pesquisador
+    IDENTIFIES researcher
+END FIELD
+```
+
+Os projetos **periféricos** apontam para ela:
+
+```synesis
+# abstracts.synt — cada artigo aponta para o pesquisador que o escreveu
+FIELD autor_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Identificador Lattes do autor
+    REFERS TO researcher
+END FIELD
+```
+
+Note que o projeto periférico **não nomeia** o projeto proprietário — apenas o rótulo da entidade. Adicionar um terceiro corpus ao estudo não exige editar nenhum template existente.
+
+### Origem do valor: `ON BIBLIOGRAPHY`
+
+Alguns identificadores são metadados da fonte, não conteúdo extraível do texto. `ON BIBLIOGRAPHY` declara que o valor vive na entrada `.bib` do SOURCE:
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+    OPTIONAL orcid ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+```bibtex
+@misc{curriculo_maria,
+    author    = {Silva, Maria},
+    title     = {Currículo Lattes},
+    year      = {2026},
+    lattes_id = {3474000000000167}
+}
+```
+
+O sufixo só é válido em cláusula de **campo único**. `REQUIRED a, b ON BIBLIOGRAPHY` é erro de sintaxe — numa lista, seria ambíguo a qual campo o sufixo se aplica.
+
+Campos `ON BIBLIOGRAPHY` são excluídos da verificação de campo obrigatório do bloco SOURCE (erro 21), já que o valor não vive no bloco. Se o valor faltar no `.bib`, o erro emitido é o 79.
+
+### Compilação isolada
+
+Um projeto com `REFERS TO` compila normalmente sozinho. O compilador emite apenas uma mensagem **INFO** ([informativo 80](guia_erros.qmd#sec-erro-80)) registrando que há ligações a materializar — nunca erro ou aviso:
+
+```bash
+synesis compile abstracts.synp --json abstracts.json
+```
+
+```
+INFO  abstracts.synp
+  Este projeto referencia a entidade externa `researcher` (`REFERS TO` em `autor_id`).
+```
+
+### Passo de linkagem
+
+Com dois ou mais projetos, o comando `compile` resolve as ligações:
+
+```bash
+synesis compile lattes.synp abstracts.synp --json estudo.json --csv saida/
+```
+
+O passo de linkagem:
+
+1. Compila cada membro **isoladamente** (validação completa, independente)
+2. Resolve cada `REFERS TO` contra o `IDENTIFIES` proprietário, por **rótulo de entidade + igualdade exata do valor**
+3. Gera uma aresta por casamento — suporta **n:1** e **n:n** (campo multivalorado gera uma aresta por valor)
+4. Qualifica os bibrefs por alias de membro (`abstracts:@artigo_a`), dissolvendo colisões entre corpora
+
+::: {.callout-important}
+## O compilador nunca funde entidades
+A comparação é por igualdade exata após remover espaços nas pontas — **sem** normalização de maiúsculas/minúsculas. Um valor que casaria apenas sob normalização vira aviso de **quase-casamento** (erro 83), com sugestão de canonizar na origem. Fundir automaticamente uniria entidades que a fonte considera distintas.
+:::
+
+### Saídas do agregado
+
+| Flag | Comportamento no passo de linkagem |
+|------|-------------------------------------|
+| `--json` | Agregado no schema **v3.1** (aditivo): `kind: "link"`, `entity_owners`, seção `links` com arestas e órfãos |
+| `--csv` | Gera `links.csv` com as arestas resolvidas |
+| `--stats` | Estatísticas por membro e agregadas (ontologia compartilhada é deduplicada, não somada) |
+| `--xls` | **Sem exportador** — emite aviso explícito |
+| `--alpaca` | **Sem exportador** — emite aviso explícito |
+
+O schema v3.1 é aditivo: consumidores da v3.0 ignoram as chaves novas.
+
+`--xls` e `--alpaca` não têm exportador no agregado porque `SOURCE FIELDS` diverge entre membros — não existe tabela única coerente. A lacuna é reportada em vez de falhar em silêncio.
+
+::: {.callout-note}
+## O LSP nunca carrega o agregado
+A linkagem é exclusiva da CLI. O servidor LSP sempre trabalha com projetos isolados — é o que mantém a edição rápida mesmo em estudos com muitos corpora grandes.
+:::
+
+Ver o guia [Ligar Projetos Independentes](../howto/ligar_projetos.qmd) para o fluxo completo com exemplos.
+
+---
+
 ## Pipeline de Compilação
 
 ### Etapas Obrigatórias
@@ -726,6 +874,7 @@ Use '->' para conectar elementos:
 | `INCLUDE`     | Inclui arquivo externo |
 | `BIBLIOGRAPHY`| Tipo de inclusão para .bib |
 | `ANNOTATIONS` | Tipo de inclusão para .syn |
+| `SHARED`      | Autoriza alvo fora da pasta do projeto (apenas com `ONTOLOGY`) |
 
 ### Modificadores de Campo
 
@@ -734,6 +883,7 @@ Use '->' para conectar elementos:
 | `REQUIRED`  | Campo obrigatório |
 | `OPTIONAL`  | Campo opcional |
 | `BUNDLE`    | Grupo de campos obrigatórios como unidade |
+| `ON BIBLIOGRAPHY` | O valor do campo vem da entrada `.bib`, não do texto (cláusula de campo único) |
 
 ### Especificadores de Campo
 
@@ -747,6 +897,8 @@ Use '->' para conectar elementos:
 | `VALUES`      | Lista de valores para ORDERED/ENUMERATED |
 | `FORMAT`      | Formato para SCALE |
 | `GUIDELINES`  | Instruções de preenchimento para o anotador ou agente de IA (qualquer tipo) |
+| `IDENTIFIES`  | Declara o campo como chave primária de uma entidade (apenas `SCOPE SOURCE`) |
+| `REFERS TO`   | Declara o campo como chave estrangeira para uma entidade (apenas `SCOPE SOURCE`) |
 
 ---
 
@@ -792,6 +944,8 @@ INCLUDE BIBLIOGRAPHY "filename.bib"   # ← Referências BibTeX
 INCLUDE ANNOTATIONS "filename.syn"    # ← Arquivos de anotação
 INCLUDE ONTOLOGY "filename.syno"      # ← Arquivos de ontologia
 
+[INCLUDE SHARED ONTOLOGY "../path.syno"]  # ← Ontologia fora da pasta do projeto
+
 [METADATA                         # ← Bloco opcional
     version: 1.0
     author: string
@@ -816,6 +970,7 @@ TEMPLATE name                     # ← Nome do template (obrigatório)
 
 SOURCE FIELDS                     # ← Campos válidos em blocos SOURCE
     [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+    [REQUIRED | OPTIONAL] field_name ON BIBLIOGRAPHY  # ← Valor vem do .bib (campo único)
 END SOURCE FIELDS
 
 ITEM FIELDS                       # ← Campos válidos em blocos ITEM
@@ -840,6 +995,9 @@ FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED 
     END VALUES]
 
     [FORMAT [min..max]]           # ← Apenas para SCALE
+
+    [IDENTIFIES entity_label]     # ← Chave primária — apenas SCOPE SOURCE
+    [REFERS TO entity_label]      # ← Chave estrangeira — apenas SCOPE SOURCE
 
     [GUIDELINES                   # ← Qualquer tipo — instrução para anotador ou IA
         Texto livre com instruções de preenchimento.

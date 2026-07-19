@@ -1,0 +1,334 @@
+---
+title: "Como Ligar Projetos Independentes"
+subtitle: "Triangular corpora heterogêneos com IDENTIFIES e REFERS TO"
+---
+
+# Como Ligar Projetos Independentes
+
+Este guia mostra como conectar dois ou mais projetos Synesis que descrevem **as mesmas entidades a partir de fontes diferentes** — currículos e artigos, entrevistas e documentos institucionais, perfis e publicações.
+
+**Você deve usar este guia se:**
+
+- Tem corpora separados que se referem às mesmas pessoas, organizações ou processos
+- Quer cruzar esses corpora sem fundi-los num único projeto gigante
+- Precisa que cada corpus continue compilando rápido e sendo editado de forma independente
+- Quer compartilhar um único vocabulário conceitual entre vários projetos
+
+:::{.callout-important}
+## O que este guia **não** faz
+A ligação não funde projetos nem cria um "projeto mestre". Cada `.synp` continua sendo uma unidade de compilação autônoma. A ligação é resolvida num passo explícito na linha de comando e nunca é carregada pelo editor.
+:::
+
+---
+
+# O problema {#sec-problema}
+
+Imagine um estudo com dois corpora:
+
+- **`lattes.synp`** — currículos de pesquisadores, um SOURCE por pesquisador
+- **`abstracts.synp`** — artigos científicos, um SOURCE por artigo
+
+Cada artigo tem um autor que também tem currículo. Você quer perguntar: *quais conceitos aparecem nos artigos dos pesquisadores que declararam determinada linha de pesquisa no Lattes?*
+
+Três caminhos ruins e por que foram descartados:
+
+| Tentativa | Por que não funciona |
+|---|---|
+| Juntar tudo num `.synp` só | O editor passa a recompilar o estudo inteiro a cada gravação. Com corpora grandes, inviável. |
+| Reconciliar por identidade (`A é B`) | Só modela 1:1. Muitos artigos → um pesquisador **não é** identidade, é relação. |
+| O corpus central nomear cada periférico | Adicionar um terceiro corpus exigiria editar o template do central. O oposto de autônomo. |
+
+A solução adotada é o modelo do **linker de C/C++**: cada projeto compila isolado e expõe suas referências externas não resolvidas; um passo de linkagem resolve as referências entre eles.
+
+---
+
+# Passo 1: declarar quem é dono da entidade {#sec-identifies}
+
+Escolha o corpus **proprietário** da entidade — aquele em que cada valor identifica um registro único. No exemplo, o currículo: cada pesquisador tem exatamente um.
+
+No template `lattes.synt`, marque o campo identificador com `IDENTIFIES`:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Identificador Lattes do pesquisador
+    IDENTIFIES researcher
+END FIELD
+```
+
+`researcher` é o **rótulo da entidade** — um nome que você escolhe. É por ele que os outros projetos vão se referir a essa entidade, sem nunca nomear o arquivo `lattes.synp`.
+
+:::{.callout-note}
+## `IDENTIFIES` é uma chave primária
+Cada valor de `lattes_id` deve corresponder a um único SOURCE. Dois SOURCEs com o mesmo valor produzem o [erro 77](../reference/guia_erros.qmd#sec-erro-77) já na compilação isolada do próprio projeto — antes de qualquer linkagem. Um defeito de dados que antes passaria despercebido vira erro explícito.
+:::
+
+## Quando o identificador vive no `.bib`
+
+Identificadores como ID Lattes, ORCID ou CNPJ costumam ser metadados da fonte, não algo extraído do texto. Nesse caso, declare a origem do valor com `ON BIBLIOGRAPHY`:
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+E o valor passa a ser lido da entrada `.bib`:
+
+```bibtex
+@misc{curriculo_maria,
+    author    = {Silva, Maria},
+    title     = {Currículo Lattes},
+    year      = {2026},
+    lattes_id = {3474000000000167}
+}
+```
+
+Sem `ON BIBLIOGRAPHY`, o compilador exigiria o campo dentro do bloco SOURCE — o que mentiria sobre onde o dado realmente vive.
+
+---
+
+# Passo 2: apontar para a entidade {#sec-refers-to}
+
+Nos templates dos corpora periféricos, declare o campo que aponta para a entidade com `REFERS TO`:
+
+```synesis
+# abstracts.synt
+FIELD autor_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Identificador Lattes do autor do artigo
+    REFERS TO researcher
+END FIELD
+```
+
+Repare no que **não** está aqui: nenhuma menção a `lattes.synp`, nenhum caminho de arquivo, nenhuma ordem de compilação. O projeto periférico conhece apenas o rótulo `researcher`.
+
+É isso que torna o estudo extensível: adicionar um quarto ou quinto corpus não exige tocar em nenhum template existente.
+
+:::{.callout-tip}
+## Cardinalidade livre
+`REFERS TO` pode repetir. Vários artigos apontando para o mesmo pesquisador (**n:1**) é o caso normal. Um campo multivalorado — um artigo com vários autores — gera uma aresta por valor (**n:n**).
+:::
+
+## Os dois modificadores lado a lado
+
+| Modificador | Papel | Cria nó? | Valor repete? |
+|---|---|:---:|:---:|
+| `IDENTIFIES <entidade>` | Chave primária | Sim | Não — unicidade validada |
+| `REFERS TO <entidade>` | Chave estrangeira | Não | Sim |
+
+Ambos só valem em campos `SCOPE SOURCE`. A ligação opera sobre SOURCEs — as unidades de coleta —, não sobre ITEMs ou conceitos. Usá-los noutro escopo produz o [erro 78](../reference/guia_erros.qmd#sec-erro-78).
+
+---
+
+# Passo 3: compartilhar a ontologia (opcional) {#sec-shared}
+
+Para que os corpora usem o **mesmo vocabulário conceitual**, coloque a ontologia numa pasta comum e declare-a com `INCLUDE SHARED ONTOLOGY`:
+
+```
+estudo/
+├── compartilhado/
+│   └── vocabulario.syno
+├── lattes/
+│   ├── lattes.synp
+│   └── lattes.synt
+└── abstracts/
+    ├── abstracts.synp
+    └── abstracts.synt
+```
+
+Em cada `.synp`:
+
+```synesis
+PROJECT Lattes
+    TEMPLATE "lattes.synt"
+    INCLUDE BIBLIOGRAPHY "curriculos.bib"
+    INCLUDE ANNOTATIONS "anotacoes/*.syn"
+    INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
+END PROJECT
+```
+
+A palavra `SHARED` é o que autoriza um alvo **fora** da pasta do projeto. Sem ela, o caminho `../compartilhado/...` seria recusado com o [erro 75](../reference/guia_erros.qmd#sec-erro-75).
+
+A autorização mora na **declaração** — versionada e auditável no `.synp` —, não na geometria do caminho. Por isso funciona também com pastas de rede e outros drives:
+
+```synesis
+INCLUDE SHARED ONTOLOGY "\\servidor\equipe\vocabulario.syno"
+INCLUDE SHARED ONTOLOGY "Z:/estudo/vocabulario.syno"
+```
+
+:::{.callout-warning}
+## `SHARED` só vale para ONTOLOGY
+`INCLUDE SHARED BIBLIOGRAPHY` ou `INCLUDE SHARED ANNOTATIONS` produzem o [erro 84](../reference/guia_erros.qmd#sec-erro-84). A exceção existe para compartilhar vocabulário; estendê-la a outros tipos abriria a contenção sem motivo.
+:::
+
+---
+
+# Passo 4: compilar isolado {#sec-isolado}
+
+Cada projeto continua compilando sozinho, normalmente:
+
+```bash
+synesis compile abstracts.synp --json abstracts.json
+```
+
+O compilador emite uma nota **informativa** registrando que há ligações pendentes:
+
+```
+INFO  abstracts.synp
+  Este projeto referencia a entidade externa `researcher` (`REFERS TO` em `autor_id`).
+  As ligacoes nao estao materializadas neste artefato. Para resolve-las,
+  compile este projeto junto com o projeto que declara `IDENTIFIES researcher`.
+```
+
+Isso é INFO — não erro, não aviso. Uma referência externa não resolvida na compilação isolada é o comportamento **esperado**, não um defeito. A mensagem aparece uma vez por entidade, o suficiente para documentar sem poluir o painel de problemas.
+
+---
+
+# Passo 5: ligar os projetos {#sec-link}
+
+Passe dois ou mais projetos ao mesmo comando `compile`:
+
+```bash
+synesis compile lattes.synp abstracts.synp
+```
+
+```
+SYNESIS v0.8.1  Linkando projetos.
+  compilando lattes …
+  compilando abstracts …
+
+✓ 2 projetos linkados. 7 aresta(s) resolvida(s) ['researcher'].
+```
+
+O que aconteceu:
+
+1. Cada membro foi compilado **isoladamente**, com validação completa
+2. Cada `REFERS TO researcher` foi comparado com o `IDENTIFIES researcher` proprietário
+3. Cada casamento virou uma aresta do agregado
+
+O caminho de linkagem só ativa com **dois ou mais** projetos. Com um só, o comportamento é exatamente o de sempre.
+
+## Exportar o agregado
+
+```bash
+synesis compile lattes.synp abstracts.synp --json estudo.json --csv saida/
+```
+
+| Flag | Resultado |
+|---|---|
+| `--json` | Agregado no schema **v3.1**: `kind: "link"`, `entity_owners`, seção `links` com arestas e órfãos |
+| `--csv` | `links.csv` com as arestas resolvidas |
+| `--stats` | Estatísticas por membro e agregadas |
+| `--xls` | **Não suportado** — emite aviso |
+| `--alpaca` | **Não suportado** — emite aviso |
+
+O JSON v3.1 é **aditivo**: ferramentas que consomem a v3.0 ignoram as chaves novas sem quebrar.
+
+`--xls` e `--alpaca` não têm exportador no agregado porque `SOURCE FIELDS` diverge entre membros — não existe planilha ou dataset único coerente. Em vez de gerar nada em silêncio, a CLI avisa:
+
+```
+aviso: --xls ainda nao e suportado no passo de linkagem (multiplos projetos)
+— nenhum arquivo .xlsx foi gerado. Exporte cada projeto separadamente.
+```
+
+## Estatísticas do agregado
+
+```bash
+synesis compile lattes.synp abstracts.synp --stats
+```
+
+Os contadores de SOURCEs, ITEMs e CHAINs são próprios de cada membro e somam. Já a ontologia, quando compartilhada via `INCLUDE SHARED ONTOLOGY`, é **deduplicada** — somar 74 + 74 conceitos da mesma ontologia daria 148, um número falso. Havendo sobreposição, as linhas aparecem como `Shared ontology` / `Shared codes`.
+
+---
+
+# Entendendo os resultados {#sec-resultados}
+
+## Bibrefs qualificados
+
+No agregado, cada bibref é prefixado pelo alias do projeto de origem:
+
+```
+lattes:@curriculo_maria
+abstracts:@artigo_silva2024
+```
+
+Isso dissolve colisões: dois corpora podem legitimamente ter a mesma chave `.bib` (o mesmo perfil aparecendo em `linkedin.bib` e `posts.bib`, por exemplo) sem que o link step os confunda.
+
+## Referências órfãs
+
+Um valor de `REFERS TO` sem `IDENTIFIES` correspondente vira **aviso**, não erro:
+
+```
+⚠ 1 REFERS TO orfao(s) (valor sem IDENTIFIES correspondente).
+```
+
+Isso é frequentemente legítimo — um artigo citando um autor externo, sem currículo no corpus, é exatamente isso. Nenhum nó é criado para o órfão.
+
+## Quase-casamentos
+
+Quando o valor casaria **apenas** sob normalização de maiúsculas/minúsculas, o aviso é enriquecido:
+
+```
+AVISO  abstracts.synp
+  Casamento proximo: `ORCID-0000-1234` difere apenas em caixa/invisiveis.
+  Se sao a mesma entidade, canonize o valor na origem (.bib/SOURCE) — o
+  compilador nao normaliza automaticamente (evita fundir entidades distintas).
+```
+
+:::{.callout-important}
+## Por que o compilador não normaliza sozinho
+Normalizar caixa automaticamente fundiria entidades que a fonte considera distintas — `AB-100` e `ab-100` podem ser deliberadamente diferentes. O compilador **detecta e sugere, mas nunca funde**. A decisão é do pesquisador e fica registrada na fonte, não escondida numa heurística do compilador.
+:::
+
+---
+
+# Erros comuns {#sec-erros}
+
+## Dois projetos declaram a mesma entidade
+
+```
+Erro 81: A entidade `researcher` e declarada com `IDENTIFIES` por dois projetos
+```
+
+Cada rótulo tem um único corpus proprietário. Se são esquemas de identificação distintos da mesma pessoa (Lattes e ORCID), apenas um mantém o `IDENTIFIES`; o outro passa a `REFERS TO`.
+
+## Tipos divergentes
+
+```
+Erro 82: Os campos que participam da entidade `researcher` tem `TYPE` divergente
+```
+
+Todos os campos de uma entidade — o `IDENTIFIES` e todos os `REFERS TO` — devem ter o mesmo `TYPE`. Divergência indica que os dois lados não modelam a mesma coisa. É erro duro: comparar valores de tipos distintos produziria casamentos arbitrários.
+
+## Valor ausente no `.bib`
+
+```
+Erro 79: Campo `lattes_id` (ON BIBLIOGRAPHY) ausente no .bib de `curriculo_maria`
+```
+
+O campo foi declarado `ON BIBLIOGRAPHY` mas a entrada `.bib` não o tem. Adicione-o à entrada ou remova a exigência do template.
+
+---
+
+# Por que o LSP nunca carrega o agregado {#sec-lsp}
+
+A linkagem é **exclusiva da linha de comando**. O servidor LSP — o que dá autocompletar, diagnósticos e navegação no VS Code — sempre trabalha com projetos isolados.
+
+Essa fronteira é deliberada. Se o editor precisasse manter o agregado em memória, cada gravação num arquivo `.syn` recompilaria o estudo inteiro. Mantendo a linkagem fora do LSP, um estudo com seis corpora grandes edita tão rápido quanto um projeto pequeno.
+
+O preço é que as arestas não aparecem no editor — e é um preço justo: elas são um resultado de análise, produzido quando você exporta, não algo que se consulta enquanto anota.
+
+:::{.callout-note}
+## A ontologia compartilhada **é** vista pelo editor
+Diferente das arestas, uma ontologia declarada com `INCLUDE SHARED ONTOLOGY` é carregada normalmente pelo LSP, com autocompletar e validação de códigos. A extensão instala um observador de arquivo sobre o alvo externo, então uma alteração feita por `git pull` ou por outra janela dispara revalidação dos projetos que a incluem. Ver [A Interface LSP](../explanation/interface_lsp.qmd).
+:::
+
+---
+
+# Próximos passos {#sec-proximos}
+
+- [Referência da Linguagem](../reference/guia_referencia.qmd) — sintaxe completa de `IDENTIFIES` / `REFERS TO`
+- [Guia de Erros](../reference/guia_erros.qmd#sec-ligacao) — todos os diagnósticos de ligação (77–84)
+- [Gramática da Linguagem](../reference/gramatica.qmd) — as regras Lark dos novos modificadores
+- [Exportar para Neo4j](exportar_neo4j.qmd) — levar o agregado para um banco de grafos
