@@ -92,6 +92,8 @@ website:
             text: Comparação de Modelos de IA
           - href: explanation/knowledge_graphs.qmd
             text: Knowledge Graphs & GraphRAG
+          - href: explanation/graphrag_embeddings_vetoriais.qmd
+            text: Embeddings Vetoriais e GraphRAG
           - href: explanation/synesis_escrituras.qmd
             text: Synesis e as Escrituras
           - href: explanation/dsap.qmd

@@ -1,0 +1,180 @@
+---
+title: "Embeddings Vetoriais e GraphRAG"
+subtitle: "O que a busca semântica realmente acrescenta à recuperação de conhecimento — medido, não estimado"
+---
+
+# Embeddings Vetoriais e GraphRAG
+
+## O que é o synesis-graph, e o que muda agora
+
+O `synesis-graph` é o pipeline que pega um projeto Synesis já codificado (as anotações qualitativas de um pesquisador, com seus conceitos, fontes e relações) e o transforma num banco de grafos consultável — hoje, Neo4j ou ArcadeDB. Não é um passo de exportação e pronto: é o que permite que Claude Desktop, conectado via **MCP** (o protocolo que dá a um LLM acesso a ferramentas e dados externos), leia o grafo e responda perguntas sobre a pesquisa em linguagem natural, com citação da fonte. Esse uso — pesquisador perguntando, agente respondendo com base no grafo — é o que chamamos de **GraphRAG**: Retrieval-Augmented Generation apoiada em uma estrutura de grafo em vez de um monte de trechos de texto soltos (ver [Knowledge Graphs e GraphRAG](knowledge_graphs.qmd) para essa base).
+
+Instalação:
+
+```bash
+pip install synesis-graph
+```
+
+A busca vetorial que este documento mede precisa do extra opcional `embeddings` (traz o `sentence-transformers`, usado para gerar os vetores localmente, sem chamada a API externa):
+
+```bash
+pip install "synesis-graph[embeddings]"
+```
+
+Até aqui, quando o Claude Desktop precisava achar um conceito no grafo, ele só tinha uma ferramenta: buscar por **palavra-chave** (BM25, o mesmo algoritmo por trás do Elasticsearch — ele pontua um conceito pela sobreposição literal de termos com a pergunta). O `synesis-graph` agora oferece uma segunda: buscar por **significado**, via **embeddings vetoriais**. Um embedding é a descrição de um conceito convertida em um vetor de números; duas descrições com sentido parecido produzem vetores próximos no espaço, mesmo que não compartilhem nenhuma palavra.
+
+::: {.callout-note}
+## Backend usado neste experimento
+A busca vetorial hoje só está implementada no backend **ArcadeDB** do `synesis-graph` — não no Neo4j. Todos os números deste documento vêm de `synesis-graph arcadedb --vector-embeddings ...` contra um banco ArcadeDB real, não de um ambiente simulado.
+:::
+
+A vantagem prática, resumida antes de qualquer número: hoje, se você pergunta ao Claude Desktop *"será que o pesquisador achou que morar de aluguel dificulta instalar painel solar?"*, e a ontologia nomeia esse conceito como `Tenure` (posse do imóvel) — sem a palavra "aluguel" em lugar nenhum — a busca por palavra-chave frequentemente não encontra nada, e o agente responde sem essa informação, ou inventa. A busca vetorial encontra, porque entende que "morar de aluguel" e "posse do imóvel" tratam do mesmo assunto.
+
+A pergunta deste estudo é simples de formular e difícil de responder honestamente: **quanto, exatamente, esse recurso melhora a chance de o Claude Desktop achar o conceito certo?**
+
+A resposta não vem de opinião nem de benchmark de terceiros. Vem de um experimento controlado contra dados reais — o corpus **Social_Acceptance** (1.388 conceitos sobre aceitação social de tecnologias de transição energética), com um gabarito de 40 perguntas fixado **antes** de qualquer busca ser executada, e métricas consagradas em Recuperação de Informação (Recall@k, MRR, nDCG — explicadas com exemplo mais abaixo). Todos os números abaixo vêm dessa execução.
+
+---
+
+## O experimento
+
+### Por que um gabarito fixo importa
+
+A armadilha mais comum em qualquer comparação de busca é formular a pergunta *depois* de ver o resultado — o que torna qualquer método "vencedor" por construção. Para evitar isso:
+
+1. Uma amostra aleatória de 40 conceitos foi extraída do corpus (semente fixa, reprodutível).
+2. Para cada conceito, foi escrita **uma pergunta em linguagem natural** cujo vocabulário é deliberadamente diferente da descrição do conceito — a pergunta usa sinônimos e paráfrases, nunca os termos exatos do `ontology_description`.
+3. O par (pergunta, conceito esperado) foi congelado em arquivo antes de qualquer consulta rodar.
+4. Só então os três métodos de busca foram executados contra o mesmo índice, no mesmo banco ArcadeDB.
+
+Exemplo do gabarito:
+
+| Pergunta (vocabulário do pesquisador) | Conceito esperado |
+|---|---|
+| "does owning your home versus renting change whether you can install solar panels" | `Tenure` |
+| "should decarbonization money be controlled centrally or spread across local authorities" | `Funding_Centralization_Support` |
+| "safety protocols for detecting leaks at a hydrogen storage site" | `Storage_Operation` |
+| "is it morally right who bears the costs and who gets the benefits of a wind farm" | `Fairness` |
+
+Nenhuma dessas perguntas contém uma palavra que apareça no nome do conceito-alvo. É o cenário realista de um pesquisador conversando com o Claude Desktop via MCP — ele não conhece o vocabulário controlado da ontologia.
+
+### O que foi comparado
+
+Três estratégias de recuperação, todas rodando **dentro do ArcadeDB**, sem intermediário:
+
+- **BM25** — o índice full-text já existente (`SEARCH_INDEX`), com o mesmo mecanismo que já documentamos em [Knowledge Graphs e GraphRAG](knowledge_graphs.qmd).
+- **Vetor** — `vector.neighbors()` sobre o índice `LSM_VECTOR`, usando o modelo `all-mpnet-base-v2` (768 dimensões) já embedado para este corpus.
+- **RRF** — fusão por *Reciprocal Rank Fusion* dos dois rankings anteriores (a fórmula padrão da literatura de IR, `1/(60+rank)`), somando os dois métodos sem normalização manual de escala.
+
+### As métricas, com exemplo
+
+Nenhuma inventada para a ocasião — todas de uso corrente em avaliação de sistemas de busca, e o motivo de usar três em vez de uma é que cada uma responde uma pergunta diferente sobre o mesmo resultado.
+
+Imagine que, para a pergunta sobre `Tenure`, a busca devolveu esta lista ordenada: `Payment_System`, `Tenure`, `Capacity` — o conceito certo caiu na **2ª posição**, não na 1ª.
+
+| Métrica | O que responde | Neste exemplo |
+|---|---|---|
+| **Recall@k** | "O conceito certo está entre os k primeiros?" — 1 se sim, 0 se não, para um k escolhido | Recall@1 = 0 (não está em 1º); Recall@3 = 1 (está entre os 3 primeiros) |
+| **MRR** (Mean Reciprocal Rank) | "Em que posição, em média, o conceito certo aparece?" — usa o inverso da posição (1/posição), então 1ª lugar vale 1,0 e posições distantes valem cada vez menos | Para esta pergunta: 1/2 = 0,5 |
+| **nDCG@k** | Como o MRR, mas com um desconto mais suave pela posição (log em vez de razão simples) — é o padrão da indústria em ranking de busca (Google, Elasticsearch) | Próximo do MRR, ligeiramente mais tolerante com a 2ª posição |
+
+Repare a diferença de propósito: **Recall@k** é a métrica que mais importa para GraphRAG, porque o LLM recebe uma *lista* de conceitos como contexto (não só o primeiro) — o que importa é se o conceito certo está nessa lista, não em que posição exata. **MRR** e **nDCG** complementam mostrando *quão perto do topo* a resposta certa costuma cair, o que interessa quando a ordem também é usada (por exemplo, para decidir qual conceito citar primeiro na resposta).
+
+---
+
+## Resultado agregado (40 perguntas, corpus completo)
+
+| Métrica | BM25 | Vetor | RRF |
+|---|---:|---:|---:|
+| Recall@1 | 0,350 | 0,275 | **0,475** |
+| Recall@3 | 0,575 | 0,650 | **0,650** |
+| Recall@5 | 0,575 | 0,700 | **0,775** |
+| Recall@10 | 0,600 | 0,875 | [**0,900**]{style="color:#c0392b"} |
+| MRR | 0,440 | 0,481 | **0,603** |
+| nDCG@5 | 0,472 | 0,518 | **0,633** |
+| nDCG@10 | 0,480 | 0,576 | **0,673** |
+
+Três leituras, na ordem em que valem a pena ser feitas:
+
+**A fusão vence em toda métrica, não só na média.** Isso não era garantido — poderia ter havido um método claramente superior sozinho, tornando a fusão um custo sem benefício. Não foi o caso: RRF entrega o melhor MRR (0,603 vs. 0,440 do BM25 isolado, um ganho de **+37%**) e o melhor Recall@10 ([**0,900**]{style="color:#c0392b"}, ou seja, em 9 de cada 10 perguntas o conceito certo aparece nos 10 primeiros resultados).
+
+**O vetor sozinho não é sempre melhor que o BM25.** No Recall@1, o vetor (0,275) perde para o BM25 (0,350). É contraintuitivo se a expectativa for "busca semântica sempre vence" — não vence. O vetor aproxima *significados*, e um corpus com 1.388 conceitos tem muitos significados vizinhos (`Attitude_Change` e `Opinion_Change`; `Discussion` e `Public_Discussion`). Errar o primeiro lugar entre dois quase-sinônimos é diferente de não encontrar nada.
+
+**Onde o vetor realmente compensa é no Recall@10** (0,875 contra 0,600 do BM25 — um salto de 46%). É o resultado que mais importa para GraphRAG: o vetor quase nunca deixa o conceito certo *fora* da lista de contexto entregue ao LLM, mesmo quando não o coloca em primeiro. BM25, sozinho, deixa o alvo de fora em [**40% das perguntas**]{style="color:#c0392b"} — o LLM simplesmente não recebe a informação para responder.
+
+---
+
+## Onde cada método vence sozinho
+
+Uma média agregada esconde uma pergunta mais interessante: **os dois métodos erram nas mesmas perguntas, ou em perguntas diferentes?** Se erram nas mesmas, a fusão não ajuda. Se erram em perguntas diferentes, a fusão é o ganho real.
+
+| | Contagem (de 40) | Exemplos |
+|---|---:|---|
+| Ambos acertam o top-1 | 5 | — |
+| Só BM25 acerta | 9 | "guaranteed fixed payment for producing renewable electricity" → `Feed-In_Tariff` |
+| Só o vetor acerta | 6 | "do households go back to burning wood after briefly switching to clean fuel" → `Transition_Permanence` |
+| Nenhum acerta o top-1 | 20 | (a maioria tem o alvo no top-3/top-5 — ver abaixo) |
+
+Os conjuntos de erro **quase não se sobrepõem**. Quando a pergunta cita um termo técnico específico (`Feed-In_Tariff`, um jargão de política energética), o BM25 acerta de cara porque o termo aparece quase literalmente na descrição. Quando a pergunta descreve um *comportamento* sem citar o nome do conceito (voltar a usar lenha após adotar combustível limpo, sem nunca dizer "transição" ou "permanência"), o vetor entende a ideia e o BM25 não tem palavra nenhuma para casar.
+
+**Essa é a evidência central deste estudo**: BM25 e busca vetorial não competem pelo mesmo espaço de perguntas — cobrem espaços diferentes. É por isso que a fusão soma, e não apenas repete o melhor dos dois.
+
+### Os 4 casos onde nenhum método chegou perto
+
+Vale nomear as falhas em vez de escondê-las atrás da média:
+
+- `Tenure` (posse do imóvel) para "does owning your home versus renting change..." — nenhum método aproximou; os resultados giraram em torno de energia solar, não do vínculo de propriedade.
+- `Cooperation` para "different stakeholders working together across disciplines" — o vetor devolveu `Collaboration`, um quase-sinônimo aceitável na prática, mas tecnicamente errado para este gabarito estrito.
+- `Behavioral_Control` para "whether a person feels capable of installing renewable tech themselves" — o vetor devolveu `Control` e `Willingness`, próximos mas não o conceito exato.
+- `Socio-Political_Context` para "the political institutions and power structures..." — o vetor devolveu `Socio-Economic_Context`, um vizinho semântico genuíno.
+
+Em três dos quatro casos, o "erro" é um conceito adjacente plausível — o tipo de resposta que um pesquisador aceitaria em uma conversa real, mas que um gabarito de resposta única não perdoa. Isso é uma limitação do desenho do experimento (uma pergunta, um único conceito certo), não necessariamente do sistema — e é discutido mais abaixo.
+
+---
+
+## O que isso significa para GraphRAG via MCP
+
+**Recuperabilidade**, no sentido em que a IR usa a palavra, é a capacidade de um sistema trazer de volta a informação certa quando alguém pergunta por ela — mesmo sem usar os termos exatos do índice. É exatamente o problema que o Claude Desktop enfrenta a cada pergunta feita via MCP: o pesquisador não conhece o vocabulário controlado da ontologia, então cada pergunta é, por definição, um teste de recuperabilidade.
+
+O cenário de uso real não é "encontrar o nó exato" — é **dar ao LLM contexto suficiente para responder com precisão**, o que corresponde a Recall@5 ou Recall@10, não Recall@1. Sob essa lente:
+
+- **BM25 sozinho** entrega o conceito certo em 57,5% das perguntas no top-5. Em quase 1 de cada 3 conversas, o pesquisador pergunta e o MCP simplesmente não traz o conceito relevante — o Claude Desktop responde com o que tem, que pode ser tangencial.
+- **RRF** entrega em 77,5% no top-5 e [**90% no top-10**]{style="color:#c0392b"}. A diferença não é sutil: é a diferença entre "o agente geralmente encontra o que você quer dizer" e "o agente frequentemente não encontra".
+
+### Latência: o custo de adicionar a busca vetorial
+
+Relevante para uso interativo (MCP), medido no mesmo corpus (1.388 conceitos, 20 execuções por método):
+
+| Etapa | Média | Mediana | p95 |
+|---|---:|---:|---:|
+| BM25 (full-text) | 17,2 ms | 18,2 ms | 30,9 ms |
+| Codificar a pergunta (encode) | 30,3 ms | 30,9 ms | 33,5 ms |
+| Busca vetorial (kNN) | 20,0 ms | 23,8 ms | 33,9 ms |
+| **Vetor completo** (encode + busca) | 50,2 ms | 53,4 ms | 65,4 ms |
+
+O custo adicional da busca vetorial é de **~50 ms** por pergunta — abaixo do limiar de percepção humana em conversa (a referência usual em UX é ~100 ms para algo parecer "instantâneo"). Em uma sessão de MCP, isso é imperceptível diante da latência do próprio LLM gerando a resposta.
+
+---
+
+## O que o experimento não prova
+
+Honestidade sobre limites, porque um estudo que só mostra vitórias não é confiável:
+
+- **Um único corpus, um único idioma.** Os números vêm do Social_Acceptance (inglês, `all-mpnet-base-v2`). Um corpus em outro idioma, com outro modelo de embedding e outra densidade conceitual, pode produzir números absolutos diferentes — não generalize estes valores para outros projetos sem medir.
+- **Gabarito de resposta única penaliza sinonímia real.** Como mostrado acima, boa parte dos "erros" no Recall@1 são conceitos vizinhos legítimos, não alucinações. Um gabarito com múltiplas respostas aceitas por pergunta produziria números mais altos e provavelmente mais realistas — mas também mais difícil de construir sem viés do avaliador.
+- **40 perguntas é uma amostra, não uma prova estatística.** É rigoroso o bastante para revelar o padrão (as duas fontes de erro não se sobrepõem, a fusão soma), mas não valida uma distribuição populacional inteira do corpus.
+- **A fusão RRF ainda tem 21 erros em 40 no top-1.** Ela é a melhor das três opções medidas — não é infalível.
+
+---
+
+## Recomendação
+
+Ative `--vector-embeddings` quando o uso for **busca conversacional** — MCP, GraphRAG, pesquisador perguntando com suas próprias palavras. É exatamente o caso onde BM25 sozinho falha 40% das vezes no top-10.
+
+Não é necessário para consultas Cypher/SQL estruturadas que já sabem o nome exato do conceito — ali, a busca por palavra-chave (ou o `MATCH` direto) já é ótima e o vetor não acrescenta nada.
+
+A implementação, a configuração por projeto e os passos para gerar os embeddings estão documentados no [README do synesis-graph](https://github.com/synesis-lang/synesis-graph#semantic-search-with-vector-embeddings-arcadedb).
+
+---
+
+**Reflexão final:** a busca vetorial não é "melhor" que a busca por palavra-chave — é **complementar**, e o experimento mostra exatamente por quê: os dois métodos erram em perguntas diferentes, não nas mesmas. É esse desencontro de erros, não a superioridade de um método sobre o outro, que faz a fusão valer o investimento de infraestrutura.
