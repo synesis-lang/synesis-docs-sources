@@ -1,0 +1,462 @@
+---
+title: "Como o benchmark foi feito"
+subtitle: "Gabarito completo, scripts e resultados da comparação entre busca por palavra, busca por significado e fusão"
+jupyter: python3
+format:
+  html:
+    code-fold: true
+    code-summary: "Mostrar código"
+    toc-depth: 3
+---
+
+::: {.callout-note}
+## O que é esta página
+É o apêndice metodológico de [Embeddings Vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd), para quem quer **auditar** o experimento em vez de aceitar os números. Aqui estão o gabarito completo das 40 perguntas, os scripts que rodam de ponta a ponta, as consultas exatas enviadas ao banco e o resultado pergunta por pergunta.
+
+Não é preciso ler isto para usar o recurso. É preciso ler para conferir se ele faz o que dizemos.
+:::
+
+## Resumo para o avaliador
+
+| | |
+|---|---|
+| **Corpus** | `Social_Acceptance` — 1.388 conceitos sobre aceitação social de tecnologias de transição energética |
+| **Banco** | ArcadeDB 26.7.3, base `social_acceptance`, consultada via API HTTP |
+| **Modelo de embedding** | `sentence-transformers/all-mpnet-base-v2`, 768 dimensões, local |
+| **Índices** | `FULL_TEXT` (Lucene/BM25) e `LSM_VECTOR` (cosseno, quantização INT8) |
+| **Amostra** | 40 conceitos sorteados com semente fixa `20260817` |
+| **Gabarito** | Uma pergunta por conceito, congelada **antes** de qualquer busca |
+| **Profundidade** | top-10; RRF com a constante padrão `k = 60` |
+| **Data da medição** | 17 de agosto de 2026 |
+
+::: {.callout-note}
+## Procedência dos números
+
+Todos os valores desta página vêm da execução de **17 de agosto de 2026**, contra um banco ArcadeDB real. O gabarito, os scripts e a saída bruta estão versionados no repositório — a página lê os resultados direto do arquivo gerado pela medição, de modo que nenhum número aqui é digitado à mão.
+:::
+
+---
+
+## O desenho, e o que ele protege
+
+A armadilha central em qualquer comparação de busca é escrever a pergunta **depois** de ver o que cada método devolveu. Quem faz isso consegue provar o que quiser. O desenho abaixo existe para tornar isso impossível.
+
+```{mermaid}
+flowchart TB
+    classDef etapaA fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+    classDef congelado fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#E65100,font-weight:bold;
+    classDef etapaB fill:#E0F7FA,stroke:#084C54,stroke-width:2px,color:#084C54,font-weight:bold;
+
+    S["1 · Sorteio de 40 conceitos<br/>semente fixa 20260817"]:::etapaA
+    Q["2 · Uma pergunta por conceito<br/>vocabulário deliberadamente disjunto"]:::etapaA
+    F["3 · Gabarito congelado em arquivo<br/>questions.json"]:::congelado
+    R["4 · Só então: as três buscas<br/>BM25 · Vetor · RRF"]:::etapaB
+    M["5 · Métricas calculadas<br/>results.json"]:::etapaB
+
+    S --> Q --> F --> R --> M
+```
+
+O passo 3 é o que dá valor aos passos 4 e 5. Como o arquivo é versionado, qualquer pessoa pode verificar que as perguntas não foram ajustadas depois de ver os resultados.
+
+::: {.callout-note collapse="true"}
+## De onde vem este desenho
+
+Nada aqui foi inventado para a ocasião. O desenho segue o padrão consolidado de avaliação em Recuperação de Informação, descrito em @manning2008 — a referência canônica da área, de acesso livre.
+
+- **A estrutura de coleção de teste** (documentos + necessidades de informação + julgamentos de relevância) é a do capítulo 8.2, a mesma da coleção Cranfield e das rodadas TREC. Nosso equivalente: os 1.388 conceitos, as 40 perguntas e o conceito-alvo de cada uma.
+- **Congelar os julgamentos antes de rodar as buscas** é o que separa uma coleção de teste de uma demonstração — a alternativa (julgar depois de ver a saída) mede o avaliador, não o sistema.
+- **As métricas** (`Recall@k`, `MRR`, `nDCG`) são as do capítulo 8.4. O desconto logarítmico do nDCG, `1/log₂(1+posição)`, é usado aqui exatamente como definido lá; com um único item relevante por pergunta, o ranking ideal vale 1 e o DCG já é o próprio nDCG.
+- **O BM25** que o ArcadeDB executa é o modelo probabilístico do capítulo 11.4.3, com saturação de frequência (`k₁`) e normalização por tamanho do documento (`b`) — formalizado em @robertson2009.
+- **A fusão RRF** vem de @cormack2009, incluindo a constante `k = 60`.
+
+Onde o nosso desenho **diverge** do padrão, isso está declarado em [Limitações do desenho](#limitações-do-desenho) — sobretudo quanto a quem redigiu as perguntas e à adoção de resposta única por pergunta.
+:::
+
+### Etapa 1 — o sorteio
+
+Amostragem aleatória simples sobre os 1.388 conceitos, com semente fixa e ordenação determinística antes do sorteio (sem isso, a ordem de leitura do arquivo mudaria a amostra entre execuções).
+
+```python
+#| eval: false
+SEED, N = 20260817, 40
+
+names = sorted(concepts)          # ordem determinística ANTES de sortear
+rng = random.Random(SEED)
+sample = sorted(rng.sample(names, N))
+```
+
+Script completo: `case-studies/benchmark_rrf/sample_concepts.py`. Rodar de novo com a mesma semente produz exatamente a mesma amostra.
+
+### Etapa 2 — as perguntas
+
+Para cada conceito sorteado, uma pergunta em linguagem natural, seguindo uma regra única e verificável:
+
+> **Nenhuma palavra de conteúdo do nome do conceito pode aparecer na pergunta.**
+
+O objetivo é simular o pesquisador que descreve o fenômeno com as próprias palavras porque não decorou o vocabulário controlado da ontologia. A regra foi conferida por código, não no olho — e a verificação pegou uma violação real (`Technology_Uptake` × "technology"), corrigida antes de qualquer busca rodar:
+
+```{python}
+#| label: verificacao-disjuncao
+#| code-fold: show
+import json, re
+from pathlib import Path
+
+BASE = Path("../../case-studies/benchmark_rrf")
+gabarito = json.loads((BASE / "questions.json").read_text(encoding="utf-8"))
+
+STOP = {"the","a","an","of","to","in","and","or","that","is","are","how","what","for",
+        "not","it","on","who","which","by","from","with","as","at","all","just","out",
+        "up","so","be","do","does","get","gets","has","have","they","their","you","we",
+        "its","into","than","then","only","more","most","some","several","through",
+        "over","about","before","after","when","where","whether","while","why"}
+
+def palavras(texto):
+    return {w for w in re.findall(r"[a-z]+", texto.lower()) if w not in STOP and len(w) > 2}
+
+violacoes = [
+    p["gold"] for p in gabarito["pairs"]
+    if palavras(p["gold"].replace("_", " ")) & palavras(p["question"])
+]
+print(f"perguntas: {len(gabarito['pairs'])}")
+print(f"violações da regra: {len(violacoes)} {violacoes}")
+```
+
+### Etapa 3 — as três buscas
+
+Todas rodam **dentro do ArcadeDB**, sem reimplementação em Python. É a diferença entre medir o produto e medir uma aproximação dele.
+
+**Busca por palavra (BM25)** — índice `FULL_TEXT`, ordenado pelo score do Lucene:
+
+```sql
+SELECT name, $score as s FROM Chain
+WHERE SEARCH_INDEX('Chain[search_name,ontology_description,reasoning,
+                    rgt_element_a,rgt_element_b,theoretical_significance]',
+                   '<pergunta>') = true
+ORDER BY s DESC LIMIT 10
+```
+
+**Busca por significado** — índice `LSM_VECTOR`, vizinhos mais próximos do vetor da pergunta:
+
+```sql
+SELECT expand(vector.neighbors('Chain[embedding]', :v, 10))
+```
+
+O vetor `:v` é gerado localmente com o mesmo modelo que embedou o corpus. Usar modelos diferentes nos dois lados produziria vizinhos sem sentido — uma falha silenciosa, porque o banco aceita o vetor e devolve resultados errados sem reclamar.
+
+**Fusão (RRF)** — a fórmula padrão da literatura de IR (*Information Retrieval*, a área que estuda sistemas de busca), somando as duas listas sem normalizar escalas:
+
+```{python}
+#| code-fold: show
+#| eval: false
+def fuse_rrf(rank_lists, k=10, RRF_K=60):
+    scores = {}
+    for ranking in rank_lists:
+        for position, name in enumerate(ranking, start=1):
+            scores[name] = scores.get(name, 0.0) + 1.0 / (RRF_K + position)
+    return [n for n, _ in sorted(scores.items(), key=lambda kv: -kv[1])][:k]
+```
+
+A constante `60` não foi ajustada para favorecer o resultado: é o valor proposto no artigo que introduziu o método [@cormack2009], mantido sem ajuste justamente para não introduzir um grau de liberdade a mais. Vale notar que aquele trabalho já mostrava o efeito que reencontramos aqui — a fusão de rankings supera os métodos isolados, inclusive métodos de aprendizado de ranking.
+
+---
+
+## Resultados
+
+```{python}
+#| label: carrega-resultados
+import json
+from pathlib import Path
+
+BASE = Path("../../case-studies/benchmark_rrf")
+res = json.loads((BASE / "results.json").read_text(encoding="utf-8"))
+M = res["metricas"]
+```
+
+Todos os números desta seção são lidos de `results.json`, o arquivo que o script de medição grava. Nenhum valor foi digitado à mão nesta página.
+
+```{python}
+#| label: fig-metricas
+#| fig-cap: "As três estratégias nas 40 perguntas do gabarito. Barras maiores são melhores."
+import plotly.graph_objects as go
+
+metricas = ["Recall@1", "Recall@3", "Recall@5", "Recall@10", "MRR", "nDCG@5", "nDCG@10"]
+CINZA, AZUL, LARANJA = "#94A3B8", "#0E7490", "#E65100"
+
+fig = go.Figure()
+for chave, nome, cor in [
+    ("bm25", "Só palavra exata", CINZA),
+    ("vector", "Só significado", AZUL),
+    ("rrf", "Os dois juntos (RRF)", LARANJA),
+]:
+    valores = [M[chave][m] for m in metricas]
+    fig.add_trace(go.Bar(
+        y=metricas, x=valores, name=nome, orientation="h",
+        marker=dict(color=cor),
+        text=[f"{v:.3f}".replace(".", ",") for v in valores],
+        textposition="outside", textfont=dict(size=10),
+        hovertemplate="%{y} — " + nome + ": %{x:.3f}<extra></extra>",
+    ))
+
+fig.update_layout(
+    template="plotly_white", barmode="group", height=620,
+    xaxis=dict(title="0 = nunca acerta · 1 = sempre acerta", range=[0, 1.12]),
+    yaxis=dict(title="", autorange="reversed"),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+    font=dict(size=12), margin=dict(l=10, r=10, t=60, b=40), bargap=0.25,
+)
+fig.show()
+```
+
+```{python}
+#| label: tbl-metricas
+#| output: asis
+linhas = ["| Métrica | Só palavra | Só significado | Os dois juntos |", "|---|---:|---:|---:|"]
+for m in metricas:
+    vals = {k: M[k][m] for k in ("bm25", "vector", "rrf")}
+    melhor = max(vals, key=vals.get)
+    cells = []
+    for k in ("bm25", "vector", "rrf"):
+        txt = f"{vals[k]:.3f}".replace(".", ",")
+        cells.append(f"**{txt}**" if k == melhor else txt)
+    linhas.append(f"| {m} | " + " | ".join(cells) + " |")
+print("\n".join(linhas))
+```
+
+### Os três achados
+
+```{python}
+#| label: achados
+#| output: asis
+o = res["sobreposicao_top1"]
+r10_bm, r10_rrf = M["bm25"]["Recall@10"], M["rrf"]["Recall@10"]
+mrr_bm, mrr_rrf = M["bm25"]["MRR"], M["rrf"]["MRR"]
+num = lambda v: f"{v:.3f}".replace(".", ",")
+pct = lambda v: f"{v * 100:.1f}%".replace(".", ",")
+print(f"""
+**1. A fusão vence em todas as sete métricas.** Não era garantido: se um método fosse
+superior sozinho, a fusão seria custo sem retorno. A posição média da resposta certa
+sobe de {num(mrr_bm)} para {num(mrr_rrf)} (**+{(mrr_rrf/mrr_bm-1)*100:.0f}%**), e a taxa de
+acerto no top-10 vai de {pct(r10_bm)} para {pct(r10_rrf)}.
+
+**2. O significado sozinho não domina.** No acerto em 1º lugar, a busca vetorial
+({num(M['vector']['Recall@1'])}) fica **abaixo** da busca por palavra ({num(M['bm25']['Recall@1'])}).
+Num corpus de 1.388 conceitos há muitos vizinhos semânticos, e escolher entre
+quase-sinônimos é justamente onde o vetor hesita.
+
+**3. Os erros não se sobrepõem — e é isso que faz a fusão funcionar.**
+Dos 40 casos, só **{o['ambos']}** são acertados em 1º lugar pelos dois métodos;
+**{o['so_bm25']}** só a palavra exata acerta e **{o['so_vetor']}** só o significado acerta.
+Ou seja, {o['so_bm25'] + o['so_vetor']} perguntas são resolvidas por exatamente um dos dois.
+Métodos que errassem juntos não teriam nada a ganhar com a fusão.
+""")
+```
+
+```{python}
+#| label: fig-sobreposicao
+#| fig-cap: "Acertos em 1º lugar, por método. As fatias do meio são o motivo de a fusão valer a pena."
+import plotly.graph_objects as go
+
+o = res["sobreposicao_top1"]
+rotulos = ["Ambos acertam", "Só palavra exata", "Só significado", "Nenhum dos dois"]
+valores = [o["ambos"], o["so_bm25"], o["so_vetor"], o["nenhum"]]
+cores = ["#2E7D32", "#94A3B8", "#0E7490", "#CBD5E1"]
+
+fig = go.Figure(go.Bar(
+    x=valores, y=rotulos, orientation="h",
+    marker=dict(color=cores),
+    text=[f"{v} de 40" for v in valores],
+    textposition="outside", textfont=dict(size=12),
+    hovertemplate="%{y}: %{x} perguntas<extra></extra>",
+))
+fig.update_layout(
+    template="plotly_white", height=300,
+    xaxis=dict(title="Perguntas (de 40)", range=[0, max(valores) * 1.35]),
+    yaxis=dict(title="", autorange="reversed"),
+    showlegend=False, font=dict(size=12),
+    margin=dict(l=10, r=10, t=40, b=40), bargap=0.35,
+)
+fig.show()
+```
+
+### Latência
+
+```{python}
+#| label: fig-latencia
+#| fig-cap: "Tempo por pergunta (média de 20 execuções). A linha marca os 100 ms que a literatura de usabilidade trata como limiar do instantâneo."
+import plotly.graph_objects as go
+
+lat = res["latencia_ms"]
+fig = go.Figure(go.Bar(
+    y=["Com busca por significado<br>(codificar + buscar)", "Só palavra exata"],
+    x=[lat["vetor_completo"]["media"], lat["bm25"]["media"]],
+    orientation="h", marker=dict(color=["#E65100", "#94A3B8"]),
+    text=[f"{lat['vetor_completo']['media']:.0f} ms", f"{lat['bm25']['media']:.0f} ms"],
+    textposition="outside", textfont=dict(size=13),
+    hovertemplate="%{y}: %{x:.1f} ms<extra></extra>",
+))
+fig.add_vline(
+    x=100, line_width=2, line_dash="dash", line_color="#c0392b",
+    annotation_text="100 ms — limiar do 'instantâneo'",
+    annotation_position="top", annotation_font=dict(color="#c0392b", size=12),
+)
+fig.update_layout(
+    template="plotly_white", height=280,
+    xaxis=dict(title="Milissegundos por pergunta", range=[0, 145]),
+    yaxis=dict(title=""), showlegend=False, font=dict(size=12),
+    margin=dict(l=10, r=10, t=50, b=40), bargap=0.4,
+)
+fig.show()
+```
+
+```{python}
+#| label: tbl-latencia
+#| output: asis
+nomes = {"bm25": "Busca por palavra (BM25)", "encode": "Codificar a pergunta",
+         "knn": "Busca vetorial (kNN)", "vetor_completo": "**Vetor completo** (codificar + buscar)"}
+linhas = ["| Etapa | Média | Mediana | p95 |", "|---|---:|---:|---:|"]
+for k, nome in nomes.items():
+    v = res["latencia_ms"][k]
+    fmt = lambda x: f"{x:.1f} ms".replace(".", ",")
+    linhas.append(f"| {nome} | {fmt(v['media'])} | {fmt(v['mediana'])} | {fmt(v['p95'])} |")
+print("\n".join(linhas))
+```
+
+O caminho vetorial custa cerca de **35 ms a mais** que a busca por palavra, e o total fica em torno de metade do limiar de percepção. Numa conversa via MCP, esse custo desaparece diante dos segundos que o LLM leva para redigir a resposta.
+
+---
+
+## Gabarito completo e resultado pergunta a pergunta
+
+A tabela abaixo é o experimento inteiro, sem recortes: as 40 perguntas, o conceito esperado e a posição em que cada método o colocou. **—** significa que o alvo não apareceu no top-10.
+
+```{python}
+#| label: tbl-completa
+#| output: asis
+def pos(r):
+    return "—" if r is None else ("**1º**" if r == 1 else f"{r}º")
+
+linhas = ["| # | Pergunta | Conceito esperado | Palavra | Significado | Fusão |",
+          "|--:|---|---|:--:|:--:|:--:|"]
+for i, r in enumerate(res["por_pergunta"], start=1):
+    linhas.append(
+        f"| {i} | {r['question']} | `{r['gold']}` | "
+        f"{pos(r['bm25']['rank'])} | {pos(r['vector']['rank'])} | {pos(r['rrf']['rank'])} |"
+    )
+print("\n".join(linhas))
+```
+
+### Onde cada método brilhou sozinho
+
+```{python}
+#| label: exemplos-complementares
+#| output: asis
+so_bm25 = [r for r in res["por_pergunta"]
+           if r["bm25"]["rank"] == 1 and r["vector"]["rank"] != 1][:3]
+so_vec  = [r for r in res["por_pergunta"]
+           if r["vector"]["rank"] == 1 and r["bm25"]["rank"] != 1][:3]
+
+print("**Só a busca por palavra acertou em 1º** — a pergunta carrega um termo que está quase literal na descrição:\n")
+for r in so_bm25:
+    print(f"- *\"{r['question']}\"* → `{r['gold']}`  \n  (significado devolveu: {', '.join('`'+t+'`' for t in r['vector']['top3'])})")
+print("\n**Só a busca por significado acertou em 1º** — a pergunta descreve o fenômeno sem nomeá-lo:\n")
+for r in so_vec:
+    print(f"- *\"{r['question']}\"* → `{r['gold']}`  \n  (palavra exata devolveu: {', '.join('`'+t+'`' for t in r['bm25']['top3']) if r['bm25']['top3'] else '*nada*'})")
+```
+
+---
+
+## O que deu errado, e não foi escondido
+
+### A fusão pode perder um alvo que um dos métodos achou
+
+```{python}
+#| label: rrf-perdas
+#| output: asis
+perdas = [r for r in res["por_pergunta"]
+          if r["rrf"]["rank"] is None and (r["bm25"]["rank"] or r["vector"]["rank"])]
+print(f"Em **{len(perdas)} das 40 perguntas**, o alvo aparecia no top-10 de um método isolado "
+      f"mas sumiu do top-10 da fusão:\n")
+for r in perdas:
+    b = r["bm25"]["rank"] or "—"
+    v = r["vector"]["rank"] or "—"
+    print(f"- `{r['gold']}` — palavra: {b} · significado: {v} · fusão: fora do top-10")
+```
+
+Não é defeito de implementação: é como o RRF funciona. Quando o alvo está fundo em **uma só** lista (6ª a 10ª posição) e o outro método contribui dez candidatos diferentes, a soma dos pesos empurra o alvo para além do corte. É o preço de fundir sem normalizar escalas — e o motivo de a fusão vencer *no agregado* sem vencer em toda pergunta individual.
+
+### Conceitos genéricos são intrinsecamente ambíguos
+
+Quatro alvos sorteados — `Context`, `Driver`, `Benefit` e `Time` — são rótulos genéricos num corpus de 1.388 itens. A pergunta *"the surrounding circumstances that frame how everything else is interpreted"* casa legitimamente com dezenas de conceitos.
+
+Eles foram **mantidos** na amostra. Removê-los depois de ver que dão resultado ruim seria exatamente a contaminação que o gabarito congelado existe para impedir. Eles puxam as métricas para baixo, e isso é honesto.
+
+### Limitações do desenho
+
+**1. Quem escreveu as perguntas conhecia a resposta.** As 40 perguntas foram escritas por um modelo de linguagem (Claude Opus 5) olhando a descrição de cada conceito. Mesmo com a regra de vocabulário disjunto, quem conhece o alvo tende a descrevê-lo de um jeito recuperável. **Esta é a limitação mais séria desta medição** — e a literatura é explícita sobre ela: Manning, Raghavan e Schütze recomendam que as necessidades de informação sejam *"projetadas por especialistas do domínio"* e alertam contra usar *"combinações aleatórias de termos de busca"* como substituto de necessidades reais [-@manning2008, cap. 8.5]. Perguntas coletadas de pesquisadores reais, sem acesso à ontologia, seriam mais fidedignas — e provavelmente produziriam números piores.
+
+**2. Um só corpus, um só idioma.** Tudo aqui é `Social_Acceptance`, em inglês, com `all-mpnet-base-v2`. Outro idioma, outro modelo ou outra densidade conceitual mudam os números. Meça no seu projeto antes de assumir o mesmo ganho.
+
+**3. Resposta única por pergunta.** O gabarito admite um só conceito certo. Boa parte dos "erros" são vizinhos que um pesquisador aceitaria numa conversa. Um gabarito com múltiplas respostas válidas daria números mais altos e mais realistas — ao custo de um julgamento subjetivo sobre o que conta como aceitável. O problema é conhecido: o julgamento de relevância humano *"não é um dispositivo que reporta de forma confiável um padrão-ouro"*, sendo *"bastante idiossincrático e variável"* [-@manning2008, cap. 8.5], razão pela qual as coleções de referência costumam medir a concordância entre avaliadores (estatística *kappa*) em vez de supor um gabarito único e óbvio.
+
+**4. Quarenta perguntas mostram um padrão, não uma distribuição.** A conclusão qualitativa (os erros não se sobrepõem) é robusta; os decimais não devem ser tratados como constantes do sistema. Para calibrar: as primeiras rodadas do **TREC** — a referência da área — usaram **50 necessidades de informação** cada [-@manning2008, cap. 8.2]. Com 40, este experimento fica na mesma ordem de grandeza das coleções consagradas, mas na margem inferior; mais perguntas dariam estimativas mais estáveis.
+
+---
+
+## Reproduzir do zero
+
+```bash
+# 1. ArcadeDB no ar, com a base social_acceptance carregada
+D:\ArcadeDB\start-arcadedb-bolt.ps1
+
+# 2. Dependências
+pip install "synesis-graph[embeddings]"
+
+# 3. Sorteio (regrava sample.json — idêntico, a semente é fixa)
+cd case-studies/benchmark_rrf
+python sample_concepts.py
+
+# 4. Medição (regrava results.json)
+python run_benchmark.py
+```
+
+| Arquivo | Papel |
+|---|---|
+| `sample_concepts.py` | Etapa 1 — sorteia os 40 conceitos com semente fixa |
+| `sample.json` | Saída do sorteio, com as descrições |
+| `questions.json` | **O gabarito congelado** — 40 pares (pergunta, conceito) |
+| `run_benchmark.py` | Etapa 3 — roda as buscas e calcula as métricas |
+| `results.json` | Saída da medição — alimenta todos os gráficos desta página |
+
+As buscas são **somente leitura**: rodar o benchmark não altera o banco.
+
+---
+
+## Referências
+
+O desenho, as métricas e os dois métodos de busca seguem a literatura estabelecida de Recuperação de Informação. Para quem quiser conferir as definições na fonte:
+
+**@manning2008** — *Introduction to Information Retrieval*. Cambridge University Press. Disponível em acesso livre em [nlp.stanford.edu/IR-book](https://nlp.stanford.edu/IR-book/information-retrieval-book.html). Os capítulos que sustentam este experimento:
+
+| Capítulo | O que cobre | Onde entra aqui |
+|---|---|---|
+| 6 — *Scoring, term weighting & the vector space model* | Modelo de espaço vetorial | Base conceitual da busca por significado |
+| 8.2 — *Standard test collections* | Estrutura de coleção de teste; TREC com 50 necessidades por rodada | O desenho do gabarito e a discussão sobre o tamanho da amostra |
+| 8.4 — *Evaluation of ranked retrieval results* | `Precision@k`, MAP, **nDCG** e seu desconto logarítmico | As métricas usadas |
+| 8.5 — *Assessing relevance* | Variabilidade do julgamento humano, concordância entre avaliadores (*kappa*) | As limitações 1 e 3 |
+| 11.4.3 — *Okapi BM25* | Modelo probabilístico com saturação (`k₁`) e normalização por tamanho (`b`) | O que o índice `FULL_TEXT` do ArcadeDB executa |
+
+**@robertson2009** — tratamento completo do arcabouço probabilístico de relevância e do BM25 pelos autores do modelo.
+
+**@cormack2009** — o artigo que introduziu o *Reciprocal Rank Fusion*, origem da fórmula e da constante `k = 60` usadas aqui.
+
+::: {.callout-tip}
+## O que a literatura corrobora, e o que não
+
+**Corrobora:** a estrutura da coleção de teste, a exigência de congelar os julgamentos antes da medição, as três métricas e sua interpretação, os dois métodos de busca e a fórmula da fusão. Nenhum desses elementos é uma invenção local.
+
+**Não corrobora — e não poderia:** os *valores* obtidos. Nenhuma referência prevê o desempenho num corpus específico; o resultado de um corpus não transfere para outro. É por isso que a recomendação prática continua sendo medir no seu próprio projeto.
+:::
+
+---
+
+**Voltar para** [Embeddings Vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd) — a página que explica o que estes números significam na prática.
