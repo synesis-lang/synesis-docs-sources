@@ -17,6 +17,9 @@ cd ..
 echo "📦 Criando página raiz de redirecionamento..."
 quarto render index.qmd --to html --output-dir _site
 
+echo "🌐 Copiando CNAME (domínio personalizado)..."
+cp CNAME _site/CNAME
+
 echo "✅ Build concluído!"
 echo "📂 Estrutura gerada:"
 ls -la _site

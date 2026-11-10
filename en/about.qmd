@@ -34,7 +34,7 @@ The project consists of 7 integrated repositories:
 | [**synesis2neo4j**](https://github.com/synesis-lang/synesis2neo4j) | Neo4j Pipeline (GraphRAG, knowledge graphs) | Python 3.11+ | 0.1.2 |
 | [**zotero-synesis-export**](https://github.com/synesis-lang/zotero-synesis-export) | Zotero 7 Plugin (exports PDF annotations as `.syn`) | JavaScript | 0.1.4 |
 | [**synesis-docs-sources**](https://github.com/synesis-lang/synesis-docs-sources) | Documentation Sources (Quarto Publishing) | Quarto/QMD | — |
-| [**synesis-docs**](https://synesis-lang.github.io/synesis-docs) | Published Documentation (GitHub Pages) | HTML | — |
+| [**synesis-docs**](https://synesis-lang.org) | Published Documentation (GitHub Pages) | HTML | — |
 
 ---
 
@@ -100,7 +100,7 @@ Synesis development was made possible thanks to:
 
 ## Contact
 
-- **Official Documentation**: [synesis-lang.github.io/synesis-docs](https://synesis-lang.github.io/synesis-docs)
+- **Official Documentation**: [synesis-lang.org](https://synesis-lang.org)
 - **Main Repository**: [github.com/synesis-lang/synesis](https://github.com/synesis-lang/synesis)
 - **Discussions**: [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions)
 - **Issues**: Report in specific repository

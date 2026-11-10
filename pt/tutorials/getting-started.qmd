@@ -499,4 +499,4 @@ pwd  # Deve mostrar o caminho do projeto
 
 ---
 
-**Ficou com dúvidas?** Abra uma discussão em [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou consulte a [documentação completa](https://synesis-lang.github.io/synesis-docs).
+**Ficou com dúvidas?** Abra uma discussão em [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou consulte a [documentação completa](https://synesis-lang.org).

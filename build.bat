@@ -35,6 +35,9 @@ if errorlevel 1 (
 echo Copiando landing pages para _site\landing\...
 xcopy /E /I /Y synesis-landing _site\landing >nul
 
+echo Copiando CNAME (dominio personalizado)...
+copy /Y CNAME _site\CNAME >nul
+
 echo Build concluido!
 echo Estrutura gerada:
 dir _site

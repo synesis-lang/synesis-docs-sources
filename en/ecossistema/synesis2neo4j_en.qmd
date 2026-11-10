@@ -611,7 +611,7 @@ MATCH (c:Concept) RETURN c.name, c.pagerank, c.community LIMIT 10
 
 | Resource | URL |
 |----------|-----|
-| **Synesis Language** | [synesis-lang.github.io/synesis-docs](https://synesis-lang.github.io/synesis-docs) |
+| **Synesis Language** | [synesis-lang.org](https://synesis-lang.org) |
 | **Neo4j Download** | [neo4j.com/download](https://neo4j.com/download/) |
 | **Neo4j Aura (Cloud)** | [console.neo4j.io](https://console.neo4j.io/) |
 | **Neo4j GDS Docs** | [neo4j.com/docs/graph-data-science](https://neo4j.com/docs/graph-data-science/current/) |
