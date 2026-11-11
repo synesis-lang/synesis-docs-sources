@@ -73,6 +73,8 @@ website:
       - text: "Explanation"
         menu:
           - text: "— Visão Geral —"
+          - href: explanation/curso_synesis_101.qmd
+            text: "Curso Synesis 101 (vídeos)"
           - href: explanation/posicionamento_arquitetural.qmd
             text: Posicionamento Arquitetural
           - href: explanation/show_case.qmd

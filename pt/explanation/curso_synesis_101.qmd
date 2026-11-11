@@ -1,0 +1,97 @@
+---
+title: "Curso Synesis 101"
+subtitle: "Vídeos curtos para entender o Synesis do zero"
+number-sections: false
+toc-depth: 2
+description: "Curso em vídeo de introdução à linguagem Synesis: do artesanato das ideias aos arquivos de um projeto, e o ecossistema de ferramentas em volta da linguagem."
+---
+
+O **Synesis 101** é um curso em vídeos curtos, de dois a cinco minutos, para quem nunca usou a linguagem. Não é preciso saber programar. Os vídeos explicam as ideias por trás do Synesis e mostram como elas viram arquivos que pessoas e computadores conseguem ler.
+
+O curso serve a dois públicos:
+
+- **quem pesquisa:** pesquisadores qualitativos e de métodos mistos, estudantes de pós-graduação e equipes de revisão de literatura;
+- **quem organiza conhecimento:** quem constrói ontologias ou mapas de conhecimento, organiza o saber de uma equipe ou usa agentes de IA para extrair conhecimento de documentos.
+
+A ideia central atravessa todos os episódios: os métodos da pesquisa qualitativa (codificar, definir, agrupar em temas, relacionar, registrar a origem) servem para organizar conhecimento para qualquer finalidade, inclusive para IAs.
+
+Todos os exemplos vêm do mesmo estudo fictício: **barreiras à adoção de telemedicina em comunidades rurais**. É o estudo usado em [Métodos de Codificação em Synesis](exemplos_codificacao.qmd), então você vai reconhecer os exemplos quando passar dos vídeos para a documentação.
+
+:::{.callout-tip}
+## Como assistir
+Siga a ordem: cada episódio parte do que o anterior mostrou. As legendas já aparecem na própria imagem do vídeo. No celular, gire a tela para ver o vídeo em tela cheia.
+:::
+
+---
+
+# Módulo 1 — Fundamentos {#sec-modulo-1}
+
+*Do artesanato das ideias à engenharia do conhecimento.* O módulo parte do trabalho que todo pesquisador já faz à mão e chega aos arquivos de um projeto Synesis. Nenhum programa aparece aqui: o foco são os conceitos.
+
+## E01 · O artesanato das ideias {#sec-m1-e01}
+
+Ler, marcar, anotar e organizar não é improviso: é um método de pesquisa, a codificação qualitativa, com etapas e manuais próprios. O episódio acompanha um pesquisador que lê entrevistas e um artigo, destaca trechos, anota conceitos e os agrupa em temas.
+
+{{< video https://www.youtube.com/embed/ELxga5LHwsE title="Synesis 101 · E01 · O artesanato das ideias" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 3 min 42 s</span>
+
+## E02 · Três blocos que se encaixam {#sec-m1-e02}
+
+Toda anotação responde a três perguntas: de onde veio, o que diz e o que significa. Cada resposta corresponde a um bloco do Synesis (**SOURCE**, **ITEM** e **ONTOLOGY**), e os blocos se encaixam como peças. Ainda sem nenhuma linha de código.
+
+{{< video https://www.youtube.com/embed/I8g_h2WFUZ4 title="Synesis 101 · E02 · Três blocos que se encaixam" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 2 min 50 s</span>
+
+## E03 · Dos blocos aos arquivos {#sec-m1-e03}
+
+O primeiro contato com o código. Você vai ler um bloco SOURCE, um ITEM e um ONTOLOGY escritos em Synesis, ver como os encaixes do episódio anterior viram nomes repetidos no texto e saber em que arquivo cada bloco mora: `.syn` para as anotações, `.syno` para a ontologia.
+
+{{< video https://www.youtube.com/embed/NIXS8kVgPoQ title="Synesis 101 · E03 · Dos blocos aos arquivos" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 2 min 55 s</span>
+
+## E04 · O template {#sec-m1-e04}
+
+Quem decide quais campos cada bloco tem? O template, um arquivo `.synt` que funciona como o livro de regras do projeto. Ele declara os campos, se são obrigatórios e de que tipo são. Escolher os campos é escolher o método de análise.
+
+{{< video https://www.youtube.com/embed/5-dW9bK7XZw title="Synesis 101 · E04 · O template" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 4 min 20 s</span>
+
+## E05 · O projeto {#sec-m1-e05}
+
+O arquivo de projeto `.synp` reúne o template, as anotações, a ontologia e as referências. O episódio mostra os blocos opcionais do projeto, explica como vários projetos podem compartilhar uma mesma ontologia e encerra o módulo apresentando o compilador.
+
+{{< video https://www.youtube.com/embed/L4epHnHY9x8 title="Synesis 101 · E05 · O projeto" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 2 min 9 s</span>
+
+---
+
+# Módulo 2 — Ferramentas {#sec-modulo-2}
+
+*Compilador, editor e codificação assistida.* Com os conceitos no lugar, o módulo apresenta as ferramentas que trabalham com a linguagem.
+
+## E01 · O ecossistema {#sec-m2-e01}
+
+O mapa das ferramentas em volta da linguagem, antes de abrir cada uma. No centro está o compilador, que confere e exporta o projeto. Em volta dele: os gerenciadores de referências (Zotero, JabRef), o editor (VS Code), a codificação assistida por IA (synesis-coder) e o grafo de conhecimento (synesis-graph), que agentes de IA podem consultar.
+
+{{< video https://www.youtube.com/embed/NAVI-5iyd-U title="Synesis 101 · Módulo 2 · E01 · O ecossistema" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 3 min 51 s</span>
+
+:::{.callout-note}
+## Próximos episódios
+Os demais episódios do Módulo 2 estão em produção e serão adicionados a esta página.
+:::
+
+---
+
+# Para continuar {#sec-continuar}
+
+- [Getting Started](../tutorials/getting-started.qmd): monte e compile seu primeiro projeto.
+- [O que Synesis pode expressar](show_case.qmd): todos os tipos de campo, com exemplos.
+- [Métodos de Codificação em Synesis](exemplos_codificacao.qmd): o estudo do curso aplicado a cada método de codificação.
+- [Referência da Linguagem](../reference/guia_referencia.qmd): a sintaxe completa.
