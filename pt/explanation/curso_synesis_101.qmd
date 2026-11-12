@@ -100,6 +100,27 @@ synesis compile project.synp --stats            # sem erros = instalação funci
 
 No VS Code, instale a extensão **Synesis**, do publicador **synesis-lang**, pelo painel Extensões. Se os painéis ficarem vazios, procure por Synesis nas configurações e informe o caminho do `synesis-lsp`.
 
+## E03 · O compilador: conferir e exportar {#sec-m2-e03}
+
+Os comandos básicos do compilador no terminal. O episódio mostra as etapas da compilação e as estatísticas. Ensina a ler uma mensagem de erro, que traz arquivo, linha, coluna, gravidade e o problema, e explica a diferença entre erro e aviso. Depois, exporta o projeto para JSON, CSV, Excel e Alpaca. Duas regras ficam claras: se nenhuma mensagem aparece, o projeto está correto; e a exportação é tudo ou nada, porque com um erro nenhum arquivo é gerado.
+
+{{< video https://www.youtube.com/embed/-4ZGcUwwdNI title="Synesis 101 · Módulo 2 · E03 · O compilador: conferir e exportar" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 2 min 37 s</span>
+
+Os comandos do vídeo, para copiar:
+
+```bash
+synesis compile project.synp --stats            # etapas + contagem de fontes, trechos e conceitos
+synesis compile project.synp --check-codes      # lista os códigos que não existem na ontologia, com sugestão
+synesis compile project.synp --strict           # avisos passam a contar como erros
+synesis compile project.synp --json saida.json --xls saida.xlsx --csv csv   # a pasta csv precisa existir
+synesis check annotations.syn                   # só a escrita de um arquivo, sem o template
+synesis validate-template template.synt         # confere o template enquanto você o escreve
+```
+
+A conferência completa é sempre a do `synesis compile`.
+
 :::{.callout-note}
 ## Próximos episódios
 Os demais episódios do Módulo 2 estão em produção e serão adicionados a esta página.
