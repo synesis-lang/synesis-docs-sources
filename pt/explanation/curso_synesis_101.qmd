@@ -82,6 +82,24 @@ O mapa das ferramentas em volta da linguagem, antes de abrir cada uma. No centro
 
 <span class="text-muted small">Duração: 3 min 51 s</span>
 
+## E02 · Instalação {#sec-m2-e02}
+
+O ecossistema básico em poucos minutos: o compilador, o servidor de linguagem (que liga o compilador ao editor), o synesis-coder e a extensão do VS Code. O episódio cria um projeto de teste, compila esse projeto e o abre no editor com os painéis do Synesis. Também mostra o que fazer se os painéis ficarem vazios.
+
+{{< video https://www.youtube.com/embed/gpAv1MjqjIw title="Synesis 101 · Módulo 2 · E02 · Instalação" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 1 min 40 s</span>
+
+Os comandos do vídeo, para copiar. É preciso ter o Python 3.10 ou mais recente.
+
+```bash
+pip install synesis synesis-lsp synesis-coder   # se pip não for encontrado: python -m pip install ...
+synesis init                                    # numa pasta vazia: cria um projeto de teste
+synesis compile project.synp --stats            # sem erros = instalação funcionando
+```
+
+No VS Code, instale a extensão **Synesis**, do publicador **synesis-lang**, pelo painel Extensões. Se os painéis ficarem vazios, procure por Synesis nas configurações e informe o caminho do `synesis-lsp`.
+
 :::{.callout-note}
 ## Próximos episódios
 Os demais episódios do Módulo 2 estão em produção e serão adicionados a esta página.
