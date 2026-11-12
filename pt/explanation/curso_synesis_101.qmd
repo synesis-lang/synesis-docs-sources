@@ -82,6 +82,14 @@ O mapa das ferramentas em volta da linguagem, antes de abrir cada uma. No centro
 
 <span class="text-muted small">Duração: 3 min 51 s</span>
 
+## E01-2 · Synesis: o que é, o que pode vir a ser, o que não é {#sec-m2-e01-2}
+
+Um episódio conceitual, antes de instalar as ferramentas. A palavra "ontologia" não quer dizer a mesma coisa na pesquisa qualitativa e na engenharia de ontologias. O episódio situa o Synesis entre esses campos: uma linguagem com compilador para registrar, conferir e rastrear o conhecimento extraído de textos, que não é um método nem um anotador automático. Mostra onde ele já se aplica (pesquisa qualitativa, revisão de literatura, bases de conhecimento auditáveis, dados para IA e GraphRAG), o que fica fora dele hoje e para onde a linguagem pode crescer.
+
+{{< video https://www.youtube.com/embed/ICp0CJfmv1E title="Synesis 101 · Módulo 2 · E01-2 · Synesis: o que é, o que pode vir a ser, o que não é" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 6 min 15 s</span>
+
 ## E02 · Instalação {#sec-m2-e02}
 
 O ecossistema básico em poucos minutos: o compilador, o servidor de linguagem (que liga o compilador ao editor), o synesis-coder e a extensão do VS Code. O episódio cria um projeto de teste, compila esse projeto e o abre no editor com os painéis do Synesis. Também mostra o que fazer se os painéis ficarem vazios.
