@@ -1,0 +1,233 @@
+---
+title: "The Organizing Model"
+subtitle: "ONTOLOGY blocks as organizing principles: field roles, production plan and SKOS export"
+---
+
+# The Organizing Model
+
+The `ONTOLOGY` blocks of a Synesis project are its **organizing
+principles**: the conceptual system through which the coded occurrences will
+be understood. The compiler calls them together the **organizing model**, and
+each block a **model entry**.
+
+The name "ONTOLOGY" does not commit you to a formal ontology. The same
+mechanism serves several degrees of organization, and the degree is a research
+decision, not a format constraint:
+
+| Degree | What the project declares | What it is for |
+|---|---|---|
+| **Flat list** | a name and a definition per concept | controlled vocabulary: `support_network` and `SupportNetwork` do not become two concepts |
+| **Vocabulary with synonyms / thesaurus** | alternative and hidden labels, deprecated names | search and consolidation of variants |
+| **Taxonomy** | "is a kind of" hierarchy | counts per subtree, navigation from general to specific |
+| **Lightweight ontology** | hierarchy with more than one species (kind, part, instance) and associative relations | SKOS publication, integration with other vocabularies |
+
+None of this needs special syntax in the `.syno`: these are ordinary template
+fields (`SCOPE ONTOLOGY`) given a **function** with a `ROLE` line.
+
+## The profile the compiler reports
+
+At the end of `synesis compile`, the compiler describes what the project
+declared — without judging whether the relations are valid:
+
+```text
+Structural Profile:
+  Concepts:              19
+  With definition:       19 (100%)
+  Alternative labels:    8
+  With KIND parent:      7
+  With PART parent:      2
+  Cycles:                none ✓
+  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Lightweight ontology
+  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Lightweight ontology
+```
+
+The `Organizing model` line profiles the `.syno`; each `EXPORT SKOS` block
+gets its own line, because an artifact may add relations (see
+[MAP RELATIONS](#skos-export)). All ecosystem CLIs write their output in
+English.
+
+## Field roles: `ROLE`
+
+A field's **type** gives the shape of its value; its `ROLE` line gives its
+**function** in the organizing model. The field name stays free.
+
+```synesis
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+END FIELD
+
+FIELD used_for TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE LABEL ALTERNATIVE
+END FIELD
+
+FIELD kind_of TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+END FIELD
+```
+
+| Role | Type | Meaning | SKOS |
+|---|---|---|---|
+| `LABEL PREFERRED` | TEXT | display label (one per concept) | `skos:prefLabel` |
+| `LABEL ALTERNATIVE` | TEXT | synonyms and variants | `skos:altLabel` |
+| `LABEL HIDDEN` | TEXT | old or misspelled forms, for search only | `skos:hiddenLabel` |
+| `NOTE DEFINITION` | TEXT | the concept's definition | `skos:definition` |
+| `NOTE USAGE` | TEXT | when to apply the code | `skos:scopeNote` |
+| `NOTE EXAMPLE` | TEXT | typical case | `skos:example` |
+| `NOTE COUNTEREXAMPLE` | TEXT | similar case it does not apply to | `syn:counterExample` |
+| `HIERARCHY KIND` | CODE | is a kind of | `skos:broader` |
+| `HIERARCHY PART` | CODE | is part of | `skos:broader` |
+| `HIERARCHY INSTANCE` | CODE | is an instance of | `skos:broader` |
+| `USE` | CODE | deprecated name; use the concept given | label of the target |
+
+With the function declared, the compiler validates the structure: a label
+belongs to one concept only, the hierarchy points to the broader concept,
+allows several parents and has no cycle. Each tool reads the field by its
+role: the SKOS exporter, the `synesis-coder` phases, `synesis-graph`
+(`KIND_OF`, `PART_OF`, `INSTANCE_OF` edges) and the LSP (hover with parents
+and children).
+
+```synesis
+ONTOLOGY smishing
+    definition: Phishing carried out through SMS messages.
+    used_for: SMS phishing
+    kind_of: phishing
+END ONTOLOGY
+```
+
+### What sources state and what the project adopts
+
+The hierarchy in the `.syno` is what the **project adopts**. What the
+**sources state** stays in the annotations' chains (`CHAIN`), with evidence.
+The two do not mix: a chain `smishing -> KIND_OF -> phishing` puts nothing in
+the `.syno`. To bring it into an artifact, use `MAP RELATIONS` in the
+[EXPORT block](#skos-export).
+
+### Merging two names: `USE`
+
+When two blocks name the same concept, the deprecated one keeps only the
+`USE`-role field:
+
+```synesis
+ONTOLOGY voice_phishing
+    use: vishing
+END ONTOLOGY
+```
+
+Annotations do not change. Counts, hierarchy, graph and SKOS add the
+deprecated block to its target, and the deprecated name becomes a label of the
+target. `synesis-coder consolidate project.synp voice_phishing --into vishing`
+makes the edit with a manifest; `--revert` undoes it.
+
+## Competency questions: `QUESTIONS`
+
+The `.synp` can declare what the project must be able to answer:
+
+```synesis
+QUESTIONS
+    Q1: Which evidence concerns phishing or any of its subtypes?
+    Q2: Which concepts have no direct or indirect evidence?
+END QUESTIONS
+```
+
+The questions guide the template design and serve as acceptance criteria for
+the organizing model. They appear in the compiled JSON, in the graph context
+and in the project context `synesis-coder` sends to the model.
+
+## Production plan: `PHASE`
+
+`PHASE` blocks split the production of the organizing model into phases, each
+with its own fields:
+
+```synesis
+PHASE ONTOLOGY definitions
+    FIELDS definition, topic
+    INPUT excerpt, chain
+END PHASE
+
+PHASE ONTOLOGY synonyms
+    FIELDS used_for, hidden_label
+    INPUT definition, topic
+END PHASE
+
+PHASE ONTOLOGY taxonomy
+    FIELDS kind_of, part_of
+    INPUT definition, topic, chain
+END PHASE
+```
+
+The compiler validates the plan against the template (existing fields, phase
+order, required fields covered). Each phase's kind comes from the roles:
+`HIERARCHY` fields make a taxonomy phase, `LABEL ALTERNATIVE` or `HIDDEN`
+fields a synonyms phase, and the rest a descriptive phase.
+
+```bash
+synesis-coder phase project.synp --list          # the plan and each phase's connection
+synesis-coder phase project.synp definitions     # run one phase
+synesis-coder review project.synp taxonomy --sample 100
+synesis-coder review project.synp taxonomy --score sample.csv
+```
+
+Each run writes a manifest (`<destination>.<phase>.manifest.json`) recording
+what was proposed, applied or rejected; running again with unchanged inputs
+does not call the model. `review` draws a stratified sample for human
+judgement and estimates precision with inclusion weights. Model and connection
+can differ per phase (`SYNESIS_CODER_PHASE_<NAME>_MODEL`, `_BACKEND`,
+`_API_URL`, `_API_KEY`).
+
+## SKOS export
+
+A project's artifacts are declared in `EXPORT` blocks of the `.synp` and run
+with `synesis export project.synp`. The `SKOS` format publishes the organizing
+model as a lightweight ontology in Turtle:
+
+```synesis
+EXPORT SKOS corroborated
+    OUTPUT "out/fraud.ttl"
+    NAMESPACE "https://example.org/id/fraud/"
+    LANGUAGE en
+    MIN_SOURCES 2
+    MAP RELATIONS KIND_OF TO HIERARCHY KIND
+    MAP RELATIONS MITIGATES, EXPLOITS TO RELATED
+END EXPORT
+```
+
+- **`MAP RELATIONS`** brings chain relations into a role (`HIERARCHY KIND`,
+  `PART`, `INSTANCE` or `RELATED`) **in this artifact only**. The `.syno`,
+  dashboards and graph do not see the mapping.
+- **`MIN_SOURCES`** is the minimum number of distinct sources stating a pair
+  for it to enter the file. Two blocks with different thresholds separate the
+  corroborated pairs from the candidates.
+- **`ALIAS_LABEL HIDDEN|ALTERNATIVE`** decides how a deprecated name (`USE`)
+  enters its target; the default is `HIDDEN`.
+- **`REGISTRY "<file>"`** with `synesis export --publish` records the
+  published IRIs. If a published concept is later deprecated, its old IRI is
+  exported as obsolete (`owl:deprecated`, `dcterms:isReplacedBy`) instead of
+  disappearing.
+
+### IRI policy
+
+Each concept gets the IRI `NAMESPACE` + `concept/` + block name. The
+`NAMESPACE` belongs to the **project**: a domain the team controls and keeps,
+ending in `/` or `#`. `example.org` is for testing, never for publication.
+Because the IRI derives from the name, renaming a concept changes its IRI:
+after publishing, use `USE` with `REGISTRY` so the old IRI keeps resolving to
+the new one.
+
+### The `syn:` vocabulary
+
+SKOS covers almost everything. The two missing terms are in the
+[`syn:`](https://synesis-lang.org/ns/syn/) vocabulary
+(`https://synesis-lang.org/ns/syn#`, file
+[`syn.ttl`](https://synesis-lang.org/ns/syn.ttl)):
+
+- `syn:counterExample`, subproperty of `skos:note`, for `NOTE COUNTEREXAMPLE`;
+- `syn:classifiedBy`, superproperty of the properties generated for
+  `ENUMERATED` and `ORDERED` fields, whose values become `skos:ConceptScheme`.
+
+## See also
+
+- [Language Reference](guia_referencia.qmd)
+- [Synesis API](synesis_load.qmd)

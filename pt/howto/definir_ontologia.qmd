@@ -7,6 +7,12 @@ subtitle: "Guia prático para criar vocabulários conceituais estruturados"
 
 Este guia mostra **como criar e organizar ontologias** (`.syno`) para estruturar seu vocabulário conceitual de forma sistemática e auditável.
 
+::: {.callout-note}
+## Blocos ONTOLOGY são princípios organizadores
+
+Os blocos `ONTOLOGY` não obrigam a uma ontologia formal: são os **princípios organizadores** do projeto, e o compilador chama o conjunto de **modelo organizador**. O mesmo mecanismo serve a uma lista plana de conceitos, a um vocabulário com sinônimos, a uma taxonomia ou a uma ontologia leve exportada em SKOS — o grau é decisão da pesquisa. A função de cada campo (rótulo, definição, hierarquia, consolidação) é declarada com `ROLE` no template. Ver [O Modelo Organizador](../reference/modelo_organizador.qmd).
+:::
+
 **Você deve usar este guia se:**
 
 - Precisa definir códigos conceituais reutilizáveis

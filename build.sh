@@ -17,6 +17,9 @@ cd ..
 echo "📦 Criando página raiz de redirecionamento..."
 quarto render index.qmd --to html --output-dir _site
 
+echo "📚 Copiando vocabulário syn: (ns/syn.ttl)..."
+cp -r ns _site/ns
+
 echo "🌐 Copiando CNAME (domínio personalizado)..."
 cp CNAME _site/CNAME
 

@@ -1,0 +1,35 @@
+@prefix syn:     <https://synesis-lang.org/ns/syn#> .
+@prefix skos:    <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs:    <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:     <http://www.w3.org/2002/07/owl#> .
+@prefix dcterms: <http://purl.org/dc/terms/> .
+
+# Synesis vocabulary for SKOS exports (EXPORT SKOS, synesis >= 0.15).
+# Only the two terms that SKOS itself does not provide.
+
+<https://synesis-lang.org/ns/syn#>
+    a owl:Ontology ;
+    dcterms:title "Synesis vocabulary for SKOS exports"@en ;
+    dcterms:title "Vocabulário Synesis para exportações SKOS"@pt-BR ;
+    dcterms:description "Terms used by the Synesis compiler when it exports a project's organizing model as a lightweight SKOS ontology."@en ;
+    dcterms:publisher <https://synesis-lang.org/> ;
+    dcterms:license <https://creativecommons.org/licenses/by/4.0/> ;
+    owl:versionInfo "1.0" ;
+    rdfs:seeAlso <https://synesis-lang.org/ns/syn/> .
+
+syn:counterExample
+    a owl:AnnotationProperty , rdf:Property ;
+    rdfs:subPropertyOf skos:note ;
+    rdfs:isDefinedBy <https://synesis-lang.org/ns/syn#> ;
+    rdfs:label "counter-example"@en , "contraexemplo"@pt-BR ;
+    skos:definition "A similar case to which the concept does NOT apply. Exported from a template field declared with ROLE NOTE COUNTEREXAMPLE."@en ,
+        "Caso parecido ao qual o conceito NÃO se aplica. Exportado de um campo do template declarado com ROLE NOTE COUNTEREXAMPLE."@pt-BR .
+
+syn:classifiedBy
+    a owl:ObjectProperty , rdf:Property ;
+    rdfs:range skos:Concept ;
+    rdfs:isDefinedBy <https://synesis-lang.org/ns/syn#> ;
+    rdfs:label "classified by"@en , "classificado por"@pt-BR ;
+    skos:definition "Links a concept to a value of a closed vocabulary (ENUMERATED or ORDERED field) of the project. Each such field becomes a subproperty of syn:classifiedBy, and its values a skos:ConceptScheme."@en ,
+        "Liga um conceito a um valor de vocabulário fechado (campo ENUMERATED ou ORDERED) do projeto. Cada campo desses vira subpropriedade de syn:classifiedBy, e seus valores, um skos:ConceptScheme."@pt-BR .

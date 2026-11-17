@@ -48,6 +48,8 @@ website:
         menu:
           - href: reference/guia_referencia.qmd
             text: Language Reference
+          - href: reference/organizing_model.qmd
+            text: The Organizing Model
           - href: reference/synesis_load.qmd
             text: Synesis API
       - text: "Explanation"

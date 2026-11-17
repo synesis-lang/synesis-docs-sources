@@ -60,6 +60,8 @@ website:
         menu:
           - href: reference/guia_referencia.qmd
             text: Referência da Linguagem
+          - href: reference/modelo_organizador.qmd
+            text: O Modelo Organizador
           - href: reference/gramatica.qmd
             text: Gramática da Linguagem
           - href: reference/guia_erros.qmd

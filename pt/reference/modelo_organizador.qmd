@@ -1,0 +1,233 @@
+---
+title: "O Modelo Organizador"
+subtitle: "Blocos ONTOLOGY como princípios organizadores: função dos campos, plano de produção e exportação SKOS"
+---
+
+# O Modelo Organizador
+
+Os blocos `ONTOLOGY` de um projeto Synesis são os seus **princípios
+organizadores**: o sistema conceitual segundo o qual as ocorrências
+codificadas serão compreendidas. O compilador chama o conjunto deles de
+**modelo organizador** (*organizing model*) e cada bloco de **entrada do
+modelo** (*model entry*).
+
+O nome "ONTOLOGY" não obriga a uma ontologia formal. O mesmo mecanismo serve
+a vários graus de organização, e o grau é decisão da pesquisa, não do
+formato:
+
+| Grau | O que o projeto declara | Para que serve |
+|---|---|---|
+| **Lista plana** | nome e definição de cada conceito | vocabulário controlado: impede que `rede_apoio` e `RedeDeApoio` virem dois conceitos |
+| **Vocabulário com sinônimos / tesauro** | rótulos alternativos, ocultos e nomes preteridos | busca e consolidação de variantes |
+| **Taxonomia** | hierarquia "é um tipo de" | contagens por subárvore, navegação do geral ao específico |
+| **Ontologia leve** | hierarquia com mais de uma espécie (tipo, parte, caso) e relações associativas | publicação em SKOS, integração com outros vocabulários |
+
+Nada disso exige sintaxe especial no `.syno`: são campos comuns do template
+(`SCOPE ONTOLOGY`) aos quais se atribui uma **função** com a linha `ROLE`.
+
+## O perfil que o compilador informa
+
+Ao final de `synesis compile`, o compilador descreve o que o projeto
+declarou — sem julgar se as relações são válidas:
+
+```text
+Structural Profile:
+  Concepts:              19
+  With definition:       19 (100%)
+  Alternative labels:    8
+  With KIND parent:      7
+  With PART parent:      2
+  Cycles:                none ✓
+  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Lightweight ontology
+  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Lightweight ontology
+```
+
+A linha `Organizing model` é o perfil do `.syno`; cada bloco `EXPORT SKOS`
+ganha a sua, porque um artefato pode acrescentar relações (ver
+[MAP RELATIONS](#exportação-skos)). As saídas dos CLIs do ecossistema são em
+inglês; a documentação segue em português e inglês.
+
+## A função dos campos: `ROLE`
+
+O **tipo** de um campo diz a forma do valor; a linha `ROLE` diz a sua
+**função** no modelo organizador. O nome do campo continua livre.
+
+```synesis
+FIELD definicao TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+END FIELD
+
+FIELD usado_por TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE LABEL ALTERNATIVE
+END FIELD
+
+FIELD tipo_de TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+END FIELD
+```
+
+| Papel | Tipo | Significado | SKOS |
+|---|---|---|---|
+| `LABEL PREFERRED` | TEXT | rótulo de exibição (um por conceito) | `skos:prefLabel` |
+| `LABEL ALTERNATIVE` | TEXT | sinônimos e variantes | `skos:altLabel` |
+| `LABEL HIDDEN` | TEXT | grafias antigas ou erradas, só para busca | `skos:hiddenLabel` |
+| `NOTE DEFINITION` | TEXT | a definição do conceito | `skos:definition` |
+| `NOTE USAGE` | TEXT | quando aplicar o código | `skos:scopeNote` |
+| `NOTE EXAMPLE` | TEXT | caso típico | `skos:example` |
+| `NOTE COUNTEREXAMPLE` | TEXT | caso parecido ao qual não se aplica | `syn:counterExample` |
+| `HIERARCHY KIND` | CODE | é um tipo de | `skos:broader` |
+| `HIERARCHY PART` | CODE | é parte de | `skos:broader` |
+| `HIERARCHY INSTANCE` | CODE | é um caso de | `skos:broader` |
+| `USE` | CODE | nome preterido; vale o conceito indicado | rótulo do alvo |
+
+Com a função declarada, o compilador valida a estrutura: um rótulo pertence a
+um só conceito, a hierarquia aponta para o conceito mais amplo, aceita vários
+pais e não tem ciclo. Cada ferramenta lê o campo pelo papel: o exportador
+SKOS, as fases do `synesis-coder`, o `synesis-graph` (arestas `KIND_OF`,
+`PART_OF`, `INSTANCE_OF`) e o LSP (hover com pais e filhos).
+
+```synesis
+ONTOLOGY smishing
+    definicao: Phishing conduzido por mensagens SMS.
+    usado_por: phishing por SMS, SMS phishing
+    tipo_de: phishing
+END ONTOLOGY
+```
+
+### O que as fontes afirmam e o que o projeto adota
+
+A hierarquia no `.syno` é o que o **projeto adota**. O que as **fontes
+afirmam** continua nas cadeias (`CHAIN`) das anotações, com evidência. As duas
+coisas não se misturam: uma cadeia `smishing -> TIPO_DE -> phishing` não põe
+nada no `.syno`. Para levá-la a um artefato, usa-se `MAP RELATIONS` no
+[bloco EXPORT](#exportação-skos).
+
+### Consolidar dois nomes: `USE`
+
+Quando dois blocos nomeiam o mesmo conceito, o preterido fica só com o campo
+de papel `USE`:
+
+```synesis
+ONTOLOGY voice_phishing
+    usar: vishing
+END ONTOLOGY
+```
+
+As anotações não mudam. Contagens, hierarquia, grafo e SKOS somam o preterido
+ao alvo, e o nome preterido vira rótulo do alvo. A edição é feita por
+`synesis-coder consolidate projeto.synp voice_phishing --into vishing`, com
+manifesto, e se desfaz com `--revert`.
+
+## Questões de competência: `QUESTIONS`
+
+O `.synp` pode declarar o que o projeto precisa conseguir responder:
+
+```synesis
+QUESTIONS
+    Q1: Quais evidências tratam de phishing ou de seus subtipos?
+    Q2: Quais conceitos não têm evidência direta nem indireta?
+END QUESTIONS
+```
+
+As questões orientam o desenho do template e servem de critério de aceite do
+modelo organizador. Elas aparecem no JSON compilado, no contexto do grafo e no
+contexto de projeto que o `synesis-coder` envia ao modelo.
+
+## Plano de produção: `PHASE`
+
+Os blocos `PHASE` dividem a produção do modelo organizador em fases, cada uma
+com seus campos:
+
+```synesis
+PHASE ONTOLOGY definicoes
+    FIELDS definicao, topico
+    INPUT trecho, chain
+END PHASE
+
+PHASE ONTOLOGY sinonimos
+    FIELDS usado_por, nome_antigo
+    INPUT definicao, topico
+END PHASE
+
+PHASE ONTOLOGY taxonomia
+    FIELDS tipo_de, parte_de
+    INPUT definicao, topico, chain
+END PHASE
+```
+
+O compilador valida o plano contra o template (campos existentes, ordem das
+fases, campos obrigatórios cobertos). O tipo de cada fase sai dos papéis:
+campos `HIERARCHY` fazem uma fase de taxonomia, campos `LABEL ALTERNATIVE` ou
+`HIDDEN` uma fase de sinônimos, e os demais uma fase descritiva.
+
+```bash
+synesis-coder phase projeto.synp --list         # o plano e a conexão de cada fase
+synesis-coder phase projeto.synp definicoes     # executa uma fase
+synesis-coder review projeto.synp taxonomia --sample 100
+synesis-coder review projeto.synp taxonomia --score amostra.csv
+```
+
+Cada execução grava um manifesto (`<destino>.<fase>.manifest.json`) com o que
+foi proposto, aplicado ou rejeitado; rodar de novo sem mudança nas entradas
+não chama o modelo. `review` sorteia uma amostra estratificada para
+julgamento humano e estima a precisão com pesos de inclusão. Modelo e conexão
+podem variar por fase (`SYNESIS_CODER_PHASE_<NOME>_MODEL`, `_BACKEND`,
+`_API_URL`, `_API_KEY`).
+
+## Exportação SKOS
+
+Os artefatos do projeto são declarados em blocos `EXPORT` no `.synp` e
+executados por `synesis export projeto.synp`. O formato `SKOS` publica o
+modelo organizador como ontologia leve em Turtle:
+
+```synesis
+EXPORT SKOS corroborado
+    OUTPUT "saida/fraudes.ttl"
+    NAMESPACE "https://example.org/id/fraudes/"
+    LANGUAGE pt-BR
+    MIN_SOURCES 2
+    MAP RELATIONS TIPO_DE TO HIERARCHY KIND
+    MAP RELATIONS MITIGA, EXPLORA TO RELATED
+END EXPORT
+```
+
+- **`MAP RELATIONS`** leva relações das cadeias a um papel (`HIERARCHY KIND`,
+  `PART`, `INSTANCE` ou `RELATED`) **só neste artefato**. O `.syno`, os
+  painéis e o grafo não veem esse mapeamento.
+- **`MIN_SOURCES`** é o número mínimo de fontes distintas que afirmam um par
+  para ele entrar no arquivo. Dois blocos com limiares diferentes separam o
+  corroborado dos candidatos.
+- **`ALIAS_LABEL HIDDEN|ALTERNATIVE`** decide como o nome preterido (`USE`)
+  entra no alvo; o padrão é `HIDDEN`.
+- **`REGISTRY "<arquivo>"`** com `synesis export --publish` registra os IRIs
+  publicados. Se um conceito publicado vira preterido, o IRI antigo sai como
+  obsoleto (`owl:deprecated`, `dcterms:isReplacedBy`) em vez de sumir.
+
+### Política de IRIs
+
+Cada conceito recebe o IRI `NAMESPACE` + `concept/` + nome do bloco. O
+`NAMESPACE` é do **projeto**: um domínio que a equipe controla e mantém, terminado
+em `/` ou `#`. `example.org` serve para testes, nunca para publicação. Como o
+IRI deriva do nome, renomear um conceito muda o IRI: depois de publicar, use
+`USE` com `REGISTRY` para que o IRI antigo continue resolvendo para o novo.
+
+### O vocabulário `syn:`
+
+O SKOS cobre quase tudo. Os dois termos que faltam estão no vocabulário
+[`syn:`](https://synesis-lang.org/ns/syn/) (`https://synesis-lang.org/ns/syn#`,
+arquivo [`syn.ttl`](https://synesis-lang.org/ns/syn.ttl)):
+
+- `syn:counterExample`, subpropriedade de `skos:note`, para
+  `NOTE COUNTEREXAMPLE`;
+- `syn:classifiedBy`, superpropriedade das propriedades geradas para campos
+  `ENUMERATED` e `ORDERED`, cujos valores viram `skos:ConceptScheme`.
+
+## Ver também
+
+- [Como Definir uma Ontologia](../howto/definir_ontologia.qmd)
+- [Referência da Linguagem](guia_referencia.qmd)
+- [Guia de Erros](guia_erros.qmd) — diagnósticos `SYNESIS_E104`–`SYNESIS_E153`
+- [Codificação com IA (synesis-coder)](../howto/synesis_coder.qmd)

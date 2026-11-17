@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synesis vocabulary (syn:)</title>
+<link rel="alternate" type="text/turtle" href="../syn.ttl">
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; color: #1d1d1f; background: #fff; }
+  code { background: #f2f2f4; padding: 0 .25em; border-radius: 3px; }
+  h2 { margin-top: 2rem; }
+  @media (prefers-color-scheme: dark) { body { color: #e8e8ea; background: #161618; } code { background: #2a2a2e; } }
+</style>
+</head>
+<body>
+<h1>Synesis vocabulary <code>syn:</code></h1>
+<p>Namespace: <code>https://synesis-lang.org/ns/syn#</code> · Turtle: <a href="../syn.ttl">syn.ttl</a> · version 1.0</p>
+<p>The Synesis compiler exports a project's organizing model (its ONTOLOGY blocks) as a lightweight SKOS ontology with <code>EXPORT SKOS</code>. SKOS covers almost everything; this vocabulary defines the two terms it lacks.</p>
+
+<h2 id="counterExample"><code>syn:counterExample</code></h2>
+<p>Subproperty of <code>skos:note</code>. A similar case to which the concept does <strong>not</strong> apply. Exported from a template field declared with <code>ROLE NOTE COUNTEREXAMPLE</code>.</p>
+
+<h2 id="classifiedBy"><code>syn:classifiedBy</code></h2>
+<p>Object property, range <code>skos:Concept</code>. Links a concept to a value of a closed vocabulary (an <code>ENUMERATED</code> or <code>ORDERED</code> field) of the project. Each such field becomes a subproperty of <code>syn:classifiedBy</code>, and its values a <code>skos:ConceptScheme</code>.</p>
+
+<p><a href="https://synesis-lang.org/">synesis-lang.org</a></p>
+</body>
+</html>

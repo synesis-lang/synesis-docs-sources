@@ -138,6 +138,10 @@ A autorização mora na **declaração** — a palavra `SHARED`, versionada e au
 `INCLUDE SHARED BIBLIOGRAPHY` ou `INCLUDE SHARED ANNOTATIONS` produzem o erro 84. A exceção existe para compartilhar vocabulário conceitual; estendê-la a outros tipos abriria a contenção para casos que a motivação não pediu.
 :::
 
+### Blocos QUESTIONS, PHASE e EXPORT (synesis ≥ 0.15)
+
+O `.synp` também declara as **questões de competência** (`QUESTIONS`), o **plano de produção** do modelo organizador executado pelo `synesis-coder` (`PHASE`) e os **artefatos** do projeto (`EXPORT`: JSON, CSV, XLS, OKF e SKOS, executados por `synesis export`). A função dos campos de ONTOLOGY é declarada no template com `ROLE`. Tudo isso está em [O Modelo Organizador](modelo_organizador.qmd).
+
 ---
 
 ## Definição de Template (.synt)

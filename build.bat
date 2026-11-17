@@ -35,6 +35,9 @@ if errorlevel 1 (
 echo Copiando landing pages para _site\landing\...
 xcopy /E /I /Y synesis-landing _site\landing >nul
 
+echo Copiando vocabulario syn: (ns\syn.ttl)...
+xcopy /E /I /Y ns _site\ns >nul
+
 echo Copiando CNAME (dominio personalizado)...
 copy /Y CNAME _site\CNAME >nul
 

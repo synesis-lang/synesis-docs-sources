@@ -451,6 +451,27 @@ Erro: O template do projeto 'thompson_bible' não define campos ONTOLOGY.
 
 ---
 
+# Fases do modelo organizador: `phase`, `review`, `consolidate` {#sec-fases}
+
+Com blocos `PHASE` no `.synp` (synesis ≥ 0.15), o modelo organizador é produzido em fases: definições, sinônimos, taxonomia. O tipo de cada fase sai dos papéis (`ROLE`) dos campos que ela produz.
+
+```bash
+synesis-coder phase projeto.synp --list          # o plano e a conexão de cada fase
+synesis-coder phase projeto.synp definicoes      # executa uma fase
+synesis-coder phase projeto.synp taxonomia --dry-run
+synesis-coder review projeto.synp taxonomia --sample 100 --stratify depth
+synesis-coder review projeto.synp taxonomia --score o.taxonomia.review_edge.csv
+synesis-coder consolidate projeto.synp voice_phishing --into vishing
+synesis-coder consolidate projeto.synp voice_phishing --revert
+```
+
+- Cada execução grava um manifesto (`<destino>.<fase>.manifest.json`) com o que foi proposto, aplicado ou rejeitado; uma execução interrompida é retomada sem nova chamada ao modelo, e rodar de novo sem mudança nas entradas não chama o modelo.
+- `review` sorteia uma amostra estratificada (`--unit edge|label|concept`, `--stratify depth|topic|origin|none`) e gera um CSV para julgamento (`judgement`: correct/wrong). `--score` estima a precisão com pesos de inclusão e intervalo de confiança.
+- `consolidate` funde um nome duplicado no conceito que vale (`ROLE USE`), de forma reversível.
+- Modelo e conexão por fase: `SYNESIS_CODER_PHASE_<NOME>_MODEL`, `_BACKEND`, `_API_URL`, `_API_KEY`.
+
+Detalhes em [O Modelo Organizador](../reference/modelo_organizador.qmd).
+
 # O pipeline ACT: revisão e consolidação {#sec-act}
 
 A extração inicial (`item`, `abstract`, `document`) produz anotações que **precisam ser revisadas**. O pipeline ACT organiza essa revisão em fases explícitas, cada uma com um artefato próprio — nada é sobrescrito silenciosamente.

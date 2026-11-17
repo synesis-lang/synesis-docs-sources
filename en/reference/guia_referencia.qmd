@@ -110,6 +110,7 @@ END
 - **INCLUDE ONTOLOGY**: Path to `.syno` file(s) with ontological definitions
 - **METADATA**: Optional block with project metadata
 - **DESCRIPTION**: Optional block with free project description
+- **QUESTIONS**, **PHASE**, **EXPORT** (synesis ≥ 0.15): competency questions, the production plan run by `synesis-coder`, and the project's artifacts (JSON, CSV, XLS, OKF, SKOS) run by `synesis export`. ONTOLOGY field functions are declared in the template with `ROLE`. See [The Organizing Model](organizing_model.qmd).
 
 ---
 
