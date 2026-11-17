@@ -20,7 +20,11 @@ formato:
 | **Lista plana** | nome e definição de cada conceito | vocabulário controlado: impede que `rede_apoio` e `RedeDeApoio` virem dois conceitos |
 | **Vocabulário com sinônimos / tesauro** | rótulos alternativos, ocultos e nomes preteridos | busca e consolidação de variantes |
 | **Taxonomia** | hierarquia "é um tipo de" | contagens por subárvore, navegação do geral ao específico |
-| **Ontologia leve** | hierarquia com mais de uma espécie (tipo, parte, caso) e relações associativas | publicação em SKOS, integração com outros vocabulários |
+| **Taxonomia multirrelacional** | hierarquia com mais de uma espécie (tipo, parte, caso) e relações associativas | publicação em SKOS, integração com outros vocabulários |
+
+Nenhum grau se chama "ontologia": SKOS é um **sistema de organização do
+conhecimento** (KOS) — vocabulário, tesauro, taxonomia —, não uma ontologia
+formal em OWL. O termo fica reservado para uma exportação OWL.
 
 Nada disso exige sintaxe especial no `.syno`: são campos comuns do template
 (`SCOPE ONTOLOGY`) aos quais se atribui uma **função** com a linha `ROLE`.
@@ -38,8 +42,8 @@ Structural Profile:
   With KIND parent:      7
   With PART parent:      2
   Cycles:                none ✓
-  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Lightweight ontology
-  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Lightweight ontology
+  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Multi-relation taxonomy
+  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Multi-relation taxonomy
 ```
 
 A linha `Organizing model` é o perfil do `.syno`; cada bloco `EXPORT SKOS`
@@ -181,7 +185,7 @@ podem variar por fase (`SYNESIS_CODER_PHASE_<NOME>_MODEL`, `_BACKEND`,
 
 Os artefatos do projeto são declarados em blocos `EXPORT` no `.synp` e
 executados por `synesis export projeto.synp`. O formato `SKOS` publica o
-modelo organizador como ontologia leve em Turtle:
+modelo organizador como vocabulário SKOS (um KOS) em Turtle:
 
 ```synesis
 EXPORT SKOS corroborado
@@ -213,6 +217,13 @@ Cada conceito recebe o IRI `NAMESPACE` + `concept/` + nome do bloco. O
 em `/` ou `#`. `example.org` serve para testes, nunca para publicação. Como o
 IRI deriva do nome, renomear um conceito muda o IRI: depois de publicar, use
 `USE` com `REGISTRY` para que o IRI antigo continue resolvendo para o novo.
+
+O `NAMESPACE` é decisão do pesquisador: mudá-lo não bloqueia a exportação nem
+a publicação. Se o `REGISTRY` tiver IRIs de outro namespace, `synesis export`
+avisa quantos ficaram fora da conferência (`SYNESIS_E156`) — os links para eles
+quebram, a menos que o endereço antigo redirecione. Com `--publish`, um
+`REGISTRY` ilegível é erro (nada é gravado), e `OUTPUT` e `REGISTRY` no mesmo
+arquivo são recusados sempre (`SYNESIS_E157`).
 
 ### O vocabulário `syn:`
 

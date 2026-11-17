@@ -19,7 +19,11 @@ decision, not a format constraint:
 | **Flat list** | a name and a definition per concept | controlled vocabulary: `support_network` and `SupportNetwork` do not become two concepts |
 | **Vocabulary with synonyms / thesaurus** | alternative and hidden labels, deprecated names | search and consolidation of variants |
 | **Taxonomy** | "is a kind of" hierarchy | counts per subtree, navigation from general to specific |
-| **Lightweight ontology** | hierarchy with more than one species (kind, part, instance) and associative relations | SKOS publication, integration with other vocabularies |
+| **Multi-relation taxonomy** | hierarchy with more than one species (kind, part, instance) and associative relations | SKOS publication, integration with other vocabularies |
+
+No degree is called "ontology": SKOS is a **knowledge organization system**
+(KOS) — vocabulary, thesaurus, taxonomy —, not a formal OWL ontology. The term
+is reserved for an OWL export.
 
 None of this needs special syntax in the `.syno`: these are ordinary template
 fields (`SCOPE ONTOLOGY`) given a **function** with a `ROLE` line.
@@ -37,8 +41,8 @@ Structural Profile:
   With KIND parent:      7
   With PART parent:      2
   Cycles:                none ✓
-  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Lightweight ontology
-  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Lightweight ontology
+  Organizing model:      Terminological: With synonyms (1 code without concept)  |  Conceptual: Multi-relation taxonomy
+  EXPORT SKOS:           Terminological: Thesaurus  |  Conceptual: Multi-relation taxonomy
 ```
 
 The `Organizing model` line profiles the `.syno`; each `EXPORT SKOS` block
@@ -181,7 +185,7 @@ can differ per phase (`SYNESIS_CODER_PHASE_<NAME>_MODEL`, `_BACKEND`,
 
 A project's artifacts are declared in `EXPORT` blocks of the `.synp` and run
 with `synesis export project.synp`. The `SKOS` format publishes the organizing
-model as a lightweight ontology in Turtle:
+model as a SKOS vocabulary (a KOS) in Turtle:
 
 ```synesis
 EXPORT SKOS corroborated
@@ -215,6 +219,13 @@ ending in `/` or `#`. `example.org` is for testing, never for publication.
 Because the IRI derives from the name, renaming a concept changes its IRI:
 after publishing, use `USE` with `REGISTRY` so the old IRI keeps resolving to
 the new one.
+
+The `NAMESPACE` is the researcher's decision: changing it blocks neither the
+export nor the publication. If the `REGISTRY` holds IRIs from another
+namespace, `synesis export` warns how many were left out of the check
+(`SYNESIS_E156`) — links to them break unless the old address redirects. With
+`--publish`, an unreadable `REGISTRY` is an error (nothing is written), and
+`OUTPUT` and `REGISTRY` on the same file are always refused (`SYNESIS_E157`).
 
 ### The `syn:` vocabulary
 
