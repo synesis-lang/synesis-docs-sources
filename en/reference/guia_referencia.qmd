@@ -110,7 +110,7 @@ END
 - **INCLUDE ONTOLOGY**: Path to `.syno` file(s) with ontological definitions
 - **METADATA**: Optional block with project metadata
 - **DESCRIPTION**: Optional block with free project description
-- **QUESTIONS**, **PHASE**, **EXPORT** (synesis ≥ 0.15): competency questions, the production plan run by `synesis-coder`, and the project's artifacts (JSON, CSV, XLS, OKF, SKOS) run by `synesis export`. ONTOLOGY field functions are declared in the template with `ROLE`. See [The Organizing Model](organizing_model.qmd).
+- **QUESTIONS**, **PHASE**, **EXPORT** (synesis ≥ 0.15): competency questions, the production plan run by `synesis-coder`, and the project's artifacts (JSON, CSV, XLS, ALPACA, OKF, SKOS) run by `synesis export`. ONTOLOGY field functions are declared in the template with `ROLE`. See [The Organizing Model](organizing_model.qmd).
 
 ---
 
@@ -487,6 +487,232 @@ END
 
 ---
 
+## GUIDELINES
+
+`GUIDELINES ... END GUIDELINES` is a property of the `FIELD` block, accepted by every field type. It holds the **instructions for filling the field**: for the human annotator and for AI-assisted coding (synesis-coder sends it to the model as part of the prompt). `DESCRIPTION` says what the field is; `GUIDELINES` says how to fill it well.
+
+```synesis
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Concepts applied to the excerpt
+    GUIDELINES
+        One to three concepts, lowercase, words joined by underscores.
+        Reuse an existing concept before creating a new one.
+        Correct: water_access, collective_action
+        Wrong: Water Access, good_group
+    END GUIDELINES
+END FIELD
+```
+
+- Write GUIDELINES for **every** field. Without them, synesis-coder sends only the DESCRIPTION (or nothing) and the model improvises the instruction. `synesis-coder --require-guidelines` turns a missing GUIDELINES into an error.
+- Prefer Correct/Wrong pairs to dense prose. Take examples from another topic, never from the sources that will be coded.
+- A `#` inside GUIDELINES reaches the model: use `#` only as a section title outside the block.
+
+---
+
+## Forbidden Fields (FORBIDDEN)
+
+`FORBIDDEN` declares, in a `*_FIELDS` block, a field of the **same scope** that must not have a value in that block. It is useful, for example, in a derived template that keeps a field's definition but does not want it filled.
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote, code
+    FORBIDDEN note
+END ITEM FIELDS
+```
+
+- The field must be defined with `FIELD` and have the same `SCOPE` as the block. Listing a `SCOPE SOURCE` field in `ITEM FIELDS` is an error.
+- A block that fills the forbidden field produces **error 21**: `Forbidden field 'note' in ITEM block — remove this line`.
+
+---
+
+## Values From Outside the Annotation (ON BIBLIOGRAPHY, ON DATASET)
+
+Some values are metadata of the source, not content extracted from the text. They are declared in the `*_FIELDS` block and are never typed in the `.syn`.
+
+### ON BIBLIOGRAPHY
+
+```synesis
+SOURCE FIELDS
+    REQUIRED year ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+The value comes from the `.bib` entry of the SOURCE. A missing value in the `.bib` produces error 79. The suffix is valid only on a **single-field** clause: `REQUIRED a, b ON BIBLIOGRAPHY` is a syntax error (it would be ambiguous).
+
+### ON DATASET and INCLUDE DATASET
+
+`ON DATASET` takes the value from a **TOML record**, one file per record. The project declares the records with `INCLUDE DATASET` (a file or a glob):
+
+```synesis
+PROJECT interviews
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "references.bib"
+INCLUDE DATASET "records/*.toml"
+INCLUDE ANNOTATIONS "annotations"
+END PROJECT
+```
+
+A `SCOPE SOURCE` field declared with **`IDENTIFIES`** and **`ON DATASET`** is the record key: the value at that path of the TOML must equal the bibref of the SOURCE.
+
+```synesis
+SOURCE FIELDS
+    REQUIRED interview ON DATASET "interview.id"
+    OPTIONAL region ON DATASET "interview.region"
+END SOURCE FIELDS
+
+FIELD interview TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES interview
+END FIELD
+
+FIELD region TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+```
+
+```toml
+# records/s1.toml — matched to SOURCE @s1
+[interview]
+id = "s1"
+region = "Northeast"
+```
+
+- The string after `ON DATASET` is a **path inside the record** (dot notation, such as `interview.region`), not a file name. The file comes from `INCLUDE DATASET`.
+- Single-field clause only, as with `ON BIBLIOGRAPHY`.
+- In the compiled JSON the values are in the `dataset` section, keyed by bibref.
+- A `REQUIRED … ON DATASET` field with no value in the record produces error 85.
+
+### CONTEXT FROM DATASET
+
+`CONTEXT FROM DATASET` is a property of the `FIELD` block, a sibling of `GUIDELINES`. It does **not** give the field a value: it names the TOML sections that synesis-coder sends to the model as context when generating that field. Several sections are separated by commas. Any field type accepts it.
+
+```synesis
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    CONTEXT FROM DATASET "interview"
+    GUIDELINES
+        Copy one to three continuous sentences, word for word.
+    END GUIDELINES
+END FIELD
+```
+
+---
+
+## Linking Projects (IDENTIFIES / REFERS TO)
+
+Independent projects (CVs, abstracts, interviews…) can be linked **without** merging them into one compilation unit. The model is a C/C++ linker: each project compiles on its own and exposes unresolved external references; `synesis compile p1.synp p2.synp` resolves them and produces the aggregate.
+
+| Modifier | Role | Semantics |
+|----------|------|-----------|
+| `IDENTIFIES <entity>` | primary key | the field **identifies** the entity; each value matches one SOURCE |
+| `REFERS TO <entity>` | foreign key | the field **points to** the entity; values may repeat |
+
+```synesis
+# project A — owner of the entity
+FIELD researcher_id TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES researcher
+END FIELD
+```
+
+```synesis
+# project B — points to it
+FIELD author_id TYPE TEXT
+    SCOPE SOURCE
+    REFERS TO researcher
+END FIELD
+```
+
+```bash
+synesis compile a/a.synp b/b.synp --json study.json
+# ✓ 2 projects linked. 1 edge(s) resolved ['researcher'].
+```
+
+- Both modifiers exist only in `SCOPE SOURCE` (error 78). `IDENTIFIES` values are unique among SOURCEs (error 77). Two projects cannot both `IDENTIFIES` the same label (error 81).
+- Compiled alone, a project with `REFERS TO` reports only an INFO (80): the reference is resolved in the link step.
+- Matching is by exact equality of values. A `REFERS TO` with no matching `IDENTIFIES` is a warning (83), not an error: orphans are normal in real corpora. The compiler never merges entities by approximate names.
+- Choose as owner the project with the widest coverage of the key.
+
+### SHARED applies only to ONTOLOGY
+
+`INCLUDE SHARED ONTOLOGY "<path>"` lets several projects use one organizing model outside their folder. `SHARED` with `BIBLIOGRAPHY` or `ANNOTATIONS` is error 84.
+
+---
+
+## Alpaca Export (EXPORT ALPACA)
+
+`EXPORT ALPACA` writes a JSONL file for fine-tuning language models. Each line
+has `instruction`, `input` and `output`, all three as text.
+
+- **Without `MAP` or `INSTRUCTION`:** the compiler chooses built-in pairs. They do
+  not carry the qualifier of a BUNDLE that contains a CHAIN (for example, the
+  epistemic status), so a hypothesis is exported as if asserted. The notice
+  `SYNESIS_I167` says so.
+- **With `MAP <fields> TO INSTRUCTION | INPUT | OUTPUT`** (synesis ≥ 0.16): the
+  researcher declares which fields form each key.
+
+```synesis
+EXPORT ALPACA mechanism
+    OUTPUT "out/mechanism.jsonl"
+    INSTRUCTION Identify the causal relation and how the text presents it.
+    MAP excerpt TO INPUT
+    MAP chain, status, justification TO OUTPUT
+END EXPORT
+
+EXPORT ALPACA zone
+    OUTPUT "out/zone.jsonl"
+    INSTRUCTION Classify the rhetorical zone of the excerpt.
+    MAP excerpt TO INPUT
+    MAP zone TO OUTPUT
+END EXPORT
+```
+
+**One line per what.** A BUNDLE in the map sets the lines: one line per
+occurrence of the bundle. Fields outside it are context, repeated whole in every
+line of the ITEM; they never multiply lines. Without a bundle, there is one line
+per ITEM. In the example, an ITEM with two chains gives two lines, both with the
+same excerpt.
+
+**Text of a key.** One field gives only its value (`"Results"`). Several fields
+give one labelled block per field, in the order of the `MAP`:
+
+```text
+chain:
+lure → EXPLOITS → trust
+status: Hypothetical
+justification:
+The author suggests the relation but does not test it.
+```
+
+A CHAIN enters with all its triples. A field with no value in a line is left out
+of the text. A line whose OUTPUT fields are all empty is not written. Only an
+exact duplicate of the three keys is removed.
+
+**Dataset card.** Next to the JSONL, `<name>.card.json` records:
+
+- the composition;
+- the hashes of the `.synp` and the template;
+- the counts: lines, empty lines, items without the bundle, duplicates;
+- the count of each value of the ENUMERATED/ORDERED fields in OUTPUT;
+- the fields left out.
+
+**Rules.** Each rule below stops only this artifact; the rest of the project
+compiles.
+
+- `OUTPUT` is required (`SYNESIS_E158`).
+- There is exactly one source of instruction: the `INSTRUCTION` text or
+  `MAP <field> TO INSTRUCTION` (`SYNESIS_E159`).
+- An OUTPUT field may not also be in INPUT or INSTRUCTION (`SYNESIS_E162`):
+  instruction and input become the prompt at training time, so the answer would
+  leak into it.
+- Fields from two bundles are refused (`SYNESIS_E163`).
+- ONTOLOGY fields and SOURCE fields with `ON BIBLIOGRAPHY` or `ON DATASET` are
+  not supported yet (`SYNESIS_E164`).
+
+Leaving a qualifier of the bundle out of the map (for instance, `status`) is
+only a notice (`SYNESIS_I166`): the file is written.
+
 ## Compilation Pipeline
 
 ### Mandatory Steps
@@ -579,7 +805,10 @@ Use '->' to connect elements:
 |---------------|-----------|
 | `INCLUDE`     | Includes external file |
 | `BIBLIOGRAPHY`| Inclusion type for .bib |
-| `ANNOTATIONS` | Inclusion type for .syn |
+| `ANNOTATIONS` | Inclusion type for .syn (a file or a folder) |
+| `ONTOLOGY`    | Inclusion type for .syno (a file or a folder) |
+| `DATASET`     | Inclusion type for TOML records (a file or a glob) |
+| `SHARED`      | Allows a target outside the project folder (only with `ONTOLOGY`) |
 
 ### Field Modifiers
 
@@ -588,6 +817,9 @@ Use '->' to connect elements:
 | `REQUIRED`  | Mandatory field |
 | `OPTIONAL`  | Optional field |
 | `BUNDLE`    | Group of mandatory fields as unit |
+| `FORBIDDEN` | Field of the same scope that must not have a value in the block (error 21) |
+| `ON BIBLIOGRAPHY` | The value comes from the `.bib` entry (single-field clause) |
+| `ON DATASET "<path>"` | The value comes from the TOML record, at the given path (single-field clause) |
 
 ### Field Specifiers
 
@@ -600,6 +832,10 @@ Use '->' to connect elements:
 | `RELATIONS`   | Relation list for CHAIN |
 | `VALUES`      | Value list for ORDERED/ENUMERATED |
 | `FORMAT`      | Format for SCALE |
+| `GUIDELINES`  | Filling instructions for the annotator or the AI coder (any type) |
+| `IDENTIFIES`  | The field is the primary key of an entity (`SCOPE SOURCE` only) |
+| `REFERS TO`   | The field is a foreign key to an entity (`SCOPE SOURCE` only) |
+| `CONTEXT FROM DATASET` | TOML sections sent to the model as context for the field (any type) |
 
 ---
 

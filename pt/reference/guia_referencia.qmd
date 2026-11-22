@@ -140,7 +140,7 @@ A autorização mora na **declaração** — a palavra `SHARED`, versionada e au
 
 ### Blocos QUESTIONS, PHASE e EXPORT (synesis ≥ 0.15)
 
-O `.synp` também declara as **questões de competência** (`QUESTIONS`), o **plano de produção** do modelo organizador executado pelo `synesis-coder` (`PHASE`) e os **artefatos** do projeto (`EXPORT`: JSON, CSV, XLS, OKF e SKOS, executados por `synesis export`). A função dos campos de ONTOLOGY é declarada no template com `ROLE`. Tudo isso está em [O Modelo Organizador](modelo_organizador.qmd).
+O `.synp` também declara as **questões de competência** (`QUESTIONS`), o **plano de produção** do modelo organizador executado pelo `synesis-coder` (`PHASE`) e os **artefatos** do projeto (`EXPORT`: JSON, CSV, XLS, ALPACA, OKF e SKOS, executados por `synesis export`; o ALPACA está na seção Exportação Alpaca). A função dos campos de ONTOLOGY é declarada no template com `ROLE`. Tudo isso está em [O Modelo Organizador](modelo_organizador.qmd).
 
 ---
 
@@ -724,7 +724,7 @@ END SOURCE FIELDS
 
 O sufixo só é válido em cláusula de **campo único**. `REQUIRED a, b ON BIBLIOGRAPHY` é erro de sintaxe — numa lista, seria ambíguo a qual campo o sufixo se aplica.
 
-Campos `ON BIBLIOGRAPHY` são excluídos da verificação de campo obrigatório do bloco SOURCE (erro 21), já que o valor não vive no bloco. Se o valor faltar no `.bib`, o erro emitido é o 79.
+Campos `ON BIBLIOGRAPHY` são excluídos da verificação de campo obrigatório do bloco SOURCE (erro 20), já que o valor não vive no bloco. Se o valor faltar no `.bib`, o erro emitido é o 79.
 
 ### Compilação isolada
 
@@ -781,6 +781,161 @@ A linkagem é exclusiva da CLI. O servidor LSP sempre trabalha com projetos isol
 Ver o guia [Ligar Projetos Independentes](../howto/ligar_projetos.qmd) para o fluxo completo com exemplos.
 
 ---
+
+## Campos Proibidos (FORBIDDEN)
+
+`FORBIDDEN` declara, num bloco `*_FIELDS`, um campo do **mesmo escopo** que não pode ter valor naquele bloco. Serve, por exemplo, para um template derivado que mantém a definição de um campo mas não quer que ele seja preenchido.
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote, code
+    FORBIDDEN note
+END ITEM FIELDS
+```
+
+- O campo precisa estar definido com `FIELD` e ter o mesmo `SCOPE` do bloco. Listar em `ITEM FIELDS` um campo de `SCOPE SOURCE` é erro.
+- Um bloco que preenche o campo proibido produz o **erro 21**: `Forbidden field 'note' in ITEM block — remove this line`.
+
+---
+
+## Valores de um Dataset (ON DATASET, INCLUDE DATASET, CONTEXT FROM DATASET)
+
+Assim como `ON BIBLIOGRAPHY` traz o valor da entrada `.bib`, `ON DATASET` traz o valor de um **registro TOML** — um arquivo por registro. O valor não é digitado no `.syn`.
+
+### Declarar o dataset no projeto
+
+```synesis
+PROJECT entrevistas
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "referencias.bib"
+INCLUDE DATASET "registros/*.toml"
+INCLUDE ANNOTATIONS "anotacoes"
+END PROJECT
+```
+
+`INCLUDE DATASET` aceita um arquivo ou um padrão (glob).
+
+### Ligar cada registro a um SOURCE
+
+Um campo de `SCOPE SOURCE` declarado com **`IDENTIFIES`** e **`ON DATASET`** é a chave do registro: o valor encontrado nesse caminho do TOML deve ser igual ao bibref do SOURCE.
+
+```synesis
+SOURCE FIELDS
+    REQUIRED entrevista ON DATASET "entrevista.id"
+    OPTIONAL regiao ON DATASET "entrevista.regiao"
+END SOURCE FIELDS
+
+FIELD entrevista TYPE TEXT
+    SCOPE SOURCE
+    IDENTIFIES entrevista
+END FIELD
+
+FIELD regiao TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+```
+
+```toml
+# registros/s1.toml — associado ao SOURCE @s1
+[entrevista]
+id = "s1"
+regiao = "Nordeste"
+```
+
+- A string depois de `ON DATASET` é um **caminho dentro do registro** (notação de ponto, como `entrevista.regiao`), não o nome do arquivo. O arquivo vem de `INCLUDE DATASET`.
+- Como `ON BIBLIOGRAPHY`, o sufixo só vale em cláusula de **campo único**.
+- No JSON compilado, os valores ficam na seção `dataset`, indexados pelo bibref.
+- Um campo `REQUIRED … ON DATASET` sem valor no registro produz o **erro 85**.
+
+### Contexto para a codificação: `CONTEXT FROM DATASET`
+
+`CONTEXT FROM DATASET` é uma propriedade do bloco `FIELD`, irmã de `GUIDELINES`. Ela **não** dá valor ao campo: indica as seções do registro TOML que o `synesis-coder` envia ao modelo como contexto ao gerar aquele campo.
+
+```synesis
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    CONTEXT FROM DATASET "entrevista"
+    GUIDELINES
+        Copie de uma a três frases contínuas, palavra por palavra.
+    END GUIDELINES
+END FIELD
+```
+
+Várias seções se separam por vírgula: `CONTEXT FROM DATASET "recorte", "texto"`. A propriedade é aceita por qualquer tipo de campo.
+
+---
+
+## Exportação Alpaca (EXPORT ALPACA)
+
+`EXPORT ALPACA` grava um JSONL para afinar modelos de linguagem. Cada linha tem
+`instruction`, `input` e `output`, as três como texto.
+
+- **Sem `MAP` nem `INSTRUCTION`:** o compilador escolhe pares embutidos. Eles não
+  levam o qualificador de um BUNDLE que contém uma CHAIN (por exemplo, o estatuto
+  epistêmico), e uma hipótese sai como se fosse afirmação. O aviso
+  `SYNESIS_I167` diz isso.
+- **Com `MAP <campos> TO INSTRUCTION | INPUT | OUTPUT`** (synesis ≥ 0.16): o
+  pesquisador declara quais campos formam cada chave.
+
+```synesis
+EXPORT ALPACA mecanismo
+    OUTPUT "saida/mecanismo.jsonl"
+    INSTRUCTION Identifique a relação causal e como o texto a apresenta.
+    MAP trecho TO INPUT
+    MAP chain, estatuto, justificativa TO OUTPUT
+END EXPORT
+
+EXPORT ALPACA zona
+    OUTPUT "saida/zona.jsonl"
+    INSTRUCTION Classifique a zona retórica do trecho.
+    MAP trecho TO INPUT
+    MAP zona TO OUTPUT
+END EXPORT
+```
+
+**Uma linha por quê.** Um BUNDLE no mapa define as linhas: uma linha por
+ocorrência do bundle. Os campos fora dele são contexto, repetido inteiro em cada
+linha do ITEM, e nunca multiplicam linhas. Sem bundle, há uma linha por ITEM. No
+exemplo, um ITEM com duas cadeias gera duas linhas, ambas com o mesmo trecho.
+
+**Texto de uma chave.** Um campo só gera o valor (`"Resultado"`). Vários campos
+geram um bloco rotulado por campo, na ordem do `MAP`:
+
+```text
+chain:
+isca → EXPLORA → confiança
+estatuto: Hipotética
+justificativa:
+O autor sugere a relação, mas não a testa.
+```
+
+A CHAIN entra com todas as triplas. Um campo sem valor numa linha fica fora do
+texto. Uma linha com todos os campos do OUTPUT vazios não é gravada. Só a
+duplicata exata das três chaves é removida.
+
+**Cartão do dataset.** Ao lado do JSONL, `<nome>.card.json` registra:
+
+- a composição;
+- os hashes do `.synp` e do template;
+- as contagens: linhas, linhas vazias, ITEMs sem o bundle, duplicatas;
+- a contagem de cada valor dos ENUMERATED/ORDERED do OUTPUT;
+- os campos que ficaram de fora.
+
+**Regras.** Cada regra abaixo impede só este artefato; o resto do projeto
+compila.
+
+- O `OUTPUT` é obrigatório (`SYNESIS_E158`).
+- Há exatamente uma origem de instrução: o texto `INSTRUCTION` ou
+  `MAP <campo> TO INSTRUCTION` (`SYNESIS_E159`).
+- Um campo do OUTPUT não pode estar também em INPUT ou INSTRUCTION
+  (`SYNESIS_E162`): no treino, instrução e entrada viram o prompt, e a resposta
+  vazaria nele.
+- Campos de dois bundles são recusados (`SYNESIS_E163`).
+- Campos de ONTOLOGY e de SOURCE com `ON BIBLIOGRAPHY` ou `ON DATASET` ainda não
+  são suportados (`SYNESIS_E164`).
+
+Deixar fora do mapa um qualificador do bundle (por exemplo, `estatuto`) é só
+informativo (`SYNESIS_I166`): o arquivo é gerado.
 
 ## Pipeline de Compilação
 
@@ -879,6 +1034,7 @@ Use '->' para conectar elementos:
 | `BIBLIOGRAPHY`| Tipo de inclusão para .bib |
 | `ANNOTATIONS` | Tipo de inclusão para .syn |
 | `SHARED`      | Autoriza alvo fora da pasta do projeto (apenas com `ONTOLOGY`) |
+| `DATASET`     | Tipo de inclusão para registros TOML (arquivo ou glob) |
 
 ### Modificadores de Campo
 
@@ -888,6 +1044,8 @@ Use '->' para conectar elementos:
 | `OPTIONAL`  | Campo opcional |
 | `BUNDLE`    | Grupo de campos obrigatórios como unidade |
 | `ON BIBLIOGRAPHY` | O valor do campo vem da entrada `.bib`, não do texto (cláusula de campo único) |
+| `ON DATASET "<caminho>"` | O valor do campo vem do registro TOML, no caminho indicado (cláusula de campo único) |
+| `FORBIDDEN` | Campo do mesmo escopo que não pode ter valor no bloco (erro 21) |
 
 ### Especificadores de Campo
 
@@ -903,6 +1061,7 @@ Use '->' para conectar elementos:
 | `GUIDELINES`  | Instruções de preenchimento para o anotador ou agente de IA (qualquer tipo) |
 | `IDENTIFIES`  | Declara o campo como chave primária de uma entidade (apenas `SCOPE SOURCE`) |
 | `REFERS TO`   | Declara o campo como chave estrangeira para uma entidade (apenas `SCOPE SOURCE`) |
+| `CONTEXT FROM DATASET` | Seções do registro TOML enviadas ao modelo como contexto do campo (qualquer tipo) |
 
 ---
 
