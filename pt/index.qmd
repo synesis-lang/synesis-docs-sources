@@ -40,6 +40,7 @@ Synesis não é apenas um sistema de organização, mas uma infraestrutura de tr
 ### Aprender Synesis
 **Você é novo aqui?** Comece com nossos tutoriais hands-on que te guiarão passo a passo.
 
+- [Synesis no Claude Desktop](tutorials/synesis_claude_desktop.qmd) — Comece com a ajuda do Claude, sem instalar nada à mão
 - [Guia para Pesquisadores](tutorials/guia_pesquisadores.qmd) — Introdução para pesquisa qualitativa
 - [Tutorial Synesis Explorer](tutorials/synesis_explorer_tutorial.qmd) — Configurar o ambiente VSCode
 

@@ -1,0 +1,128 @@
+---
+title: "Synesis no Claude Desktop"
+subtitle: "A Skill para os primeiros passos: instalar e codificar suas fontes com a ajuda do Claude"
+---
+
+Esta Skill ensina o Claude a conduzir um projeto Synesis com você. Ela instala as ferramentas, conversa sobre o seu estudo, escreve o template, roda a codificação, confere as citações e monta um painel de auditoria que abre no seu computador.
+
+A divisão de papéis é a mesma do resto do Synesis: **a IA propõe, o compilador confere, o pesquisador decide**. O Claude conduz a conversa e prepara os arquivos. As perguntas de pesquisa, as categorias e a aprovação do template continuam sendo suas.
+
+::: {.callout-note}
+## Situação
+A Skill foi testada de ponta a ponta com um projeto de prova e está em **fase de testes com pesquisadores**. O seu retorno ajuda a melhorá-la (veja [Se algo der errado](#se-algo-der-errado)).
+:::
+
+## O que você precisa
+
+- **Claude Desktop** (Windows ou macOS), numa conta com acesso à aba **Code**.
+- **Uma pasta** no seu computador para o projeto, com as fontes:
+  - entrevistas e documentos em `.txt` ou `.md`;
+  - artigos numa bibliografia `.bib` com os resumos.
+- **Internet** na primeira vez, para instalar as ferramentas.
+- **Cerca de uma hora** para a primeira sessão.
+
+Você **não** precisa instalar Python nem saber programar. O VS Code é opcional.
+
+::: {.callout-important}
+## Só na aba Code
+A Skill precisa de um terminal e do seu disco. Ela funciona na aba **Code** do Claude Desktop (uma sessão local), e **não** no chat do claude.ai nem no Cowork.
+:::
+
+## 1. Instalar a Skill (uma vez)
+
+1. Baixe o arquivo da Skill: [synesis-skill.zip](../../downloads/synesis-skill.zip).
+2. No Claude Desktop, abra **Customize → Plugins** e use **Add** para enviar o arquivo.
+3. O Desktop avisa para instalar apenas plugins em que você confia. Este é o plugin do projeto Synesis.
+
+Se a sua organização não permite enviar plugins, peça ao administrador.
+
+## 2. Abrir a primeira sessão
+
+1. Abra a aba **Code** e escolha a **pasta do projeto**.
+2. Escolha o modo de permissão **Manual**. O Claude passa a pedir a sua aprovação antes de cada comando, e você vê o que será instalado.
+3. Digite `/synesis` e descreva o que quer fazer. Por exemplo:
+
+   > `/synesis` Quero codificar minhas três entrevistas sobre telemedicina com o Synesis. As transcrições estão na pasta `fontes`.
+
+Se quiser só experimentar, a Skill traz um projeto de exemplo, com fontes fictícias, em `skills/synesis/examples/prova`.
+
+## 3. O que o Claude faz
+
+Em ordem:
+
+1. **Pergunta sobre sigilo** antes de abrir qualquer arquivo (veja [Sigilo dos dados](#sigilo-dos-dados)).
+2. **Instala as ferramentas** do Synesis e mostra um relatório. Isso acontece uma vez por computador.
+3. **Conversa sobre o estudo:** as suas perguntas de pesquisa, o que extrair das fontes, se você quer categorias livres ou fechadas, relações de causa ou escalas.
+4. **Escreve o template** (a descrição do que será codificado) e mostra um exemplo. **Você aprova o template.**
+5. **Codifica cada fonte**, uma por vez, e monta a ontologia dos conceitos.
+6. **Valida, confere as citações no texto original** e monta o painel.
+
+No fim, o Claude resume o resultado: erros e avisos do compilador, quantas citações foram encontradas nas fontes, quantos conceitos a ontologia tem, e uma lista de **pontos que valem a sua conferência na auditoria**.
+
+## 4. Auditar o resultado
+
+O painel fica em `dashboard/dashboard.html`. Ele abre com dois cliques, sem internet e sem servidor.
+
+| Aba | O que mostra |
+|---|---|
+| **Fontes** | cada trecho codificado, com a citação, a nota e os códigos. A citação aparece como *encontrada*, *não encontrada* ou *não verificável* no texto original |
+| **Códigos** | cada código, com a definição e todas as evidências |
+| **Relações** e **Questões** | as relações entre conceitos e onde estão as evidências de cada pergunta de pesquisa |
+| **Qualidade** | o que ainda precisa de atenção |
+| **Método** | o template completo e como o resultado foi produzido |
+
+Para registrar a sua auditoria:
+
+1. Marque os trechos e os códigos como *correto*, *incorreto* ou *dúvida*, com uma nota.
+2. Use **Exportar marcações** e entregue o arquivo ao Claude na conversa, para que ele o registre no projeto. As marcações não exportadas ficam só no navegador e podem se perder.
+
+Quando algo estiver errado, o Claude não corrige o trecho à mão. Ele classifica o problema com você antes de agir: instrução ambígua no template, falha pontual, texto-fonte mal convertido ou divergência legítima de interpretação.
+
+## Custos
+
+Há dois modos de codificação, e o Claude explica os dois antes de começar:
+
+| Modo | Quem codifica | Custo |
+|---|---|---|
+| **Sessão do Claude** | o próprio Claude da sua assinatura | dentro dos limites do seu plano |
+| **API** | um modelo por chave de API (Anthropic, OpenRouter) | cobrado pelo provedor; o Claude faz um piloto com 2 ou 3 fontes e mostra o custo antes de codificar tudo |
+
+::: {.callout-warning}
+## Chaves de API
+Nunca digite uma chave de API no chat. O Claude cria um arquivo `.env` na pasta do projeto com o campo vazio, e você cola a chave diretamente nele.
+:::
+
+## Sigilo dos dados {#sigilo-dos-dados}
+
+Tudo o que o Claude lê sai do seu computador e vai para a Anthropic (e, no modo API, para o provedor escolhido). Por isso o Claude pergunta antes de abrir as fontes e propõe uma modalidade:
+
+- **A. Nuvem:** o Claude lê as fontes. Use quando não houver dados sigilosos.
+- **B. Exposição reduzida:** o Claude trabalha só com o método e com exemplos inventados; a codificação roda num modelo local (Ollama). Não é um processamento inteiramente local.
+- **C. Local:** o Claude não participa. Para dados sob sigilo legal ou ético estrito, use o Synesis no VS Code com um modelo local.
+
+## O que fica na pasta do projeto
+
+| Arquivo ou pasta | Conteúdo |
+|---|---|
+| `*.synp` | o projeto |
+| `template.synt` | o método |
+| `*.bib` | as fontes bibliográficas |
+| `fontes/` | os textos |
+| `anotacoes/`, `ontologia/` | o resultado da codificação |
+| `runs/` | o registro de cada execução: o que foi pedido ao modelo, o que ele respondeu e as decisões que você tomou |
+| `dashboard/`, `saida/` | arquivos gerados, que podem ser refeitos a qualquer momento |
+
+Guarde a pasta inteira, exceto o `.env`. Com ela, qualquer pessoa reconstrói os seus resultados e o seu painel. Os arquivos são os mesmos do Synesis: você pode abri-los no [VS Code](synesis_explorer_tutorial.qmd) quando quiser.
+
+## Se algo der errado {#se-algo-der-errado}
+
+- **"comando não encontrado"** logo depois da instalação: abra uma nova sessão na aba Code. Na mesma sessão, o Claude usa o caminho completo das ferramentas.
+- **O Windows bloqueou o instalador:** o Claude tenta outro caminho. Se a máquina for institucional, pode ser preciso falar com o suporte de TI.
+- **Dúvidas sobre a linguagem:** peça ao Claude, que consulta o guia de referência instalado.
+- **Erros do Synesis e sugestões:** abra uma *issue* em <https://github.com/synesis-lang/synesis/issues>.
+
+## Próximos passos
+
+- [Getting Started](getting-started.qmd): o primeiro projeto à mão, sem a Skill.
+- [Curso Synesis 101](../explanation/curso_synesis_101.qmd): vídeos curtos sobre a linguagem.
+- [Codificação com IA (synesis-coder)](../howto/synesis_coder.qmd): o que a Skill usa para codificar.

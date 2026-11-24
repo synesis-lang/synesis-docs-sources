@@ -18,6 +18,7 @@ Often, it is believed that technical rigor stifles creativity. Synesis proves th
 ### Learn Synesis
 **New here?** Start with our hands-on tutorials that guide you step by step.
 
+- [Synesis in Claude Desktop](tutorials/synesis_claude_desktop.qmd) — Start with Claude's help, with nothing to install by hand
 - [Guide for Researchers](tutorials/guia_pesquisadores.qmd) — Introduction to qualitative research
 - [Synesis Explorer Tutorial](tutorials/synesis_explorer_tutorial.qmd) — Set up your VSCode environment
 

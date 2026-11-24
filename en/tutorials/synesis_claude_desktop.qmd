@@ -1,0 +1,127 @@
+---
+title: "Synesis in Claude Desktop"
+subtitle: "The Skill for first steps: install it and code your sources with Claude's help"
+---
+
+This Skill teaches Claude to run a Synesis project with you. It installs the tools, talks through your study, writes the template, runs the coding, checks every quotation against your sources and builds an audit dashboard that opens on your own computer.
+
+The division of roles is the same as everywhere in Synesis: **the AI proposes, the compiler checks, the researcher decides**. Claude leads the conversation and prepares the files. Your research questions, your categories and the approval of the template stay yours.
+
+::: {.callout-note}
+## Status
+The Skill was tested end to end on a proof project and is **in testing with researchers**. Your feedback helps improve it (see [If something goes wrong](#if-something-goes-wrong)).
+:::
+
+## What you need
+
+- **Claude Desktop** (Windows or macOS), on an account with access to the **Code** tab.
+- **A folder** on your computer for the project, holding your sources:
+  - interviews and documents as `.txt` or `.md`;
+  - articles in a `.bib` bibliography with abstracts.
+- **An internet connection** the first time, to install the tools.
+- **About an hour** for the first session.
+
+You do **not** need to install Python or know how to program. VS Code is optional.
+
+::: {.callout-important}
+## Code tab only
+The Skill needs a terminal and your disk. It works in the **Code** tab of Claude Desktop (a local session), and **not** in claude.ai chat or Cowork.
+:::
+
+## 1. Install the Skill (once)
+
+1. Download the Skill file: [synesis-skill.zip](../../downloads/synesis-skill.zip).
+2. In Claude Desktop, open **Customize → Plugins** and use **Add** to upload the file.
+3. Desktop warns you to install only plugins you trust. This is the Synesis project's plugin.
+
+If your organization does not allow uploading plugins, ask your administrator.
+
+## 2. Open the first session
+
+1. Open the **Code** tab and choose the **project folder**.
+2. Choose the **Manual** permission mode. Claude then asks for your approval before every command, so you see what will be installed.
+3. Type `/synesis` and say what you want to do. For example:
+
+   > `/synesis` I want to code my three interviews about telemedicine with Synesis. The transcripts are in the `fontes` folder.
+
+If you just want to try it, the Skill ships with an example project with fictitious sources, in `skills/synesis/examples/prova`.
+
+## 3. What Claude does
+
+In order:
+
+1. **Asks about confidentiality** before opening any file (see [Data confidentiality](#data-confidentiality)).
+2. **Installs the Synesis tools** and shows a report. This happens once per computer.
+3. **Talks through the study:** your research questions, what to extract from the sources, whether you want free or closed categories, causal relations or scales.
+4. **Writes the template** (the description of what will be coded) and shows an example. **You approve the template.**
+5. **Codes each source**, one at a time, and builds the ontology of concepts.
+6. **Validates, checks each quotation against the original text** and builds the dashboard.
+
+At the end Claude summarizes the result: compiler errors and warnings, how many quotations were found in the sources, how many concepts the ontology has, and a list of **points worth checking in your audit**.
+
+## 4. Audit the result
+
+The dashboard is in `dashboard/dashboard.html`. It opens with a double click, with no internet and no server.
+
+| Tab | What it shows |
+|---|---|
+| **Fontes** (Sources) | each coded excerpt, with its quotation, note and codes. The quotation appears as *found*, *not found* or *unverifiable* in the original text |
+| **Códigos** (Codes) | each code, with its definition and all its evidence |
+| **Relações** and **Questões** (Relations, Questions) | the relations between concepts and where the evidence for each research question is |
+| **Qualidade** (Quality) | what still needs attention |
+| **Método** (Method) | the full template and how the result was produced |
+
+To record your audit:
+
+1. Mark excerpts and codes as *correct*, *incorrect* or *doubt*, with a note.
+2. Use **Exportar marcações** (export marks) and hand the file to Claude in the conversation, so it records it in the project. Marks you do not export stay only in the browser and can be lost.
+
+When something is wrong, Claude does not fix the excerpt by hand. It classifies the problem with you first: an ambiguous instruction in the template, a one-off failure, a badly converted source text, or a legitimate difference of interpretation.
+
+## Costs
+
+There are two coding modes, and Claude explains both before starting:
+
+| Mode | Who codes | Cost |
+|---|---|---|
+| **Claude session** | the Claude of your own subscription | within the limits of your plan |
+| **API** | a model through an API key (Anthropic, OpenRouter) | billed by the provider; Claude runs a pilot with 2 or 3 sources and shows the cost before coding everything |
+
+::: {.callout-warning}
+## API keys
+Never type an API key into the chat. Claude creates a `.env` file in the project folder with the field empty, and you paste the key directly into it.
+:::
+
+## Data confidentiality {#data-confidentiality}
+
+Everything Claude reads leaves your computer and goes to Anthropic (and, in API mode, to the chosen provider). That is why Claude asks before opening your sources and proposes a modality:
+
+- **A. Cloud:** Claude reads the sources. Use it when there is no confidential data.
+- **B. Reduced exposure:** Claude works only with the method and invented examples; coding runs on a local model (Ollama). This is not fully local processing.
+- **C. Local:** Claude does not take part. For data under strict legal or ethical confidentiality, use Synesis in VS Code with a local model.
+
+## What stays in the project folder
+
+| File or folder | Content |
+|---|---|
+| `*.synp` | the project |
+| `template.synt` | the method |
+| `*.bib` | the bibliographic sources |
+| `fontes/` | the texts |
+| `anotacoes/`, `ontologia/` | the result of the coding |
+| `runs/` | the record of every run: what was asked of the model, what it answered and the decisions you made |
+| `dashboard/`, `saida/` | generated files, which can be rebuilt at any time |
+
+Keep the whole folder, except the `.env`. With it, anyone can rebuild your results and your dashboard. The files are plain Synesis files: you can open them in [VS Code](../tutorials/synesis_explorer_tutorial.qmd) whenever you like.
+
+## If something goes wrong {#if-something-goes-wrong}
+
+- **"command not found"** right after installation: open a new session in the Code tab. In the same session, Claude uses the full path to the tools.
+- **Windows blocked the installer:** Claude tries another route. On an institutional machine you may need to talk to IT support.
+- **Questions about the language:** ask Claude, which consults the installed reference guide.
+- **Synesis errors and suggestions:** open an *issue* at <https://github.com/synesis-lang/synesis/issues>.
+
+## Next steps
+
+- [Guide for Researchers](guia_pesquisadores.qmd): a hands-on project, without the Skill.
+- [Language Reference](../reference/guia_referencia.qmd)

@@ -34,6 +34,8 @@ website:
         text: Introduction
       - text: "Tutorials"
         menu:
+          - href: tutorials/synesis_claude_desktop.qmd
+            text: Synesis in Claude Desktop (Skill)
           - href: tutorials/guia_pesquisadores.qmd
             text: Guide for Researchers
           - href: tutorials/synesis_explorer_tutorial.qmd

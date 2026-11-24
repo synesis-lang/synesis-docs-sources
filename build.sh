@@ -20,6 +20,9 @@ quarto render index.qmd --to html --output-dir _site
 echo "📚 Copiando vocabulário syn: (ns/syn.ttl)..."
 cp -r ns _site/ns
 
+echo "📥 Copiando downloads (Skill do Claude Desktop)..."
+cp -r downloads _site/downloads
+
 echo "🌐 Copiando CNAME (domínio personalizado)..."
 cp CNAME _site/CNAME
 

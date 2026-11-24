@@ -1,0 +1,42 @@
+---
+title: "Explanation"
+subtitle: "Textos para entender o Synesis: o porquê, o contexto e as ideias por trás das ferramentas"
+toc: false
+number-sections: false
+---
+
+Estes textos explicam **por que** o Synesis é como é. Não são passo a passo (para isso, veja os [Tutorials](../tutorials/getting-started.qmd)) nem receitas para uma tarefa (veja os [How-to Guides](../howto/guia_profissionais.qmd)). Escolha pela pergunta que você tem.
+
+## Quero entender o que é o Synesis
+
+- [**Curso Synesis 101 (vídeos)**](curso_synesis_101.qmd): vídeos curtos que explicam o Synesis do zero.
+- [O que Synesis pode expressar](show_case.qmd): uma visão panorâmica das possibilidades de anotação.
+- [Por que anotações estruturadas importam](por_que_estrutura_importa.qmd): rigor, liberdade e o futuro do conhecimento qualitativo.
+- [Por que não fazer direto no Excel?](guia_sincero.qmd): uma resposta honesta sobre quando o Synesis faz sentido e quando não faz.
+- [Como a Synesis surgiu](como_surgiu.qmd): o problema de pesquisa que deu origem à linguagem.
+- [O posicionamento arquitetural](posicionamento_arquitetural.qmd): como o Synesis equilibra legibilidade para a pessoa e rigor para a máquina.
+
+## Quero codificar com método
+
+- [Métodos de codificação em Synesis](exemplos_codificacao.qmd): como expressar tradições de codificação qualitativa com templates.
+- [Codificação assistida por IA](codificacao_assistida_IA.qmd): um caso real de análise bibliométrica.
+  - [Métricas da pesquisa](codificacao_assistida_IA_metricas.qmd)
+  - [Comparação de modelos de IA](codificacao_assistida_IA_comparacao.qmd)
+
+## Quero ligar o conhecimento e a IA
+
+- [Knowledge graphs e GraphRAG](knowledge_graphs.qmd): por que grafos de conhecimento transformam a pesquisa qualitativa.
+- [Embeddings vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd): o que a busca semântica acrescenta à recuperação, medido e não estimado.
+  - [Como o benchmark foi feito](benchmark_rrf_metodologia.qmd)
+
+## Quero ver o Synesis na minha área
+
+- [Direito](synesis_para_direito.qmd): conhecimento jurídico como patrimônio institucional auditável.
+- [Escrituras](synesis_escrituras.qmd): anotação sistemática de textos sagrados.
+- [Diagnóstico socioambiental participativo](dsap.qmd): codificação e análise SWOT em diagnósticos comunitários.
+
+## Quero saber como a ferramenta funciona por dentro
+
+- [Por dentro do compilador](fluxo_compilacao_interno.qmd): como o texto vira conhecimento estruturado, estágio por estágio.
+- [A interface LSP](interface_lsp.qmd): como o compilador ganha vida dentro do editor.
+- [Roadmap e ideias](ideas.qmd): propostas de extensão da linguagem que ainda não estão implementadas.

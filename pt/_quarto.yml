@@ -36,6 +36,8 @@ website:
         menu:
           - href: tutorials/getting-started.qmd
             text: Getting Started
+          - href: tutorials/synesis_claude_desktop.qmd
+            text: Synesis no Claude Desktop (Skill)
           - href: tutorials/guia_pesquisadores.qmd
             text: Guia para Pesquisadores
           - href: tutorials/synesis_explorer_tutorial.qmd
@@ -72,46 +74,8 @@ website:
             text: synesis-graph
           - href: reference/fluxo_compilacao.qmd
             text: O fluxo de compilação
-      - text: "Explanation"
-        menu:
-          - text: "— Visão Geral —"
-          - href: explanation/curso_synesis_101.qmd
-            text: "Curso Synesis 101 (vídeos)"
-          - href: explanation/posicionamento_arquitetural.qmd
-            text: Posicionamento Arquitetural
-          - href: explanation/show_case.qmd
-            text: O que Synesis pode expressar
-          - text: "— Para Pesquisadores —"
-          - href: explanation/por_que_estrutura_importa.qmd
-            text: Por Que Estrutura Importa
-          - href: explanation/guia_sincero.qmd
-            text: Por que não Excel?
-          - href: explanation/exemplos_codificacao.qmd
-            text: Métodos de Codificação em Synesis
-          - href: explanation/codificacao_assistida_IA.qmd
-            text: Codificação Assistida por IA
-          - href: explanation/codificacao_assistida_IA_metricas.qmd
-            text: Métricas da Pesquisa
-          - href: explanation/codificacao_assistida_IA_comparacao.qmd
-            text: Comparação de Modelos de IA
-          - href: explanation/knowledge_graphs.qmd
-            text: Knowledge Graphs & GraphRAG
-          - href: explanation/graphrag_embeddings_vetoriais.qmd
-            text: Embeddings Vetoriais e GraphRAG
-          - href: explanation/synesis_escrituras.qmd
-            text: Synesis e as Escrituras
-          - href: explanation/dsap.qmd
-            text: Diagnóstico Socioambiental Participativo
-          - text: "— Para o Direito —"
-          - href: explanation/synesis_para_direito.qmd
-            text: Synesis para Profissionais do Direito
-          - text: "— Para Desenvolvedores —"
-          - href: explanation/fluxo_compilacao_interno.qmd
-            text: Por Dentro do Compilador
-          - href: explanation/interface_lsp.qmd
-            text: A Interface LSP
-          - href: explanation/ideas.qmd
-            text: Roadmap & Ideias
+      - href: explanation/index.qmd
+        text: "Explanation"
       - href: about.qmd
         text: Sobre
     right:
