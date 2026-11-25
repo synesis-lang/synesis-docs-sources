@@ -11,7 +11,7 @@ format:
 
 ::: {.callout-note}
 ## O que é esta página
-É o apêndice metodológico de [Embeddings Vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd), para quem quer **auditar** o experimento em vez de aceitar os números. Aqui estão o gabarito completo das 40 perguntas, os scripts que rodam de ponta a ponta, as consultas exatas enviadas ao banco e o resultado pergunta por pergunta.
+É o apêndice metodológico de [Embeddings Vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd), para quem quer **auditar** o experimento em vez de aceitar os números. Aqui estão o gabarito completo das 40 perguntas, a descrição dos scripts, as consultas exatas enviadas ao banco e o resultado pergunta por pergunta.
 
 Não é preciso ler isto para usar o recurso. É preciso ler para conferir se ele faz o que dizemos.
 :::
@@ -32,7 +32,7 @@ Não é preciso ler isto para usar o recurso. É preciso ler para conferir se el
 ::: {.callout-note}
 ## Procedência dos números
 
-Todos os valores desta página vêm da execução de **17 de agosto de 2026**, contra um banco ArcadeDB real. O gabarito, os scripts e a saída bruta estão versionados no repositório — a página lê os resultados direto do arquivo gerado pela medição, de modo que nenhum número aqui é digitado à mão.
+Todos os valores desta página vêm da execução de **17 de agosto de 2026**, contra um banco ArcadeDB real. O gabarito, os scripts e a saída bruta ficam na pasta `case-studies/benchmark_rrf` do projeto desta documentação, que ainda não está publicada em um repositório público. A página lê os resultados direto do arquivo gerado pela medição, de modo que as tabelas e os gráficos de resultado não são digitados à mão.
 :::
 
 ---
@@ -56,7 +56,7 @@ flowchart TB
     S --> Q --> F --> R --> M
 ```
 
-O passo 3 é o que dá valor aos passos 4 e 5. Como o arquivo é versionado, qualquer pessoa pode verificar que as perguntas não foram ajustadas depois de ver os resultados.
+O passo 3 é o que dá valor aos passos 4 e 5: o gabarito é um arquivo à parte, gravado antes de qualquer busca.
 
 ::: {.callout-note collapse="true"}
 ## De onde vem este desenho
@@ -405,8 +405,7 @@ Eles foram **mantidos** na amostra. Removê-los depois de ver que dão resultado
 ## Reproduzir do zero
 
 ```bash
-# 1. ArcadeDB no ar, com a base social_acceptance carregada
-D:\ArcadeDB\start-arcadedb-bolt.ps1
+# 1. Suba o servidor ArcadeDB, com a base social_acceptance carregada
 
 # 2. Dependências
 pip install "synesis-graph[embeddings]"

@@ -17,7 +17,7 @@ O compilador Synesis recebe um conjunto de arquivos de texto com uma sintaxe pr�
 1. Lê e valida cada arquivo
 2. Verifica a consistência entre eles (ex: todo código usado existe no dicionário?)
 3. Liga as peças (fontes, excertos, códigos, ontologia) num grafo semântico
-4. Exporta o resultado em JSON, CSV ou Excel
+4. Exporta o resultado em JSON, CSV, Excel e outros formatos
 
 Para acompanhar cada estágio com exemplos concretos, usamos o projeto `Basic` — um projeto mínimo mas completo.
 
@@ -202,9 +202,11 @@ ProjectNode(
     ],
     metadata    = {},
     description = None,
-    location    = SourceLocation(file="project.synp", line=1, column=0)
+    location    = SourceLocation(file="project.synp", line=1, column=1)
 )
 ```
+
+Em seguida o compilador confere a estrutura do projeto: arquivos do diretório que não foram incluídos, arquivos declarados e não encontrados, template ausente e datas inválidas.
 
 ::: {.callout-note}
 ## SourceLocation — rastreabilidade total
@@ -230,10 +232,12 @@ O caminho do `template.synt`, extraído do `ProjectNode.template_path`.
    - **`bundled_fields`** — quais devem aparecer juntos
 3. `validate_template()` verifica inconsistências estruturais — por exemplo, um campo listado como REQUIRED mas sem definição de FIELD.
 
+Se o template não existe ou não pode ser interpretado, a compilação termina aqui: sem contrato não há o que validar.
+
 ### O que sai
 ```python
 TemplateNode(
-    name = "demo",
+    name = "",               # o exemplo não tem a linha TEMPLATE
     field_specs = {
         "description": FieldSpec(type=TEXT,      scope=SOURCE),
         "citation":    FieldSpec(type=QUOTATION, scope=ITEM),
@@ -266,7 +270,7 @@ O template funciona como um **contrato**: a partir daqui, toda validação se ba
 O caminho do arquivo `.bib`.
 
 ### O que acontece
-Usa a biblioteca `bibtexparser` para parsear o BibTeX. Normaliza todas as chaves para minúsculas, garantindo comparação case-insensitive.
+Usa a biblioteca `bibtexparser` para parsear o BibTeX. Normaliza todas as chaves para minúsculas, garantindo comparação case-insensitive. Vários `INCLUDE BIBLIOGRAPHY` se somam; numa chave repetida vale a primeira ocorrência. Quando o projeto declara `INCLUDE DATASET`, os registros TOML são carregados neste mesmo momento.
 
 ### O que sai
 ```python
@@ -279,6 +283,7 @@ Usa a biblioteca `bibtexparser` para parsear o BibTeX. Normaliza todas as chaves
         "journal":       "Journal of Social Research",
         "year":          "2024",
         "_original_key": "smith2024"
+        # ... demais campos da entrada
     }
 }
 ```
@@ -302,24 +307,26 @@ Para cada arquivo `.syno`, o mesmo processo dos estágios anteriores:
 1. `parse_file()` gera uma `lark.Tree`
 2. `SynesisTransformer.transform()` converte em objetos Python
 
-Se houver mais de 2 arquivos de ontologia, o parsing é feito **em paralelo** via `ThreadPoolExecutor` — cada thread usa sua própria instância do parser (via `threading.local`), garantindo segurança.
+Os arquivos de ontologia são lidos um após o outro, na ordem dos `INCLUDE`.
 
 ### O que sai
 ```python
 [
     OntologyNode(
         concept     = "Social_Cohesion",
-        description = "The degree to which community members trust...",
-        fields      = {"group": "Community_Resilience"},
+        description = "",   # preenchido apenas por um campo chamado "description"
+        fields      = {"definition": "The degree to which community members trust...",
+                       "group": "Community_Resilience"},
         field_names = ["definition", "group"],
-        location    = SourceLocation("ontology.syno", line=1, col=0)
+        location    = SourceLocation("ontology.syno", line=1, column=1)
     ),
     OntologyNode(
         concept     = "Collective_Action",
-        description = "Coordinated efforts by community members...",
-        fields      = {"group": "Community_Resilience"},
+        description = "",
+        fields      = {"definition": "Coordinated efforts by community members...",
+                       "group": "Community_Resilience"},
         field_names = ["definition", "group"],
-        location    = SourceLocation("ontology.syno", line=8, col=0)
+        location    = SourceLocation("ontology.syno", line=9, column=1)
     ),
 ]
 ```
@@ -333,7 +340,7 @@ Se houver mais de 2 arquivos de ontologia, o parsing é feito **em paralelo** vi
 Lista de caminhos `.syn`.
 
 ### O que acontece
-Mesmo processo do Estágio 4. Um arquivo `.syn` pode conter múltiplos blocos SOURCE e ITEM. O Transformer os separa em **listas distintas**.
+Mesmo processo do Estágio 4. Um arquivo `.syn` pode conter múltiplos blocos SOURCE e ITEM, que o compilador separa em **listas distintas**. Com mais de três arquivos de anotação, o parsing é distribuído entre até quatro processos (`ProcessPoolExecutor`).
 
 ::: {.callout-important}
 ## ITEMs não são aninhados em SOURCEs — ainda
@@ -344,23 +351,23 @@ Neste estágio, os ITEMs são retornados numa lista plana, separados dos SOURCEs
 ```python
 # SourceNode
 SourceNode(
-    bibref   = "smith2024",       # sem o "@"
+    bibref   = "@smith2024",       # como escrito; as comparações usam a forma normalizada
     fields   = {"description": "Qualitative study on community resilience..."},
     items    = [],                 # vazio agora — preenchido no Estágio 7
-    location = SourceLocation("annotations.syn", line=1, col=0)
+    location = SourceLocation("annotations.syn", line=1, column=1)
 )
 
 # ItemNode
 ItemNode(
-    bibref           = "smith2024",
-    quote            = "People here look out for each other...",
+    bibref           = "@smith2024",
+    quote            = "",         # o campo QUOTATION chamado "citation" fica em extra_fields
     codes            = ["Social_Cohesion", "Collective_Action"],
     notes            = ["Participant describes spontaneous..."],
     chains           = [],
-    extra_fields     = {},
-    code_locations   = {},         # vazio agora — preenchido no Estágio 7
-    field_line_tokens = {...},     # tokens brutos para resolução posterior
-    location = SourceLocation("annotations.syn", line=5, col=0)
+    extra_fields     = {"citation": '"People here look out for each other..."'},
+    code_locations   = {"code": [SourceLocation(...), SourceLocation(...)]},
+    field_names      = ["citation", "note", "code"],
+    location = SourceLocation("annotations.syn", line=6, column=1)
 )
 ```
 
@@ -379,12 +386,11 @@ O `SemanticValidator` percorre **cada nó** e aplica regras que vão além da si
 
 | Verificação | Resultado no Basic | Se falhasse |
 |---|---|---|
-| `@smith2024` existe no `.bib`? | Sim | E001: UnregisteredSource |
-| O ITEM tem SOURCE com mesmo bibref? | Sim | E002: OrphanItem |
-| A SOURCE tem pelo menos um ITEM? | Sim | W003: SourceWithoutItems |
-| `Social_Cohesion` existe na ontologia? | Sim | W004: UndefinedCode |
-| Campos obrigatórios (citation, note, code) presentes no ITEM? | Sim | MissingRequiredField |
-| Algum campo não declarado no template foi usado? | Não | UndeclaredField |
+| `@smith2024` existe no `.bib`? | Sim | [E001](../reference/guia_erros.qmd#sec-e001): `UnregisteredSource` (erro) |
+| `Social_Cohesion` existe na ontologia? | Sim | [E090](../reference/guia_erros.qmd#sec-e090): resumo dos códigos sem conceito (aviso); com `--check-codes`, um [E004](../reference/guia_erros.qmd#sec-e004) por ocorrência |
+| Campos obrigatórios (citation, note, code) presentes no ITEM? | Sim | [E020](../reference/guia_erros.qmd#sec-e020): `MissingRequiredField` (erro) |
+| Há campo não declarado no template? | Não | [E022](../reference/guia_erros.qmd#sec-e022): `UnknownFieldName` (erro) |
+| Os valores respeitam o tipo declarado (lista, escala, cadeia)? | Sim | Erro específico do tipo |
 
 ### O que sai
 ```python
@@ -405,18 +411,20 @@ No projeto Basic, tudo está correto — as três listas saem vazias.
 Este é o estágio mais importante: **transforma uma coleção de nós soltos em um grafo semântico coerente**.
 
 ### O que entra
-Todas as listas de nós + o `ValidationResult` do Estágio 6. O Linker pode adicionar mais erros durante a linkagem.
+Todas as listas de nós, o projeto e o template. O que o Linker encontra de errado é acrescentado ao `ValidationResult` do Estágio 6.
 
 ### O que acontece — passo a passo
 
-1. **Verificação de duplicatas** — bibrefs e conceitos repetidos geram erros (E070, E068).
-2. **Associação ITEM → SOURCE** — cada ITEM é ligado ao SOURCE com o mesmo `bibref`. A lista `SourceNode.items`, que estava vazia, agora é preenchida.
-3. **Construção do `ontology_index`** — dicionário `{código_normalizado → OntologyNode}` para lookup rápido.
-4. **Construção do `code_usage`** — dicionário `{código → [ItemNode, ...]}` que responde: "quais itens usaram este código?"
-5. **Verificação de códigos** — cada código usado em ITEMs é buscado no `ontology_index`. Ausentes geram aviso W004.
-6. **Extração de triples** — CHAINs (sequências como `A → B → C`) viram triples `(A, relação, B)`, `(B, relação, C)`.
-7. **Construção da hierarquia** — CHAINs na ontologia com relações IS_A viram `{filho → pai}`.
-8. **Construção do `topic_index`** — campos TOPIC das ontologias viram `{tema → [códigos]}`.
+1. **Normalização de `ORDERED`** — o valor materializado é sempre o índice, como número inteiro.
+2. **Verificação de bibrefs duplicados** em blocos SOURCE ([E070](../reference/guia_erros.qmd#sec-e070)).
+3. **Associação ITEM → SOURCE** — cada ITEM é ligado ao SOURCE com o mesmo `bibref`, e a lista `SourceNode.items` é preenchida. Um ITEM sem SOURCE é erro ([E002](../reference/guia_erros.qmd#sec-e002)); uma SOURCE sem ITEMs, aviso ([E003](../reference/guia_erros.qmd#sec-e003)).
+4. **Conceitos e descrições duplicados** na ontologia ([E068](../reference/guia_erros.qmd#sec-e068)).
+5. **Construção do `ontology_index`** — dicionário `{código_normalizado → OntologyNode}`, com os valores já interpretados pelo tipo declarado.
+6. **Termos preteridos** — com o papel `USE`, as menções do termo antigo contam para o termo adotado.
+7. **Construção do `code_usage`** — dicionário `{código → [ItemNode, ...]}` que responde: "quais itens usaram este código?"
+8. **Extração de triples** — cadeias como `A -> B -> C` viram triples `(A, relação, B)`, `(B, relação, C)`, indexadas em `relation_index`.
+9. **Construção do `topic_index`** — campos TOPIC das ontologias viram `{tema → [códigos]}`.
+10. **Hierarquia** — campos com `ROLE HIERARCHY` produzem a `role_hierarchy`.
 
 ### O que sai
 ```python
@@ -426,7 +434,7 @@ LinkedProject(
     # Fontes agora com seus itens associados
     sources = {
         "smith2024": SourceNode(
-            bibref = "smith2024",
+            bibref = "@smith2024",
             items  = [ItemNode(...)]   # preenchido!
         )
     },
@@ -443,35 +451,44 @@ LinkedProject(
         "collective_action": [ItemNode(...)],
     },
 
-    # Hierarquia IS_A (vazia no Basic — não há CHAINs)
-    hierarchy = {},
-
-    # Triples de CHAINs (vazia no Basic)
-    all_triples = [],
+    # Triples de CHAINs (vazias no Basic)
+    all_triples    = [],
+    relation_index = {},
 
     # Temas → códigos (do campo TOPIC nas ontologias)
     topic_index = {
         "Community_Resilience": ["Social_Cohesion", "Collective_Action"]
     },
+
+    hierarchy      = {},     # rota antiga, por campo "parent"/"is_a"
+    role_hierarchy = None,   # preenchida por campos com ROLE HIERARCHY
+    aliases        = {},     # preterido → adotado (papel USE)
 )
 ```
 
 
 ## Estágio 8 — Exportação
 
-**Onde:** `exporters/json_export.py`, `exporters/csv_export.py`, `exporters/xls_export.py`
+**Onde:** `exporters/`
 
 ### O que entra
-O `LinkedProject` completo + `TemplateNode` + `Dict[BibEntry]`.
+O `LinkedProject` completo + `TemplateNode` + bibliografia.
 
 ### O que acontece
-Cada exportador percorre o `LinkedProject` e serializa os dados no formato alvo. A exportação só ocorre se **não houver erros** (ou se o flag `--force` for usado no CLI).
+Cada exportador percorre o `LinkedProject` e serializa os dados no formato alvo. Na linha de comando, a exportação só ocorre se **não houver erros** (ou com `--force`).
 
 ### O que sai
 
-- **JSON** — Estrutura hierárquica: sources → items → codes → ontology
-- **CSV** — Múltiplos arquivos relacionais: `sources.csv`, `items.csv`, `codes.csv`, `chains.csv`
-- **Excel** — Planilha com múltiplas abas correspondendo às tabelas CSV
+| Formato | Módulo | Conteúdo |
+|---|---|---|
+| JSON | `json_export.py` | Projeto, template, bibliografia, índices, ontologia e corpus |
+| CSV | `csv_export.py` | `sources.csv`, `items.csv`, `ontologies.csv` e, havendo cadeias, `chains.csv` |
+| Excel | `xls_export.py` | Planilha com abas correspondentes às tabelas CSV |
+| Alpaca | `alpaca_export.py`, `alpaca_mapped.py` | Dados de ajuste fino |
+| OKF (experimental) | `okf_export.py` | Pacote de conhecimento em arquivos |
+| SKOS | `skos_export.py` | Vocabulário em SKOS, declarado por um bloco `EXPORT` no `.synp` |
+
+Ligar vários projetos (`synesis compile p1.synp p2.synp`) é um passo posterior, em `semantic/link_step.py`: ver [Ligar Projetos](../howto/ligar_projetos.qmd).
 
 
 ## O orquestrador {#sec-orquestrador}
@@ -483,20 +500,29 @@ O compilador é o maestro — chama cada estágio na ordem certa e decide o que 
 ```python
 # Simplificado para clareza
 def compile(self) -> CompilationResult:
-    project, validation = self.parse_project()           # Estágio 1
-    template, tv = self._safe_load_template()            # Estágio 2
-    bibliography = self.load_bibliography(project)       # Estágio 3
-    ontologies = self.parse_ontologies(project)          # Estágio 4
-    sources, items = self.parse_annotations(project)     # Estágio 5
-    validation += self.validate_all(...)                 # Estágio 6
-    linked = self.link_all(...)                          # Estágio 7
-    # Estágio 8 é acionado externamente via result.to_json(), etc.
+    project, pv = self.parse_project()                      # Estágio 1
+    sv = self.validate_project_structure(project)
+    template, tv = self._safe_load_template(project)        # Estágio 2
+    if template is None:
+        return CompilationResult(success=False, ...)        # encerra aqui
+    validate_template(template)
+    bibliography = self.load_bibliography(project)          # Estágio 3
+    dataset, dv = self.load_dataset_index(project, template)
+    ontologies, ov = self.parse_ontologies(project)         # Estágio 4
+    sources, items, av = self.parse_annotations(project)    # Estágio 5
+    validation = self.validate_all(...)                     # Estágio 6
+    linked = self.link_all(..., validation_result=validation)  # Estágio 7
+    # os resultados parciais (pv, sv, tv...) são reunidos em `validation`
+    # Estágio 8 é acionado por quem chama: result.to_json(), etc.
 
     return CompilationResult(
         success           = not validation.has_errors(),
         linked_project    = linked,
         validation_result = validation,
-        stats             = self._compute_stats(linked),
+        stats             = self._compute_stats(linked, sources, items, ontologies),
+        template          = template,
+        bibliography      = bibliography,
+        dataset           = dataset,
     )
 ```
 
@@ -506,7 +532,7 @@ O resultado final é um `CompilationResult` com todas as informações:
 CompilationResult(
     success = True,
     linked_project    = LinkedProject(...),
-    validation_result = ValidationResult(errors=[], warnings=[]),
+    validation_result = ValidationResult(errors=[], warnings=[], info=[]),
     stats = CompilationStats(
         source_count   = 1,
         item_count     = 1,
@@ -516,7 +542,8 @@ CompilationResult(
         triple_count   = 0,
     ),
     template     = TemplateNode(...),
-    bibliography = {"smith2024": BibEntry(...)},
+    bibliography = {"smith2024": {...}},
+    dataset      = None,
 )
 ```
 
@@ -531,7 +558,7 @@ Todos os estágios de parsing (1, 2, 4, 5) compartilham o mesmo mecanismo intern
 Texto bruto (.syn, .synt, etc.)
         │
         ▼
-  SynesisIndenter        ← converte tabs em 4 espaços,
+  SynesisIndenter        ← conta cada tab como 4 colunas e
         │                   gera tokens INDENT/DEDENT (como Python)
         ▼
   Lexer LALR(1)          ← tokeniza: KEYWORD, STRING, IDENTIFIER, NEWLINE...
@@ -549,7 +576,7 @@ Texto bruto (.syn, .synt, etc.)
   ProjectNode / SourceNode / ItemNode / OntologyNode / ...
 ```
 
-O Synesis usa o **Lark** — uma biblioteca Python de parsing que aceita gramáticas no formato EBNF e gera parsers LALR(1) eficientes. A gramática completa, comentada regra por regra, está em [Gramática da Linguagem](../reference/gramatica.qmd).
+O Synesis usa o **Lark** — uma biblioteca Python de parsing que aceita gramáticas no formato EBNF e gera parsers LALR(1) eficientes. O compilador usa um parser autônomo gerado a partir de `synesis.lark`. A gramática completa, comentada regra por regra, está em [Gramática da Linguagem](../reference/gramatica.qmd).
 
 ### Como a árvore vira objetos Python
 
@@ -602,42 +629,46 @@ Esta tabela mostra onde cada estrutura é criada e onde é consumida:
 | `List[OntologyNode]` | Estágio 4 | 6, 7 |
 | `List[SourceNode]` | Estágio 5 | 6, 7 |
 | `List[ItemNode]` | Estágio 5 | 6, 7 |
-| `ValidationResult` | Estágios 1–7 | CLI |
+| `ValidationResult` | Estágios 1–7 | CLI, editor, API |
 | `LinkedProject` | Estágio 7 | 8 |
-| `CompilationResult` | Orquestrador | CLI |
+| `CompilationResult` | Orquestrador | CLI, editor, API |
 
 
 ## Referência rápida dos nós AST {#sec-nos-ast}
 
 | Nó | Campos principais | Criado por |
 |---|---|---|
-| `ProjectNode` | `name`, `template_path`, `includes` | Transformer |
-| `IncludeNode` | `include_type`, `path` | Transformer |
-| `TemplateNode` | `field_specs`, `required_fields`, `optional_fields` | template_loader |
-| `FieldSpec` | `name`, `type`, `scope`, `arity`, `values`, `relations` | Transformer |
+| `ProjectNode` | `name`, `template_path`, `includes`, `metadata`, `description`, `questions`, `exports` | Transformer |
+| `IncludeNode` | `include_type`, `path`, `shared` | Transformer |
+| `TemplateNode` | `field_specs`, `required_fields`, `optional_fields`, `forbidden_fields`, `bundled_fields` | template_loader |
+| `FieldSpec` | `name`, `type`, `scope`, `arity`, `values`, `relations`, `guidelines`, `role` | Transformer |
 | `SourceNode` | `bibref`, `fields`, `items` | Transformer |
-| `ItemNode` | `bibref`, `quote`, `codes`, `notes`, `chains`, `code_locations` | Transformer + Linker |
+| `ItemNode` | `bibref`, `codes`, `notes`, `chains`, `extra_fields`, `code_locations` | Transformer + Linker |
 | `OntologyNode` | `concept`, `description`, `fields`, `parent_chains` | Transformer |
 | `ChainNode` | `nodes`, `relations`, `node_locations` | Transformer |
 | `SourceLocation` | `file`, `line`, `column` | Transformer |
 | `BibEntry` | `ID`, `ENTRYTYPE`, `author`, `title`, `year` | bib_loader |
-| `LinkedProject` | `sources`, `ontology_index`, `code_usage`, `hierarchy`, `all_triples` | Linker |
+| `LinkedProject` | `sources`, `ontology_index`, `code_usage`, `all_triples`, `topic_index`, `role_hierarchy` | Linker |
 | `ValidationResult` | `errors`, `warnings`, `info` | Validator + Linker |
 | `CompilationResult` | `success`, `linked_project`, `validation_result`, `stats` | Compiler |
 
 
 ## Erros mais comuns {#sec-erros}
 
-| Erro | Nome | Quando acontece |
-|---|---|---|
-| E001 | UnregisteredSource | O bibref do SOURCE não existe no arquivo `.bib` |
-| E002 | OrphanItem | O ITEM referencia um bibref sem SOURCE correspondente |
-| W003 | SourceWithoutItems | Uma SOURCE foi declarada mas nenhum ITEM a referencia |
-| W004 | UndefinedCode | Um código usado no ITEM não está definido na ontologia |
-| E005 | OntologyWithoutTemplateFields | Há arquivos de ontologia mas o template não define `ONTOLOGY FIELDS` |
-| E013 | ChainWithoutArrowOperator | Um CHAIN foi declarado sem o operador `→` |
-| E023 | EmptyItemBlock | Um bloco ITEM está vazio (sem campos) |
-| E061 | UnreferencedAnnotations | Arquivo `.syn` existe no diretório mas não está listado no `project.synp` |
-| E065 | MissingTemplateDeclaration | O projeto não tem declaração TEMPLATE |
-| E068 | DuplicateOntologyConcept | O mesmo conceito foi definido duas vezes na ontologia |
-| E070 | DuplicateSourceBibref | O mesmo bibref aparece em dois blocos SOURCE |
+| Código | Nome | Severidade | Quando acontece |
+|---|---|---|---|
+| [E001](../reference/guia_erros.qmd#sec-e001) | `UnregisteredSource` | erro | O bibref do SOURCE não existe no arquivo `.bib` |
+| [E002](../reference/guia_erros.qmd#sec-e002) | `OrphanItem` | erro | O ITEM referencia um bibref sem SOURCE correspondente |
+| [E003](../reference/guia_erros.qmd#sec-e003) | `SourceWithoutItems` | aviso | Uma SOURCE foi declarada mas nenhum ITEM a referencia |
+| [E090](../reference/guia_erros.qmd#sec-e090) | `UndefinedCodesSummary` | aviso | Há códigos usados e não definidos na ontologia (resumo) |
+| [E004](../reference/guia_erros.qmd#sec-e004) | `UndefinedCode` | aviso | Cada código sem definição, com `--check-codes` |
+| [E005](../reference/guia_erros.qmd#sec-e005) | `OntologyWithoutTemplateFields` | erro | Há blocos ONTOLOGY mas o template não define `ONTOLOGY FIELDS` |
+| [E020](../reference/guia_erros.qmd#sec-e020) | `MissingRequiredField` | erro | Um campo obrigatório está ausente |
+| [E022](../reference/guia_erros.qmd#sec-e022) | `UnknownFieldName` | erro | Um campo não declarado no template foi usado |
+| [E023](../reference/guia_erros.qmd#sec-e023) | `EmptyItemBlock` | erro | Um bloco ITEM está vazio (sem campos) |
+| [E061](../reference/guia_erros.qmd#sec-e061) | `MissingAnnotationsInclude` | erro | Arquivo `.syn` existe no diretório mas não está listado no `.synp` |
+| [E064](../reference/guia_erros.qmd#sec-e064) | `MissingTemplateFile` | erro | O template não foi encontrado ou não pôde ser interpretado |
+| [E068](../reference/guia_erros.qmd#sec-e068) | `DuplicateOntologyConcept` | erro | O mesmo conceito foi definido duas vezes na ontologia |
+| [E070](../reference/guia_erros.qmd#sec-e070) | `DuplicateSourceBibref` | erro | O mesmo bibref aparece em dois blocos SOURCE |
+
+A lista completa está no [Guia de Erros](../reference/guia_erros.qmd).

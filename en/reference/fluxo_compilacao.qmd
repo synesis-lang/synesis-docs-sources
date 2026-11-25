@@ -1,0 +1,87 @@
+# The Compilation Flow
+
+Compilation in Synesis happens in phases, ensuring the formal and conceptual integrity of the body of knowledge.
+
+In the syntactic phase, the compiler checks that blocks are properly opened and closed and that each file follows the grammar of the language.
+
+Then comes the semantic and linking validation. The compiler checks that:
+
+* items are associated with declared sources, and sources with the bibliography;
+* the fields used exist in the template, in the right scope, with the declared type and requirement;
+* fields grouped in a `BUNDLE` appear paired;
+* codes used in items have a concept defined in the ontology;
+* chain relations are the declared ones and arity is respected;
+* the hierarchy and the labels of the organizing model are consistent (when there are `ROLE` lines).
+
+All these criteria — field names, types, requirements and relation rules — come from the template file, which users adapt to their methodological parameters. The order of fields inside a block is free.
+
+This layered process ensures that outputs are structurally sound and that the body of knowledge stays consistent and computationally reliable. It does not judge the reading: whether the source supports what was annotated is the researcher's call.
+
+```{mermaid}
+flowchart TB
+    %% --- COLORS (Synesis 2.0 palette) ---
+    classDef compiler fill:#fff,stroke:#084C54,stroke-width:3px,color:#084C54,font-weight:bold;
+    classDef highValue fill:#E0F7FA,stroke:#00BFA5,stroke-width:2px,color:#084C54;
+    classDef defaultNode fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
+    classDef bridge fill:#F1F5F9,stroke:#00BFA5,stroke-width:1px,color:#084C54,font-weight:600;
+
+    %% --- LAYER 1: ENTRY POINT ---
+    P["Project (.synp)<br/>project entry point"]:::defaultNode
+
+    %% --- LAYER 2: INPUTS ---
+    subgraph Input ["Input Files"]
+        direction LR
+        D["Template<br/>(.synt)"]:::defaultNode
+        A["Sources<br/>(.bib, .toml)"]:::defaultNode
+        B["Annotations<br/>(.syn)"]:::defaultNode
+        E["Ontology<br/>(.syno)"]:::defaultNode
+    end
+
+    %% --- LAYER 3: COMPILER ---
+    C["Synesis Compiler<br/>• Parsing • Validation <br/>• Linking • Export ."]:::compiler
+
+    %% --- LAYER 4: OUTPUTS ---
+    subgraph Output ["Output Formats"]
+        direction LR
+        F["JSON"]:::defaultNode
+        G["CSV / Excel"]:::defaultNode
+        H["Alpaca / OKF / SKOS"]:::defaultNode
+    end
+
+    %% --- LAYER 5: API/BRIDGE ---
+    subgraph Bridge ["Interface Layer"]
+        direction LR
+        API["Compiler API ."]:::bridge
+        S["synesis-graph"]:::bridge
+    end
+
+    %% --- LAYER 6: ECOSYSTEM ---
+    subgraph Ecosystem ["Application Ecosystem"]
+        direction LR
+        I["Graphs<br/>Neo4j • ArcadeDB • HTML"]:::highValue
+        J["AI Agents<br/>MCP"]:::highValue
+        K["Data Science<br/>R • Python • Jupyter"]:::highValue
+    end
+
+    style Input fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Output fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Bridge fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+    style Ecosystem fill:transparent,stroke:#4A5568,stroke-width:1px,stroke-dasharray:5 5
+
+    P ==> Input
+    Input ==> C
+    C ==> Output
+    C ==> API
+    API --> S
+
+    D -. "defines structure" .-> B
+    D -. "defines structure" .-> E
+    A -. "referenced in" .-> B
+
+    Output -.-> K
+    S --> I
+    I --> J
+    API --> K
+
+    linkStyle default stroke:#64748B,stroke-width:1.5px;
+```

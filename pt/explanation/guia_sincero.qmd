@@ -59,9 +59,6 @@ No Excel, você pode registrar:
 
 São três formas de dizer a mesma coisa? Ou são conceitos diferentes? O Excel não sabe. Você também não vai lembrar daqui a seis meses.
 
-São três coisas diferentes?
-Ou três formas imprecisas de nomear o mesmo fenômeno?
-
 Excel não sabe. Ele não foi feito para saber.
 
 Sim, você pode criar uma aba de códigos, usar validação de dados, listas suspensas, referências cruzadas. Funciona.
@@ -250,7 +247,7 @@ Se a fonte da verdade é um sistema estruturado validável, a planilha vira apen
 
 ## Conclusão
 
-Synesis não é para todo mundo.E isso não é defeito — é foco.
+Synesis não é para todo mundo. E isso não é defeito — é foco.
 
 Ele faz sentido quando:
 

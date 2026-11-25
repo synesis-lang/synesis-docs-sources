@@ -122,7 +122,7 @@ Os comandos do vídeo, para copiar:
 synesis compile project.synp --stats            # etapas + contagem de fontes, trechos e conceitos
 synesis compile project.synp --check-codes      # lista os códigos que não existem na ontologia, com sugestão
 synesis compile project.synp --strict           # avisos passam a contar como erros
-synesis compile project.synp --json saida.json --xls saida.xlsx --csv csv   # a pasta csv precisa existir
+synesis compile project.synp --json saida.json --xls saida.xlsx --csv csv
 synesis check annotations.syn                   # só a escrita de um arquivo, sem o template
 synesis validate-template template.synt         # confere o template enquanto você o escreve
 ```

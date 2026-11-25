@@ -10,51 +10,31 @@ synesis-docs-sources/
 │   ├── _quarto.yml              # Configuração PT
 │   ├── index.qmd
 │   ├── about.qmd
-│   ├── explanation/             # Explicações aprofundadas
-│   │   ├── posicionamento_arquitetural.qmd
-│   │   ├── por_que_estrutura_importa.qmd
-│   │   ├── guia_sincero.qmd
-│   │   ├── synesis_escrituras.qmd
-│   │   ├── knowledge_graphs.qmd
-│   │   ├── ideas.qmd
-│   │   ├── show_case.qmd
-│   │   ├── exemplos_codificacao.qmd
-│   │   ├── codificacao_assistida_IA.qmd
-│   │   ├── codificacao_assistida_IA_metricas.qmd
-│   │   ├── como_surgiu.qmd
-│   │   └── dsap.qmd
-│   ├── howto/                   # Guias práticos
-│   │   ├── guia_profissionais.qmd
-│   │   ├── definir_ontologia.qmd
-│   │   ├── criar_chains.qmd
-│   │   └── exportar_neo4j.qmd
-│   ├── reference/               # Referência da linguagem
-│   │   ├── guia_referencia.qmd
-│   │   ├── synesis_load.qmd
-│   │   └── fluxo_compilacao.qmd
-│   └── tutorials/               # Tutoriais
-│       ├── getting-started.qmd
-│       ├── guia_pesquisadores.qmd
-│       └── synesis_explorer_tutorial.qmd
-├── en/                          # Versão em Inglês
-│   ├── _quarto.yml              # Configuração EN
-│   ├── index.qmd
-│   ├── about.qmd
-│   ├── explanation/
-│   │   ├── guia_sincero.qmd
-│   │   ├── knowledge_graphs.qmd
-│   │   └── ideas.qmd
+│   ├── tutorials/
+│   │   ├── getting-started.qmd
+│   │   ├── synesis_claude_desktop.qmd
+│   │   ├── guia_pesquisadores.qmd
+│   │   ├── synesis_explorer_tutorial.qmd
+│   │   └── synesis_para_iramuteq.qmd
 │   ├── howto/
 │   │   ├── guia_profissionais.qmd
+│   │   ├── synesis_coder.qmd
+│   │   ├── definir_ontologia.qmd
+│   │   ├── criar_chains.qmd
+│   │   ├── ligar_projetos.qmd
 │   │   └── exportar_neo4j.qmd
-│   ├── ecossistema/
-│   │   └── synesis2neo4j_en.qmd
 │   ├── reference/
 │   │   ├── guia_referencia.qmd
-│   │   └── synesis_load.qmd
-│   └── tutorials/
-│       ├── guia_pesquisadores.qmd
-│       └── synesis_explorer_tutorial.qmd
+│   │   ├── modelo_organizador.qmd
+│   │   ├── gramatica.qmd
+│   │   ├── guia_erros.qmd
+│   │   ├── synesis_load.qmd
+│   │   ├── synesis_graph.qmd
+│   │   └── fluxo_compilacao.qmd
+│   └── explanation/             # 20 páginas; explanation/index.qmd é o sumário
+├── en/                          # Versão em Inglês: as mesmas páginas e nomes de arquivo
+│   ├── _quarto.yml              # (exceção: reference/organizing_model.qmd)
+│   └── ...
 ├── images/                      # Assets visuais (25 imagens)
 ├── synesis-landing/             # Páginas de landing
 ├── index.qmd                   # Página raiz com redirecionamento automático
@@ -107,22 +87,11 @@ cd en
 quarto preview
 ```
 
-### Deploy no GitHub Pages
+### Publicação
 
-1. Configure o repositório:
-   - Vá em Settings > Pages
-   - Source: Deploy from a branch
-   - Branch: `main`
-   - Folder: `/_site`
+O site publicado (synesis-lang.org) vem do repositório `synesis-docs`, branch `gh-pages`. Depois do build, o conteúdo de `_site/` é copiado para esse repositório, preservando o arquivo `CNAME`, e então enviado com `git push`. A pasta `_site/` não é versionada neste repositório.
 
-2. O arquivo `.nojekyll` já está configurado automaticamente no build
-
-3. Push das alterações:
-```bash
-git add _site
-git commit -m "Update documentation"
-git push
-```
+Algumas páginas de Explanation executam Python durante a renderização (`jupyter: python3`) e dependem de `pandas` (com `jinja2` compatível), `plotly`, `matplotlib`, `networkx` e `synesis`, além dos dados locais em `case-studies/`, que não são versionados.
 
 ## Funcionalidades
 
@@ -148,14 +117,17 @@ O conteúdo segue o framework [Diataxis](Diataxis_principle.md), organizado em 4
 
 ### Adicionar Nova Página
 
-1. Crie o arquivo `.qmd` na pasta correta em `pt/` e (opcionalmente) `en/`
+1. Crie o arquivo `.qmd` na pasta correta em `pt/` e em `en/`, com o mesmo nome
 2. Adicione a referência em `pt/_quarto.yml` e/ou `en/_quarto.yml`:
 
 ```yaml
 website:
-  sidebar:
-    contents:
-      - nova-pagina.qmd
+  navbar:
+    left:
+      - text: "Reference"
+        menu:
+          - href: reference/nova-pagina.qmd
+            text: Nova Página
 ```
 
 3. Execute `quarto preview` ou `build.bat` para validar

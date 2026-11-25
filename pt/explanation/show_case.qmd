@@ -238,6 +238,7 @@ END ITEM FIELDS
 
 FIELD cadeia TYPE CHAIN
     SCOPE ITEM
+    ARITY >= 2
     DESCRIPTION Relação entre conceitos
 END FIELD
 ```
@@ -394,9 +395,9 @@ FIELD relevancia TYPE ORDERED
     SCOPE ITEM
     DESCRIPTION Relevância do excerto para a questão de pesquisa
     VALUES
-        1 baixa: Tangencialmente relacionado
-        2 media: Contribui para a compreensão
-        3 alta: Central para a questão de pesquisa
+        [1] baixa: Tangencialmente relacionado
+        [2] media: Contribui para a compreensão
+        [3] alta: Central para a questão de pesquisa
     END VALUES
 END FIELD
 ```
@@ -406,9 +407,11 @@ END FIELD
 ```synesis
 ITEM @entrevista_dona_maria2026
     citacao: "Eu não confio nessas coisas de computador para falar com médico"
-    relevancia: alta
+    relevancia: 3
 END ITEM
 ```
+
+Em um campo `ORDERED`, grava-se o **índice** (`3`), não o rótulo; escrever `alta` produz erro, com o índice correto na mensagem. O editor mostra o rótulo ao lado do número.
 
 :::{.callout-tip}
 ## ORDERED vs. ENUMERATED
@@ -513,9 +516,9 @@ FIELD prioridade TYPE ORDERED
     SCOPE ONTOLOGY
     DESCRIPTION Prioridade do conceito para intervenção
     VALUES
-        1 baixa: Fator secundário
-        2 media: Fator relevante
-        3 alta: Fator crítico para intervenção
+        [1] baixa: Fator secundário
+        [2] media: Fator relevante
+        [3] alta: Fator crítico para intervenção
     END VALUES
 END FIELD
 ```
@@ -525,12 +528,12 @@ END FIELD
 ```synesis
 ONTOLOGY Desconfianca_Tecnologica
     definicao: Resistência a tecnologias digitais
-    prioridade: alta
+    prioridade: 3
 END ONTOLOGY
 
 ONTOLOGY Preferencia_Presencial
     definicao: Preferência por atendimento médico face a face
-    prioridade: media
+    prioridade: 2
 END ONTOLOGY
 ```
 
@@ -540,14 +543,16 @@ END ONTOLOGY
 
 A tabela abaixo consolida todos os tipos de campo e suas características.
 
-| Tipo | Escopos típicos | Propriedades especiais | O que armazena |
+Os três escopos aceitam os mesmos tipos; a coluna indica o uso mais comum. O `ITEM` e a `ONTOLOGY` de um mesmo estudo costumam combinar vários deles.
+
+| Tipo | Escopos comuns | Propriedades especiais | O que armazena |
 |------|----------------|----------------------|----------------|
 | **TEXT** | SOURCE, ONTOLOGY | — | Texto livre genérico |
 | **QUOTATION** | ITEM | — | Excerto textual da fonte |
 | **MEMO** | ITEM | — | Nota analítica do pesquisador |
 | **CODE** | ITEM | — | Rótulo conceitual (deve existir na ontologia) |
-| **CHAIN** | ITEM | RELATIONS, ARITY | Relação entre conceitos (simples ou qualificada) |
-| **DATE** | SOURCE | — | Data (formato ISO) |
+| **CHAIN** | ITEM | ARITY (obrigatório), RELATIONS | Relação entre conceitos (simples ou qualificada) |
+| **DATE** | SOURCE | — | Data (recomenda-se ISO; o formato não é conferido) |
 | **SCALE** | ITEM | FORMAT [min..max] | Valor numérico em intervalo |
 | **ENUMERATED** | SOURCE, ITEM | VALUES (sem índice) | Valor de lista fechada |
 | **ORDERED** | ITEM, ONTOLOGY | VALUES (com índice) | Valor com hierarquia ordinal |
@@ -562,5 +567,18 @@ A tabela abaixo consolida todos os tipos de campo e suas características.
 | **REQUIRED** | Campo obrigatório --- o compilador rejeita se ausente |
 | **OPTIONAL** | Campo opcional --- pode ser omitido sem erro |
 | **REQUIRED BUNDLE** | Grupo de campos que devem aparecer juntos, em igual quantidade |
+| **OPTIONAL BUNDLE** | O grupo pode faltar por inteiro; presente, vem completo |
+| **FORBIDDEN** | O campo não pode ter valor naquele bloco |
+| **ON BIBLIOGRAPHY** / **ON DATASET** | O valor vem do `.bib` ou de um registro TOML |
 
 : Modificadores de campo {.striped .hover}
+
+## Além dos campos
+
+| Recurso | Para quê |
+|---|---|
+| `ROLE` | dá a um campo da ontologia uma função (rótulo, definição, hierarquia, consolidação) — veja [O Modelo Organizador](../reference/modelo_organizador.qmd) |
+| `IDENTIFIES` / `REFERS TO` | ligam projetos independentes — veja [Como Ligar Projetos](../howto/ligar_projetos.qmd) |
+| `QUESTIONS`, `PHASE`, `EXPORT` | no `.synp`: perguntas de pesquisa, plano de produção e artefatos — veja a [Referência](../reference/guia_referencia.qmd) |
+
+: Outros recursos {.striped .hover}

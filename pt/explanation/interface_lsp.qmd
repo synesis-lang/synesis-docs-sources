@@ -48,7 +48,7 @@ flowchart TB
         subgraph ExplorerInternals ["Dentro da extensão"]
             direction LR
             LC["SynesisLspClient<br/>vscode-languageclient"]
-            UI["Explorers visuais<br/>Reference · Code · Relation · Ontology"]
+            UI["Painéis visuais<br/>References · Codes · Relations<br/>Ontology · Template Fields"]
         end
         EX --> ExplorerInternals
     end
@@ -69,6 +69,7 @@ flowchart TB
             F6["semantic_tokens"]
             F7["code_actions"]
             F8["references"]
+            F9["hierarchy"]
         end
     end
 
@@ -141,7 +142,7 @@ Neste modo, o `lsp_adapter` faz o trabalho pesado:
 
 ::: {.callout-note}
 ## Por que não compilar o projeto inteiro a cada tecla?
-A compilação completa leva ~3.7 segundos e envolve leitura de disco para todos os arquivos do projeto. É inviável para feedback em tempo real. O `lsp_adapter` resolve isso validando apenas o arquivo aberto, usando o contexto (template, bibliografia, ontologia) em cache.
+A compilação completa envolve leitura de disco de todos os arquivos do projeto e pode levar vários segundos em projetos grandes. É inviável para feedback em tempo real. O `lsp_adapter` resolve isso validando apenas o arquivo aberto, usando o contexto (template, bibliografia, ontologia) em cache.
 :::
 
 
@@ -230,7 +231,12 @@ A tradução é feita pelo `converters.py`:
 
 ::: {.callout-note}
 ## Mensagens pedagógicas
-Quando disponível, o `error_handler` do compilador enriquece a mensagem com contexto e sugestões — por exemplo, "Código 'Cohesion' não encontrado na ontologia. Você quis dizer 'Social_Cohesion'?". Isso é feito via `create_pedagogical_error()`, que traduz tokens Lark internos em linguagem legível.
+Nos erros de sintaxe, o `error_handler` do compilador enriquece a mensagem com contexto e sugestões. Isso é feito por `create_pedagogical_error()`, que traduz tokens internos do Lark em linguagem legível. As mensagens do compilador e do servidor são escritas em inglês; o [Guia de Erros](../reference/guia_erros.qmd) explica cada diagnóstico.
+:::
+
+::: {.callout-note}
+## Códigos sem definição
+Um código usado nas anotações e ausente da ontologia gera um **aviso**, não um erro. Por padrão o editor não marca cada ocorrência: a configuração `synesisExplorer.diagnostics.checkCodes` da extensão, desligada de início, liga o diagnóstico por ocorrência (`E004`). Ao mudar a opção, o servidor recompila os projetos em cache e republica os diagnósticos.
 :::
 
 
@@ -244,7 +250,7 @@ O `synesis-lsp` implementa um conjunto abrangente de funcionalidades LSP, cada u
 |---|---|
 | Abrir arquivo (`did_open`) | Validação imediata |
 | Digitar (`did_change`) | Debounce de 300ms — só valida após pausa |
-| Salvar (`did_save`) | Validação imediata + invalidação de cache se `.synp`/`.synt`/`.bib` |
+| Salvar (`did_save`) | `.synp` e `.synt` invalidam os caches e revalidam os arquivos abertos, assim como o `.bib`; `.syn` e `.syno` invalidam o cache de compilação |
 | Fechar (`did_close`) | Limpa diagnósticos e libera memória |
 
 O debounce segue o padrão **Pyright** (`scheduleReanalysis`): quando o usuário digita 10 caracteres rapidamente, apenas 1 validação é disparada após a última tecla. Isso elimina ~80% do uso desnecessário de CPU.
@@ -254,8 +260,8 @@ O debounce segue o padrão **Pyright** (`scheduleReanalysis`): quando o usuário
 | Feature | Módulo | O que faz |
 |---|---|---|
 | **Semantic Tokens** | `semantic_tokens.py` | Coloração sintática rica (keywords, bibrefs, códigos, campos) |
-| **Document Symbols** | `symbols.py` | Painel de outline — mostra SOURCEs, ITEMs e ONTOLOGYs como árvore |
-| **Hover** | `hover.py` | Tooltip ao passar o mouse — mostra definição do código, tipo do campo |
+| **Document Symbols** | `symbols.py` | Painel de outline — mostra SOURCEs, ITEMs e ONTOLOGYs como árvore; no `.synp`, também as questões de competência e os blocos `EXPORT` |
+| **Hover** | `hover.py` | Tooltip ao passar o mouse — mostra definição do código e tipo do campo; com hierarquia declarada, também pais, filhos e termos preteridos (`USE`) |
 | **Inlay Hints** | `inlay_hints.py` | Dicas inline — mostra autor/ano ao lado de `@bibref` |
 | **Signature Help** | `signature_help.py` | Documentação do campo ao digitar `:` |
 
@@ -263,11 +269,12 @@ O debounce segue o padrão **Pyright** (`scheduleReanalysis`): quando o usuário
 
 | Feature | Módulo | O que faz |
 |---|---|---|
-| **Completion** | `completion.py` | Autocomplete para `@bibrefs`, códigos e nomes de campo |
+| **Completion** | `completion.py` | Autocomplete para `@bibrefs`, códigos, nomes de campo e blocos de anotação; papéis depois de `ROLE` e propriedades dentro de `EXPORT` |
 | **Go to Definition** | `definition.py` | `Ctrl+Click` em `@bibref` vai para a SOURCE; em código vai para a ONTOLOGY |
-| **Find References** | `references.py` | Encontra todos os usos de um código ou bibref no projeto |
+| **Find References** | `references.py` | Encontra todos os usos de um código ou bibref no projeto, inclusive citações em campos de hierarquia da ontologia |
 | **Rename** | `rename.py` | Renomeia código ou bibref em todos os arquivos do workspace |
 | **Code Actions** | `code_actions.py` | Quick fixes — sugestões de correção para erros comuns |
+| **Type Hierarchy** | `hierarchy.py` | *Show Type Hierarchy* sobre um conceito: pais e filhos declarados por campos com `ROLE HIERARCHY` (`KIND`, `PART`, `INSTANCE`) |
 
 ### Synesis Explorer
 
@@ -280,16 +287,21 @@ O Synesis Explorer é uma extensão VS Code que oferece uma interface visual par
 | `synesis/getReferences` | `explorer_requests.py` | Fontes com contagem de itens |
 | `synesis/getRelations` | `explorer_requests.py` | Triples (sujeito, relação, objeto) com localizações |
 | `synesis/getRelationGraph` | `graph.py` | Grafo de relações em formato Mermaid.js |
-| `synesis/getExcerpts` | `explorer_requests.py` | Itens de uma fonte específica |
-| `synesis/getOntologyTopics` | `ontology_topics.py` | Hierarquia de temas da ontologia |
+| `synesis/getExcerpts` | `explorer_requests.py` | Itens de uma fonte específica, com os campos do bloco SOURCE |
+| `synesis/getOntologyTopics` | `ontology_topics.py` | Temas da ontologia; com `ROLE HIERARCHY`, a árvore da hierarquia |
+| `synesis/getSubtreeEvidence` | `hierarchy.py` | Itens de um conceito e de todos os seus descendentes, sem repetição |
 | `synesis/getOntologyAnnotations` | `ontology_annotations.py` | Códigos com localizações no fonte |
 | `synesis/getAbstract` | `abstract_viewer.py` | Conteúdo do campo ABSTRACT |
+| `synesis/getBlocks` | `blocks.py` | Blocos SOURCE e ITEM de um arquivo, com intervalo e referência |
+| `synesis/getTemplate` | `template_info.py` | Campos e requisitos por escopo do template compilado |
+| `synesis/getProjectStats` | `server.py` | Contagens do projeto compilado |
+| `synesis/validateWorkspace` | `workspace_diagnostics.py` | Diagnósticos de todo o projeto |
 
-Todos esses comandos dependem do `WorkspaceCache` — primeiro é necessário chamar `loadProject` para compilar e cachear o projeto.
+Os comandos de consulta ao projeto dependem do `WorkspaceCache` — primeiro é necessário chamar `loadProject` para compilar e cachear o projeto.
 
 ### O contrato LSP ↔ extensão
 
-As respostas desses comandos customizados são descritas por **JSON Schemas versionados**. O servidor valida o que produz; a extensão valida o que consome, contra uma cópia dos mesmos schemas.
+As respostas dos principais comandos de consulta (referências, códigos, relações, itens de uma fonte e anotações da ontologia) são descritas por **JSON Schemas versionados**. O servidor valida o que produz; a extensão valida o que consome, contra uma cópia dos mesmos schemas.
 
 O ganho é que uma mudança de formato no servidor não chega ao usuário como um painel vazio ou um erro obscuro no editor: ela quebra o CI dos **dois** repositórios ao mesmo tempo, no momento da mudança.
 
@@ -408,26 +420,33 @@ stateDiagram-v2
 
 | Módulo | Linhas | Tipo | Importa de |
 |---|---|---|---|
-| `server.py` | ~1700 | Core | Todos os outros + `synesis` |
-| `converters.py` | ~300 | Tradução | `synesis.ast` |
-| `cache.py` | ~100 | Cache | Nenhum |
-| `explorer_requests.py` | ~1200 | Feature | `converters`, `synesis` |
-| `symbols.py` | ~300 | Feature | `synesis.ast.nodes` |
-| `semantic_tokens.py` | ~230 | Feature | `synesis` |
-| `hover.py` | ~280 | Feature | `synesis` |
-| `completion.py` | ~150 | Feature | `synesis` |
-| `definition.py` | ~90 | Feature | `synesis` |
-| `references.py` | ~210 | Feature | `synesis` |
-| `rename.py` | ~520 | Feature | `synesis` |
-| `code_actions.py` | ~230 | Feature | `synesis` |
-| `inlay_hints.py` | ~60 | Feature | `synesis` |
-| `signature_help.py` | ~80 | Feature | `synesis` |
-| `graph.py` | ~410 | Feature | `synesis` |
-| `ontology_annotations.py` | ~680 | Feature | `synesis` |
-| `ontology_topics.py` | ~200 | Feature | `synesis` |
-| `abstract_viewer.py` | ~270 | Feature | `synesis` |
-| `template_diagnostics.py` | ~290 | Feature | Nenhum |
-| `workspace_diagnostics.py` | ~110 | Feature | `synesis` |
+| `server.py` | ~2100 | Core | Todos os outros + `synesis` |
+| `explorer_requests.py` | ~1360 | Feature | `converters`, `synesis` |
+| `ontology_annotations.py` | ~700 | Feature | `synesis` |
+| `semantic_tokens.py` | ~660 | Feature | `synesis` |
+| `graph.py` | ~610 | Feature | `synesis` |
+| `rename.py` | ~580 | Feature | `synesis` |
+| `completion.py` | ~380 | Feature | `synesis` |
+| `symbols.py` | ~350 | Feature | `synesis.ast.nodes` |
+| `template_diagnostics.py` | ~340 | Feature | Nenhum |
+| `hover.py` | ~340 | Feature | `synesis` |
+| `abstract_viewer.py` | ~340 | Feature | `synesis` |
+| `converters.py` | ~330 | Tradução | `synesis.ast` |
+| `blocks.py` | ~310 | Feature | `synesis` |
+| `hierarchy.py` | ~300 | Feature | `synesis` |
+| `code_actions.py` | ~300 | Feature | `synesis` |
+| `references.py` | ~260 | Feature | `synesis` |
+| `ontology_topics.py` | ~250 | Feature | `synesis` |
+| `inlay_hints.py` | ~200 | Feature | `synesis` |
+| `shared_includes.py` | ~150 | Apoio | `synesis` |
+| `workspace_diagnostics.py` | ~150 | Feature | `synesis` |
+| `template_info.py` | ~140 | Feature | `synesis` |
+| `code_usage.py` | ~110 | Apoio | `synesis` |
+| `signature_help.py` | ~110 | Feature | `synesis` |
+| `cache.py` | ~110 | Cache | Nenhum |
+| `definition.py` | ~100 | Feature | `synesis` |
+
+Tamanhos aproximados na versão 0.25 do `synesis-lsp`.
 
 Todos os módulos de feature seguem o mesmo padrão: recebem o `CompilationResult` ou o source do documento, processam, e retornam tipos LSP que o `server.py` despacha para o editor.
 
@@ -442,7 +461,7 @@ synesis (compilador)
   ├── compiler.py        ← Pipeline completo
   ├── parser/            ← Lark + transformer
   ├── semantic/          ← Validador + linker
-  └── exporters/         ← JSON, CSV, Excel
+  └── exporters/         ← JSON, CSV, Excel, Alpaca, OKF, SKOS
 
 synesis-lsp (servidor)
   ├── server.py          ← Importa de synesis.lsp_adapter
@@ -450,7 +469,7 @@ synesis-lsp (servidor)
   └── features/          ← Importam de synesis.*
 ```
 
-O `lsp_adapter.py` foi colocado dentro do compilador (e não no LSP) porque precisa acessar internamente o parser, o transformer e o validador — componentes que não fazem parte da API pública do compilador. Ele funciona como uma **fachada interna**: expõe `validate_single_file()` como uma operação atômica que esconde toda a complexidade do pipeline de 8 estágios.
+O `lsp_adapter.py` foi colocado dentro do compilador (e não no LSP) porque precisa acessar internamente o parser, o transformer e o validador — componentes que não fazem parte da API pública do compilador. Ele funciona como uma **fachada interna**: expõe `validate_single_file()` como uma operação atômica que esconde a complexidade do pipeline.
 
 ### A fronteira do agregado multiprojeto
 

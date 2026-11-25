@@ -5,41 +5,70 @@ subtitle: "Guia prático para modelar relações causais estruturadas"
 
 # Como Criar e Validar Chains
 
-Este guia mostra **como construir chains (cadeias causais)** para expressar relações entre conceitos de forma sistemática e auditável.
+Este guia mostra **como construir chains (cadeias)** para expressar relações entre conceitos de forma sistemática e auditável.
 
 **Você deve usar este guia se:**
 
 - Precisa expressar relações de causalidade, influência ou mediação
-- Quer construir mapas de relações entre códigos
-- Precisa validar a consistência lógica de suas chains
+- Quer construir mapas de relações entre conceitos
+- Precisa validar a consistência das suas chains
 - Quer extrair redes de relações para análise ou visualização
 
 ---
 
 ## O que é uma Chain?
 
-Uma **chain** (cadeia) é uma sequência de códigos conectados por relações, expressando como conceitos se influenciam mutuamente.
+Uma **chain** é uma sequência de conceitos ligados por `->`, que expressa como eles se relacionam. Quando o campo declara relações, cada ligação é nomeada.
 
-### Sintaxe Básica
-
-```synesis
-chain: conceito_a -> RELACAO -> conceito_b
+```text
+conceito_a -> RELACAO -> conceito_b
 ```
 
-**Exemplo:**
 ```synesis
-chain: custo_alto -> INIBE -> adocao
+ITEM @entrevista_01
+    chain: custo_alto -> INIBE -> adocao
+END ITEM
 ```
 
-Lê-se: "custo_alto INIBE adocao"
+Lê-se: "custo_alto INIBE adocao".
+
+---
+
+## Como Declarar o Campo
+
+As relações são declaradas **no template**, no campo de tipo `CHAIN`. O nome do campo é livre; `ARITY` é obrigatório.
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relação entre conceitos afirmada pela fonte
+    RELATIONS
+        CAUSA: X é causa direta de Y
+        INIBE: X reduz a probabilidade ou a intensidade de Y
+        FAVORECE: X promove ou facilita Y
+        MEDIA: X intermedeia o efeito sobre Y
+        CORRELACIONA: X e Y ocorrem juntos, sem direção causal definida
+    END RELATIONS
+    GUIDELINES
+        Registre somente relações que o trecho afirma.
+        Teste CAUSA ou FAVORECE: sem X, Y deixaria de ocorrer? Então CAUSA.
+        Correto: custo_alto -> INIBE -> adocao (o trecho diz que o preço afasta)
+        Errado: custo_alto -> CAUSA -> adocao (o trecho não afirma causa)
+    END GUIDELINES
+END FIELD
+```
+
+- `ARITY >= 2` aceita uma ligação simples
+- `ARITY >= 3` exige um **mediador** (antecedente → mediador → resultado)
+
+Se o campo **não** declarar `RELATIONS`, a cadeia é simples (`a -> b`): registra a associação, sem nomeá-la.
 
 ---
 
 ## Como Criar Chains Simples
 
-### Chain de Dois Elementos
-
-A forma mais básica: um código influencia outro diretamente.
+### Dois conceitos
 
 ```synesis
 ITEM @entrevista_01
@@ -49,244 +78,235 @@ ITEM @entrevista_01
 END ITEM
 ```
 
-**Quando usar:** Para relações diretas e não mediadas.
+**Quando usar:** relações diretas.
 
-### Chains com Múltiplas Relações
-
-Para expressar cadeias causais complexas:
+### Vários passos
 
 ```synesis
-chain: falta_de_treinamento -> CAUSA -> baixa_competencia -> INIBE -> adocao
+ITEM @entrevista_01
+    chain: falta_de_treinamento -> CAUSA -> baixa_competencia -> INIBE -> adocao
+END ITEM
 ```
 
-Lê-se: "Falta de Treinamento CAUSA Baixa Competência, que INIBE Adoção"
+Lê-se: "falta de treinamento CAUSA baixa competência, que INIBE a adoção". Cada par consecutivo vira uma relação (tripla) nas exportações.
 
-**Quando usar:** Para capturar mecanismos causais com elementos intermediários.
+**Quando usar:** para registrar mecanismos com elementos intermediários.
 
 ---
 
-## Como Escolher Relações Apropriadas
+## Como Escolher Relações
 
-As relações devem estar **declaradas no template do projeto** (campo `chain`). Tipos comuns:
+Um conjunto pequeno e bem separado vale mais que muitas relações sobrepostas. Se duas relações não se distinguem numa frase, são a mesma.
 
 | Relação | Significado | Exemplo |
 |---------|-------------|---------|
 | `CAUSA` | X é causa direta de Y | `erro_de_software -> CAUSA -> falha_do_sistema` |
 | `INIBE` | X reduz ou impede Y | `custo_alto -> INIBE -> adocao` |
 | `FAVORECE` | X promove ou facilita Y | `treinamento -> FAVORECE -> usabilidade` |
-| `MEDIA` | X é intermediário entre A e Y | `suporte_tecnico -> MEDIA -> satisfacao` |
-| `CORRELACIONA` | X e Y ocorrem juntos (sem direção) | `alta_rotatividade -> CORRELACIONA -> baixo_engajamento` |
+| `MEDIA` | X intermedeia | `suporte_tecnico -> MEDIA -> satisfacao` |
+| `CORRELACIONA` | ocorrem juntos, sem direção | `rotatividade -> CORRELACIONA -> desengajamento` |
 
-**Declare relações no template do projeto:**
+---
+
+## Como Construir Estruturas
+
+### Divergentes (um causa vários)
 
 ```synesis
-FIELD chain TYPE CHAIN
-    SCOPE ITEM
-    DESCRIPTION Cadeia causal entre conceitos
-    RELATIONS
-        CAUSA: X é causa direta e necessária de Y
-        INIBE: X reduz probabilidade ou intensidade de Y
-        FAVORECE: X promove ou facilita Y
-        MEDIA: X é elemento intermediário entre A e Y
-        CORRELACIONA: X e Y ocorrem juntos, sem direção causal definida
-    END RELATIONS
-END FIELD
+ITEM @doc_01
+    chain: falta_de_recursos -> INIBE -> investimento_em_ia
+    chain: falta_de_recursos -> INIBE -> treinamento_de_equipe
+    chain: falta_de_recursos -> CAUSA -> priorizacao_de_curto_prazo
+END ITEM
+```
+
+### Convergentes (vários causam um)
+
+```synesis
+ITEM @doc_02
+    chain: facilidade_de_uso -> FAVORECE -> satisfacao
+    chain: suporte_responsivo -> FAVORECE -> satisfacao
+    chain: custo_acessivel -> FAVORECE -> satisfacao
+END ITEM
+```
+
+### Com mediadores
+
+```synesis
+ITEM @doc_03
+    chain: capacitacao -> FAVORECE -> competencia_da_equipe -> FAVORECE -> qualidade
+END ITEM
 ```
 
 ---
 
-## Como Construir Chains Complexas
+## Como Qualificar uma Afirmação {#sec-qualificar}
 
-### Chains Divergentes (Um Causa Vários)
-
-```synesis
-# Chain 1
-chain: falta_de_recursos -> INIBE -> investimento_em_ia
-
-# Chain 2
-chain: falta_de_recursos -> INIBE -> treinamento_de_equipe
-
-# Chain 3
-chain: falta_de_recursos -> CAUSA -> priorizacao_de_curto_prazo
-```
-
-**Quando usar:** Para identificar causas de múltiplos efeitos.
-
-### Chains Convergentes (Vários Causam Um)
+Uma chain diz que uma relação existe. As fontes raramente dizem só isso: elas propõem hipóteses, testam, negam. Emparelhe a chain com seus qualificadores num `BUNDLE`:
 
 ```synesis
-# Chain 1
-chain: facilidade_de_uso -> FAVORECE -> satisfacao
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL BUNDLE chain, estatuto
+END ITEM FIELDS
 
-# Chain 2
-chain: suporte_responsivo -> FAVORECE -> satisfacao
-
-# Chain 3
-chain: custo_acessivel -> FAVORECE -> satisfacao
+FIELD estatuto TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Como o texto apresenta a relação imediatamente anterior
+    VALUES
+        Afirmada: apresentada como achado ou fato
+        Hipotetica: proposta sem ser afirmada
+        Negada: o texto afirma que não ocorre
+    END VALUES
+END FIELD
 ```
-
-**Quando usar:** Para identificar fatores múltiplos contribuindo para mesmo resultado.
-
-### Chains com Mediadores
-
-Quando há elementos intermediários:
 
 ```synesis
-chain: investimento_em_capacitacao -> FAVORECE -> competencia_da_equipe -> FAVORECE -> qualidade_do_output
+ITEM @artigo_01
+    quote: "O treinamento reduziu os cliques, mas não aumentou as denúncias."
+    chain: treinamento -> INIBE -> cliques
+    estatuto: Afirmada
+    chain: treinamento -> FAVORECE -> denuncias
+    estatuto: Negada
+END ITEM
 ```
 
-**Quando usar:** Para explicar "o porquê" de uma relação (mecanismo causal).
+Cada `chain:` emparelha, pela posição, com o seu `estatuto:`. Sem o qualificador, uma hipótese e um achado ficam iguais em todas as exportações.
 
 ---
 
 ## Como Validar Chains
 
-### Validação Automática pelo Compilador
-
-Ao compilar, o Synesis valida automaticamente:
-
-1. ✅ Todos os códigos existem na ontologia
-2. ✅ Todas as relações existem na ontologia
-3. ✅ Estrutura sintática está correta
+### Validação automática
 
 ```bash
-synesis check analysis.synp
+synesis compile analysis.synp --check-codes
 ```
 
-**Erros comuns:**
+O compilador confere:
 
-| Erro | Causa | Solução |
+1. a estrutura (alternância conceito → relação → conceito)
+2. se cada relação está declarada no campo
+3. se a aridade é atendida
+4. se os conceitos têm definição na ontologia
+
+| Mensagem | Causa | Solução |
 |------|-------|---------|
-| `Code 'X' not found in ontology` | Código não definido | Adicione o código em `.syno` |
-| `Relation 'Y' not found` | Relação não definida | Adicione a relação em `.syno` |
-| `Invalid chain syntax` | Estrutura malformada | Verifique formato: `A -> REL -> B` |
-| `Chain must have odd number of elements` | Faltou código ou relação | Chains têm formato: `C -> R -> C -> R -> C` |
+| `Relation 'Y' not declared in the template` | relação fora de `RELATIONS` | use uma declarada ou acrescente-a ao template |
+| `Concept 'A B' contains spaces` | conceito com espaços | use `A_B` |
+| `Simple chain in 'chain' but the template requires named relations` | falta a relação | `A -> REL -> B` |
+| `Qualified chain with incorrect structure` | termina em relação ou falta um conceito | conceito, relação, conceito |
+| `Chain with N element(s), the template requires >= M` | aridade | complete a cadeia |
+| `Code 'X' is not defined in the organizing model` | conceito sem bloco | defina em um `.syno` (aviso) |
 
-### Validação Semântica Manual
+Detalhes no [Guia de Erros](../reference/guia_erros.qmd#sec-chains).
 
-Perguntas para revisar suas chains:
+### Validação semântica manual
 
-1. **Direcionalidade**: A ordem A → B faz sentido? Ou deveria ser B → A?
-2. **Tipo de relação**: "INIBE" é a relação correta, ou deveria ser "CAUSA"?
-3. **Completude**: Faltam elementos intermediários importantes?
-4. **Evidência**: A citação realmente suporta esta chain?
+1. **Direção**: A → B faz sentido, ou deveria ser B → A?
+2. **Tipo**: é `INIBE` mesmo, ou `CAUSA`?
+3. **Completude**: falta um mediador?
+4. **Evidência**: o trecho sustenta a relação?
+
+O compilador confere a forma; a leitura é sua. Para chains geradas por IA, use o [pipeline de revisão](synesis_coder.qmd#sec-act).
 
 ---
 
 ## Como Extrair e Analisar Chains
 
-Após compilar, as chains ficam disponíveis em:
-
 ### CSV
 
-`output/chains.csv`:
-
-```csv
-source,item_id,chain_type,elements
-entrevista_01,1,qualified,"Custo Alto,INIBE,Adoção"
-entrevista_02,3,qualified,"Treinamento,FAVORECE,Competência,FAVORECE,Qualidade"
+```bash
+synesis compile analysis.synp --csv saida/
 ```
 
-**Use para:** Análise quantitativa (contagem, frequência de relações).
+`saida/chains.csv`, uma linha por tripla:
+
+```text
+bibref,from_code,relation,to_code,source_file,source_line,source_column
+'@entrevista_01,custo_alto,INIBE,adocao,anotacoes.syn,8,5
+```
 
 ### JSON
 
-`output/analysis.json`:
+Cada item do `corpus` traz as suas cadeias, e `indices.triples` reúne todas, com a origem:
 
 ```json
 {
-  "chains": [
-    {
-      "codes": ["Custo Alto", "Adoção"],
-      "relations": ["INIBE"],
-      "source": "@entrevista_01",
-      "quote": "..."
-    }
-  ]
+  "indices": {
+    "triples": [
+      {
+        "from": "custo_alto",
+        "relation": "INIBE",
+        "to": "adocao",
+        "source_item": "entrevista_01_item0001",
+        "location": {"file": "anotacoes.syn", "line": 8, "column": 5}
+      }
+    ]
+  }
 }
 ```
-
-**Use para:** Integração com ferramentas de visualização ou Neo4j.
 
 ---
 
 ## Como Visualizar Chains
 
-### Grafos no Synesis Explorer (VSCode)
+### No VS Code
 
-1. Abra projeto no VSCode com extensão Synesis Explorer instalada
-2. Pressione `Ctrl+Alt+G` (Show Relation Graph)
-3. Visualize grafo interativo Mermaid.js
+Com a extensão **Synesis**: `Ctrl+Alt+G` (por fonte), `Ctrl+Alt+F` (arquivo) ou `Ctrl+Alt+I` (item sob o cursor).
 
-### Exportar para Neo4j
-
-Para análises avançadas de rede:
+### Em grafo
 
 ```bash
-python synesis2graph.py --project analysis.synp --config neo4j.toml
+pip install synesis-graph
+synesis-graph html --project analysis.synp --output grafo.html --all
 ```
 
-Consulte [Como exportar para Neo4j](../howto/exportar_neo4j.qmd) para detalhes.
+Para análise de rede, veja [Como exportar para Neo4j](exportar_neo4j.qmd).
 
 ---
 
-## Padrões Comuns de Chains
+## Padrões Comuns
 
-### Padrão "Barreira-Inibição"
+### Barreira → inibição
 
-```synesis
-chain: barreira_x -> INIBE -> comportamento_desejado
-```
-
-**Exemplo:**
-```synesis
+```text
 chain: falta_de_informacao -> INIBE -> confianca -> INIBE -> adocao
 ```
 
-### Padrão "Facilitador-Promoção"
+### Facilitador → promoção
 
-```synesis
-chain: facilitador_x -> FAVORECE -> comportamento_desejado
-```
-
-**Exemplo:**
-```synesis
+```text
 chain: demonstracao_pratica -> FAVORECE -> compreensao -> FAVORECE -> adocao
 ```
 
-### Padrão "Feedback Loop"
+### Ciclo de realimentação
 
-Expresse ciclos usando múltiplas chains:
-
-```synesis
-# Chain 1: Ida
-chain: alta_satisfacao -> FAVORECE -> engajamento
-
-# Chain 2: Volta
-chain: alto_engajamento -> FAVORECE -> satisfacao
-```
-
-**Nota:** Chains individuais não podem ter ciclos diretos (A → B → A). Use chains separadas.
-
-### Padrão "Trade-off"
+Registre cada direção como a fonte a afirma, em cadeias separadas, usando os **mesmos** nomes de conceito:
 
 ```synesis
-# Chain 1
-chain: automacao_completa -> FAVORECE -> eficiencia
-
-# Chain 2
-chain: automacao_completa -> INIBE -> flexibilidade
+ITEM @doc_04
+    chain: satisfacao -> FAVORECE -> engajamento
+    chain: engajamento -> FAVORECE -> satisfacao
+END ITEM
 ```
 
-**Quando usar:** Para expressar dilemas ou tensões entre objetivos.
+Ciclos entre cadeias são permitidos: elas registram o que as fontes afirmam. A proibição de ciclos vale só para a **hierarquia** declarada na ontologia.
+
+### Dilema (trade-off)
+
+```synesis
+ITEM @doc_05
+    chain: automacao_completa -> FAVORECE -> eficiencia
+    chain: automacao_completa -> INIBE -> flexibilidade
+END ITEM
+```
 
 ---
 
-## Como Iterar Sobre Chains
+## Como Iterar
 
-### Passo 1: Rascunho Inicial
-
-Na primeira leitura, crie chains exploratórias:
+### 1. Rascunho
 
 ```synesis
 ITEM @doc_01
@@ -296,47 +316,45 @@ ITEM @doc_01
 END ITEM
 ```
 
-### Passo 2: Refinamento
+### 2. Refinamento
 
-Após revisar várias fontes, consolide padrões recorrentes:
+Depois de várias fontes, consolide os conceitos recorrentes:
 
 ```synesis
-# Versão refinada
-chain: utilidade_percebida -> FAVORECE -> intencao_de_uso
-chain: custo_percebido -> INIBE -> intencao_de_uso
-chain: intencao_de_uso -> FAVORECE -> comportamento_de_adocao
+ITEM @doc_01
+    chain: utilidade_percebida -> FAVORECE -> intencao_de_uso
+    chain: custo_percebido -> INIBE -> intencao_de_uso
+    chain: intencao_de_uso -> FAVORECE -> adocao
+END ITEM
 ```
 
-### Passo 3: Validação Cruzada
-
-Compare chains extraídas de fontes diferentes:
+### 3. Comparação entre fontes
 
 ```synesis
 # Fonte A
-chain: treinamento -> FAVORECE -> competencia -> FAVORECE -> adocao
+ITEM @fonte_a
+    chain: treinamento -> FAVORECE -> competencia -> FAVORECE -> adocao
+END ITEM
 
 # Fonte B
-chain: mentoria -> FAVORECE -> competencia -> FAVORECE -> adocao
-
-# Insight: "competencia" é mediador recorrente
+ITEM @fonte_b
+    chain: mentoria -> FAVORECE -> competencia -> FAVORECE -> adocao
+END ITEM
+# Observação: "competencia" é um mediador recorrente
 ```
 
 ---
 
-## Como Documentar Decisões sobre Chains
+## Como Documentar Decisões
 
-Adicione notas explicativas:
+Registre a justificativa num campo de memo (de preferência no mesmo `BUNDLE` da cadeia) e use comentários para decisões de método:
 
 ```synesis
 ITEM @policy_doc
-    quote: "Investimento em infraestrutura digital reduziu custos operacionais"
-
-    memo: Relação causal direta confirmada por dados quantitativos (Tabela 3)
-
+    quote: "O investimento em infraestrutura digital reduziu custos operacionais"
+    memo: Relação confirmada por dados quantitativos (Tabela 3)
     chain: infraestrutura_digital -> INIBE -> custos_operacionais
-
-    # DECISÃO 2026-02-04: Escolhemos INIBE em vez de CAUSA para
-    # refletir natureza gradual (não binária) do efeito
+    # DECISÃO 2026-02-04: INIBE em vez de CAUSA, pela natureza gradual do efeito
 END ITEM
 ```
 
@@ -344,67 +362,51 @@ END ITEM
 
 ## Quando NÃO Usar Chains
 
-Chains não são apropriadas para:
+1. **Descrições simples.** Se a fonte só menciona um tema, use um campo `CODE`:
+   ```text
+   # Forçado
+   chain: custo -> DESCREVE -> entrevista
 
-1. **Descrições simples**: Use `code` em vez de forçar uma chain
-   ```synesis
-   # ❌ Forçado
-   chain: Custo -> DESCREVE -> Entrevista
-
-   # ✅ Apropriado
-   code: Custo
+   # Apropriado
+   code: custo
    ```
-
-2. **Relações ambíguas**: Se você não tem certeza da direção ou tipo, deixe como código isolado e anote sua incerteza no campo `MEMO`.
-
-3. **Taxonomias**: Use `TOPIC` na ontologia em vez de chains hierárquicas.
+2. **Relações incertas.** Se não há direção ou tipo, registre o código e anote a incerteza no memo.
+3. **Taxonomias.** "É um tipo de" é uma decisão conceitual do projeto: declare-a na ontologia com [`ROLE HIERARCHY`](../reference/modelo_organizador.qmd). Se for algo que **as fontes afirmam**, é uma cadeia — e pode ser levada a um vocabulário com `MAP RELATIONS`.
 
 ---
 
 ## Exercício Prático
 
-### Cenário
-
-Você tem esta citação:
-
 > "A falta de suporte técnico adequado gerou frustração na equipe, o que levou à baixa adesão ao novo sistema."
 
-### Tarefa
+Construa a cadeia que captura a relação.
 
-Construa uma chain que capture esta relação causal.
-
-### Solução Proposta
+### Solução proposta
 
 ```synesis
 ITEM @entrevista_gerente
     quote: "A falta de suporte técnico adequado gerou frustração na equipe, o que levou à baixa adesão ao novo sistema."
-
-    memo: Cadeia causal clara: suporte insuficiente -> frustração -> baixa adoção
-
-    code: suporte_tecnico_inadequado
-    code: frustracao
-    code: baixa_adesao
-
-    chain: suporte_tecnico_inadequado -> CAUSA -> frustracao -> INIBE -> adesao_ao_sistema
+    memo: Cadeia temporal explícita: suporte insuficiente, frustração, baixa adesão
+    code: suporte_tecnico_inadequado, frustracao, baixa_adesao
+    chain: suporte_tecnico_inadequado -> CAUSA -> frustracao -> CAUSA -> baixa_adesao
 END ITEM
 ```
 
-**Validação:**
-- ✅ Três códigos, duas relações (estrutura válida)
-- ✅ Relações CAUSA e INIBE declaradas no template
-- ✅ Cadeia reflete sequência temporal da citação
-- ✅ Campo `memo` explicita interpretação
+- Três conceitos, duas relações
+- `CAUSA` declarada no template
+- A cadeia segue a sequência do trecho
+- O memo explicita a interpretação
+
+Repare nos nomes: o conceito é `baixa_adesao`, e a relação é a que o texto afirma ("levou à"). Escrever `frustracao -> INIBE -> baixa_adesao` inverteria o sentido.
 
 ---
 
 ## Referências
 
-Para informações complementares:
-
-- [Referência da Linguagem](../reference/guia_referencia.qmd) — Sintaxe formal de chains
-- [Como definir uma ontologia](definir_ontologia.qmd) — Criar relações reutilizáveis
-- [Tutorial Getting Started](../tutorials/getting-started.qmd) — Exemplos básicos de chains
+- [Referência da Linguagem](../reference/guia_referencia.qmd) — sintaxe formal
+- [Como definir uma ontologia](definir_ontologia.qmd)
+- [Getting Started](../tutorials/getting-started.qmd)
 
 ---
 
-**Ficou com dúvidas?** Consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou abra uma issue específica.
+**Ficou com dúvidas?** Consulte [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou abra uma issue.

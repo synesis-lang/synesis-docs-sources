@@ -2,320 +2,427 @@
 
 **Ideas:** Language Extension Specification Proposals
 
+::: {.callout-important}
+## What this document contains
+This is a document of **proposals** — specifications that have been designed but are **not yet implemented**. The syntax shown in the proposals **does not compile** with the current compiler.
+
+For what already works, see the [Language Reference](../reference/guia_referencia.qmd) and the [Grammar](../reference/gramatica.qmd).
+:::
+
+::: {.callout-tip}
+## Proposals that became real
+Several needs treated here as "ideas" have already been **met**, sometimes by a design different from the one proposed:
+
+| Original idea | What exists today |
+|---|---|
+| Aggregating parallel projects (`STUDY` block / *master project*) | Proposal **discarded** for overloading the editor. Independent projects linked by `IDENTIFIES` / `REFERS TO`: [How to Link Independent Projects](../howto/ligar_projetos.qmd) |
+| Vocabulary shared between projects | `INCLUDE SHARED ONTOLOGY` |
+| Output artifacts declared in the project (`RENDER` command) | `EXPORT` blocks in the `.synp` (JSON, CSV, XLS, Alpaca, OKF, SKOS), run with `synesis export` |
+| Strict "is-a" taxonomy (`TAXONOMY` block) | Fields with `ROLE HIERARCHY` in the ontology, without property inheritance |
+| Detecting hierarchy cycles | Error `E118`, for hierarchies declared with `ROLE HIERARCHY` |
+| Concepts defined and never used | Diagnostic `E120`, for hierarchies declared with `ROLE HIERARCHY` |
+| Immediate graph visualization | `synesis-graph html` |
+| Data Science integration and compiler as a library | [`synesis.load`](../reference/synesis_load.qmd), with DataFrame output |
+
+The meaning of each code is in the [Error Guide](../reference/guia_erros.qmd).
+:::
 
 ---
 
-## Introduction to Extensions
-This specification details the new features planned for version 1.2 of the Synesis language. The focus of this update is to evolve the language from a linear annotation system to a **qualitative inference engine** and knowledge management (Zettelkasten), as well as introduce native support for canonical loci (sacred texts).
+## Introduction to the Extensions
+This specification details features under consideration for a future version of the Synesis language. The focus is to evolve the language from a linear annotation system into a knowledge management system (Zettelkasten), and to introduce native support for canonical loci (sacred texts).
 
 ---
 
-## Output Artifact Configuration (RENDER)
+## Canonical (Biblical/Exegetical) Annotation
 
-The `RENDER` command allows explicitly declaring, within the project file, which file formats should be generated and where they should be saved. This ensures compilation reproducibility without relying on command-line parameters.
+An addressing system specialized for sacred texts that use the Locus pattern (Book, Chapter, Verse). To keep the grammar intact, canonical addressing would be implemented through a specific field type (`TYPE PERICOPE`), leaving the standard block structure untouched.
 
-### Syntax
+Today the same address can be recorded in a `TYPE TEXT` field, without format validation.
 
-```synesis
-RENDER AS [JSON | CSV | EXCEL] INTO "path/to/filename"
-```
+### The PERICOPE Field Type
 
-#### Semantics
+No block is replaced. The `SOURCE` block is still used to reference the bibliographic work (the specific translation or manuscript via BibTeX). The analytical unit (`ITEM`) receives a field typed as `PERICOPE` to identify the exact passage.
 
-* **RENDER**: Command verb that initiates compilation target definition. Indicates creation of a structured representation (artifact) from interpreted data.
-* **AS**: Clause that specifies serialization format.
-* `JSON`: Generates complete abstract syntax tree with traceability metadata.
-* `CSV`: Generates flat relational tables (separated by block type).
-* `EXCEL`: Generates `.xlsx` file with tabs corresponding to CSV tables.
-
-
-* **INTO**: Clause that defines destination path.
-* Must be a string in double quotes.
-* **Relative paths** to the project root are recommended to ensure portability across different machines.
-* If destination directory doesn't exist, compiler will attempt to create it.
-
-#### Example in Context (.synp)
+**Syntax in the `.syn` file:**
 
 ```synesis
-PROJECT "Phenomenological Study 2026"
+SOURCE @niv2011
+    translation_type: Dynamic equivalence
+END SOURCE
 
-TEMPLATE "templates/research_v1.synt"
-INCLUDE BIBLIOGRAPHY "data/references.bib"
-INCLUDE ANNOTATIONS "data/interviews/*.syn"
-INCLUDE ONTOLOGY "ontology/main.syno"
-
-# Declarative Output Configuration
-# Generates multiple formats simultaneously in organized directories
-
-RENDER AS JSON  INTO "dist/full_data.json"
-RENDER AS EXCEL INTO "reports/human_readable/matrix.xlsx"
-RENDER AS CSV   INTO "reports/raw_data/export.csv"
-
-END
+# The ITEM references the translation and gives the locus in a field
+ITEM @niv2011
+    passage: ROM 8:28-30, 32a
+    quote: "And we know that in all things God works for the good..."
+    code: Providence
+END ITEM
 ```
 
-#### Validation Rules
+### Addressing Rules (Parsing)
 
-1. **Multiplicity**: Multiple `RENDER` commands are allowed in the same project. The compiler will process all sequentially.
-2. **Write Permission**: Compiler must have write permission to target directory. If destination file is locked (e.g., open in Excel), compilation will fail with I/O error.
-3. **Absolute Paths**: Using absolute paths (e.g., `C:/Users/...`) will emit a *Warning*, as it breaks project portability.
+The parser would apply strict rules to identify books, with ergonomic flexibility in verse punctuation:
+
+1. **USX code (strict):** exactly 3 capital letters for the book (e.g. `MAT`, `GEN`, `ROM`). Full names would not be accepted, to avoid ambiguity.
+2. **Chapter separator (flexible):** both colon (`:`) and period (`.`) separate chapter and verse (e.g. `ROM 8:1` or `ROM 8.1`). The syntax tree (AST) normalizes the variation.
+3. **Verses and subdivisions:** hyphen `-` for ranges and comma `,` for lists, with lowercase letters attached to numbers for exegetical subdivisions (e.g. `6a`, `6b`).
+
+### Example Template for Exegesis
+
+In the `.synt` file the field would be declared with type `PERICOPE` and scope `ITEM`.
+
+```synesis
+TEMPLATE biblical_exegesis
+
+ITEM FIELDS
+    REQUIRED passage, quote
+    OPTIONAL code
+END ITEM FIELDS
+
+FIELD passage TYPE PERICOPE
+    SCOPE ITEM
+    DESCRIPTION Canonical locus address (Book Chap:Verses)
+END FIELD
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt from the bibliographic source
+END FIELD
+```
+
+### Implementation Notes (Lark Grammar)
+
+Sketch of how the value of a `PERICOPE` field would be processed by the language rules:
+
+```lark
+// The strict rule that processes the Locus field value
+pericope_value: usx_code WS INT separator verse_list
+
+// USX codes (strictly 3 capital letters)
+usx_code: UCASE_LETTER~3
+
+// The separator (accepts both common academic formats)
+separator: ":" | "."
+
+// Verse list with commas and optional spaces
+verse_list: verse_node ("," WS? verse_node)*
+
+// A node may be a single verse or a range
+verse_node: verse_single | verse_single "-" verse_single
+
+// The verse: a number followed by an optional lowercase letter (e.g. 6a)
+verse_single: INT /[a-z]?/
+```
+
+### Estimated Impact of the Change
+
+**In the compiler:**
+
+* **Template parser:** add `PERICOPE` to the list of field types, alongside `TEXT`, `QUOTATION`, `MEMO`, `CHAIN` etc.
+* **Lark grammar:** create the `pericope_value` rule.
+* **Transformer (Python):** split the string into a dictionary (`book`, `chapter`, `verses`).
+
+The relation between `ITEM` and `SOURCE`, BibTeX validation and `BUNDLE` validation would not change; exporters would treat the new field like any field defined in the template.
+
+**In the VS Code extension:**
+
+* **Syntax highlighting:** a regular expression for the canonical pattern (e.g. `\b[A-Z]{3}\s\d+[:.]\d+[\d\-,a-z\s]*\b`).
+* **Snippets:** autocomplete the `ITEM` block with the locus field already in place.
+* **Code Actions (optional):** convert "Romans 8, 1 to 3" into `ROM 8:1-3` as a quick-fix suggestion, without touching the compiler.
 
 ---
 
-## Advanced Semantic Analysis
-The compiler now acts as a methodological assistant, not just a syntactic validator.
+## Converting Logos Bible Software Notes to Synesis
 
-### Ontological Redundancy Detection (Fuzzy Matching)
-The compiler will analyze the ontology for concepts with similar spelling (Lexical Similarity), preventing knowledge graph fragmentation.
+There is a converter from the proprietary Logos annotation format to Markdown text:
 
-* **Algorithm:** Levenshtein / Jaro-Winkler distance.
-* **Behavior:** Warning during compilation.
-* **Detection Example:** `SocialInteraction` vs `Social_Interaction`.
+- [Logos Bible Software notes to Markdown converter](https://github.com/agape-apps/Logos-Notes-Exporter)
 
-### Hierarchical Cycle Validation
-Prevents creation of logical loops in taxonomic definitions.
-* **Rule:** A concept cannot be an ancestor of itself.
-* **Fatal Error:** Compilation is aborted if a cycle is detected (e.g., A > B > C > A).
-
-### Dead Code Elimination (Ghost Concepts)
-Identifies concepts defined in ontology that were never applied to any `ITEM` or `ZETTEL`.
-* **Behavior:** Warning (Codebook cleanup report).
+From there, converting Markdown annotations into Synesis is simple.
 
 ---
 
-## New Structural Commands
+## Strategies for Comparative Exegesis
 
-### TAXONOMY (Rigid Hierarchy)
-Replaces loose use of `TOPIC` for strict "is-a" relationship definitions. Allows property inheritance.
+Synesis offers structural flexibility to researchers who need to compare manuscripts or translations of the same passage. Since an `ITEM` belongs to exactly one `SOURCE`, there are two approaches, depending on how the data will be used later. The examples use the proposed `PERICOPE` type; today, declare these fields as `TEXT`.
 
-**Syntax:**
-```synesis
-TAXONOMY
-    Emotions
-        > Negative
-            > Anger
-            > Fear
-        > Positive
-            > Joy
-END
+### Approach 1: the Relational "Join" (multiple ITEMs)
 
-```
-
-### CONSTRAINT (Business Rules)
-
-Defines logical invariants to ensure methodological consistency of annotations.
-
-**Syntax:**
+Prioritizes bibliographic rigour. Each base text (e.g. the Greek original and an English translation) is treated as a separate work in a `SOURCE` block. The annotation blocks correlate because the locus field acts as a relationship key.
 
 ```synesis
-CONSTRAINT
-    # Mutual exclusion: An item cannot have both codes simultaneously
-    FORBID Code "Sentiment: Positive" WITH Code "Risk: Critical"
+SOURCE @na28
+    language: "grc"
+END SOURCE
 
-    # Logical dependency: Code B requires presence of Code A
-    REQUIRE Code "Solution" IF Code "Problem" PRESENT
-END
+ITEM @na28
+    passage: ROM 8:1
+    quote: "Οὐδὲν ἄρα νῦν κατάκριμα..."
+END ITEM
 
+SOURCE @niv2011
+    language: "en"
+END SOURCE
+
+ITEM @niv2011
+    passage: ROM 8:1
+    quote: "Therefore, there is now no condemnation..."
+END ITEM
 ```
 
-### CROSSREF (Citation Network)
+**Analytical advantage:** produces normalized flat tables suited to Data Science workflows — translations can be grouped in Python (Pandas) or queried in graph databases, connecting nodes through the locus property.
 
-Formalizes rhetorical relationships between bibliographic sources (Source-to-Source), independent of internal annotations.
+### Approach 2: Direct Comparison with BUNDLE (single item)
 
-**Syntax:**
+If the focus is visual and hermeneutical juxtaposition, and the base text is an interlinear or parallel Bible, use the `BUNDLE` modifier, which guarantees positional correspondence between version and excerpt.
+
+**In the template (`.synt`):**
 
 ```synesis
-CROSSREF
-    @smith2019 -> REFUTES -> @doe2018
-    @jones2020 -> EXTENDS -> @smith2019
-END
+ITEM FIELDS
+    REQUIRED passage
+    REQUIRED BUNDLE version, quote  # Fields tied by position
+END ITEM FIELDS
+
+FIELD passage TYPE PERICOPE
+    SCOPE ITEM
+    DESCRIPTION Canonical address
+END FIELD
+
+FIELD version TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Abbreviation of the bibliographic translation
+    VALUES
+        NA28: Nestle-Aland (Greek)
+        NIV: New International Version
+        ESV: English Standard Version
+    END VALUES
+END FIELD
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerpt matching the version
+END FIELD
 ```
+
+**In the annotation (`.syn`):**
+
+```synesis
+ITEM @interlinear_bible2025
+    passage: ROM 8:1
+
+    # -- Bundle pair 1 --
+    version: NA28
+    quote: "Οὐδὲν ἄρα νῦν κατάκριμα..."
+
+    # -- Bundle pair 2 --
+    version: NIV
+    quote: "Therefore, there is now no condemnation..."
+END ITEM
+```
+
+**Analytical advantage:** keeps the comparison cohesive in one block. The compiler raises an error if a version is annotated without its excerpt, or the reverse, and `ENUMERATED` accepts only the versions declared in `VALUES`.
+
+---
+
+## Legal and Normative Annotation (Domain Extension)
+
+The Synesis ecosystem is agnostic about the research domain. Configurable field types allow modelling the complexity of legal texts (legislation and case law) without changing the `SOURCE` and `ITEM` block structure.
+
+### 1. Topographic Addressing (legislation)
+
+Normative texts require structured, non-linear addressing.
+
+* **Suggested field type:** `TYPE LEGAL_LOCUS`
+* **Parser behaviour:** capture and structure the topography of the law (act, article, paragraph, item, sub-item). Example target syntax (Brazilian law): `CF/88 Art. 5, inc. X`.
+
+### 2. Case Law Ontology
+
+Court decisions have strict categories, which can already be enforced today with `ENUMERATED`.
+
+* **Common categories:** *Ratio Decidendi* (main thesis), *Obiter Dictum* (side remark) and *Headnote* (official summary).
+
+### 3. Precedent Networks (CHAIN)
+
+Mapping how decisions relate over time can use qualified chains (`CHAIN`). The proposal adds the use of bibliographic references as chain nodes.
+
+### Proposed Example (template and annotation)
+
+```synesis
+TEMPLATE legal_analysis
+
+ITEM FIELDS
+    REQUIRED locus, quote
+    OPTIONAL legal_concept, chain
+END ITEM FIELDS
+
+FIELD locus TYPE LEGAL_LOCUS
+    SCOPE ITEM
+    DESCRIPTION Normative or case-law topographic address
+END FIELD
+
+FIELD legal_concept TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Structural classification of the court decision
+    VALUES
+        RATIO: Ratio Decidendi (main thesis)
+        OBITER: Obiter Dictum (side argument)
+        HEADNOTE: Official summary
+    END VALUES
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        OVERRULES: A higher court overturns the previous thesis
+        CITES_PRECEDENT: Decision grounded in a previous case
+        DISTINGUISHES: Current case distinguished from the general rule
+    END RELATIONS
+END FIELD
+```
+
+```synesis
+SOURCE @stj_petition_1234
+    access_date: 2026-02-17
+END SOURCE
+
+ITEM @stj_petition_1234
+    locus: CF/88 Art. 5, inc. X
+    legal_concept: RATIO
+    quote: "intimacy, private life, honor and image of persons are inviolable..."
+
+    # Precedent graph between bibliographic works (rulings)
+    chain: @stj_petition_1234 -> OVERRULES -> @tj_decision_999
+END ITEM
+```
+
+**Expected advantage:** exported to relational (CSV) or graph formats, the project would give the researcher the precedent network with its legal topology and traceability to the text.
+
+For the modelling that already works today, see [Synesis for Legal Professionals](synesis_para_direito.qmd).
 
 ---
 
 ## Knowledge Management (Zettelkasten)
 
-Introduces capability to create "Permanent Notes" that synthesize knowledge independent of a specific bibliographic source.
+Introduces "Permanent Notes" that synthesize knowledge. To preserve the language invariants, the Zettelkasten would not be a new block but a set of specialized fields inside the `ITEM`.
 
-### 4.1 ZETTEL Block
+### The Zettelkasten as a SOURCE
 
-Top-level entity, sibling of `SOURCE` and `ONTOLOGY`. Does not require `@bibref`.
-
-**Syntax:**
+Since every `ITEM` belongs to a `SOURCE`, a BibTeX entry representing the author's note repository is recommended (e.g. `@zettel_vault`).
 
 ```synesis
-# Syntax: ZETTEL [UNIQUE_ID]
-ZETTEL 2026011401
-    title: "The Atomicity Principle"
-    body: "A DSL should force concept breakdown..."
+# The "Source" is the researcher's own repository
+SOURCE @zettel_vault
+    access_date: 2026-02-17
+END SOURCE
 
-    # Explicit connections (Rhizome)
+# The ITEM acts as the Permanent Note (Zettel)
+ITEM @zettel_vault
+    zettel_id: 2026011401
+    title: "The Principle of Atomicity"
+    body: "A DSL should force concepts to be broken down..."
+
+    # Explicit connections
     links: 2026011205, 2025123001
 
-    # Metadata
-    tags: DSL Design
+    # Metadata and traceability
+    topic: DSL_Design
     origin: @turing1936
-END
+END ITEM
 ```
 
-### Exclusive Fields (ZETTEL FIELDS)
+### Proposed Field Types
 
-In the `.synt` template file, new field types are supported:
+New types would support the graph topology of a Zettelkasten, with cross-validation at the linking stage:
 
-* **LINK (Type REFERENCE):** Creates bidirectional edges between ZETTEL nodes.
-* **ORIGIN (Type REFERENCE):** Creates citation edge to a SOURCE.
-
----
-
-## Canonical Annotation (Biblical/Exegetical)
-
-Specialized addressing system for texts that use the Locus pattern (Book, Chapter, Verse) instead of author-date bibliographic reference.
-
-### BIBLE Block
-
-Replaces `SOURCE` block for sacred texts. Uses USX standard for book identification.
-
-**Syntax:**
+* **`ZETTEL_ID`:** unique note identifier (usually a timestamp); the compiler would guarantee there are no duplicate IDs.
+* **`ZETTEL_LINK`:** creates directed edges between notes; the compiler would check that referenced IDs exist.
+* **`BIB_REF`:** references an external source directly in the field, creating a citation edge.
 
 ```synesis
-# Syntax: BIBLE [USX_CODE] [CHAP:VERSE] [(VERSION)]
-BIBLE ROM 8:28-30 (ESV)
-
-    # Pericope title (String with mandatory quotes to support punctuation)
-    pericope: "The efficacy of calling: The eternal purpose."
-
-    ITEM
-        quote: "And we know that for those who love God all things work together..."
-        code: Providence
-    END
-END
-
-```
-
-### Addressing Rules (Parsing)
-
-Parser applies strict rules to avoid ambiguity:
-
-1. **USX Code:** Exactly 3 uppercase letters (e.g., `MAT`, `GEN`, `PSA`).
-2. **Separators:** Mandatory use of `:` to separate chapter/verse and `-` for ranges.
-3. **Pericope:** Must be delimited by double quotes `""` or triple `"""` to allow special characters, commas, and line breaks without breaking the parser.
-
-### Canon Template Example
-
-```synesis
-TEMPLATE biblical_exegesis
-
-BIBLE FIELDS
-    OPTIONAL pericope
-END
+TEMPLATE zettel_knowledge_base
 
 ITEM FIELDS
-    REQUIRED quote
-    REQUIRED code
-    OPTIONAL original_term  # E.g.: Greek/Hebrew
-END
+    REQUIRED zettel_id, title, body
+    OPTIONAL links, topic, origin
+END ITEM FIELDS
+
+FIELD zettel_id TYPE ZETTEL_ID
+    SCOPE ITEM
+    DESCRIPTION Unique chronological identifier of the Zettel
+END FIELD
+
+FIELD links TYPE ZETTEL_LINK
+    SCOPE ITEM
+    DESCRIPTION Connections to other Zettels (comma-separated IDs)
+END FIELD
+
+FIELD origin TYPE BIB_REF
+    SCOPE ITEM
+    DESCRIPTION Bibliographic reference that inspired the permanent note
+END FIELD
 ```
 
-#### Appendix A: Implementation Notes (Lark Grammar)
-
-Grammar snippet to support `BIBLE` header:
+### Implementation Notes (Lark Grammar)
 
 ```lark
-// Canon Block Definition
-canon_block: "BIBLE" usx_code bible_ref version? block_body "END"
+// The generic field rule absorbs the new types
+field_value: text_value
+           | chain_value
+           | zettel_id_value
+           | zettel_link_value
+           | bib_ref_value
 
-// USX Codes (strict 3 uppercase letters)
-usx_code: UCASE_LETTER UCASE_LETTER UCASE_LETTER
+// The ID is a strictly numeric string (e.g. YYYYMMDDHH)
+zettel_id_value: INT
 
-// Supported references: 8, 8:28, 8:28-30, 8:28-9:1
-bible_ref: chapter
-         | chapter ":" verse
-         | chapter ":" verse "-" verse
-         | chapter ":" verse "-" chapter ":" verse
+// Comma-separated list of IDs
+zettel_link_value: INT ("," WS? INT)*
 
-chapter: INT
-verse: INT | "END"
-version: "(" UCASE_LETTER+ ")" | "@" LCASE_LETTER+ DIGIT+
+// Citation format with '@'
+bib_ref_value: "@" LCASE_LETTER+ DIGIT+
 ```
 
----
+### Impact on Export
 
-## Immediate Visualization
-
-JSON output is useful for processing, but humans need to see the graph.
-
-Idea: Create a `synesis serve` command that starts a simple local server showing the connection graph (using D3.js or Cytoscape) generated from exported JSON.
+With `zettel_link` and `bib_ref` as `ITEM` field types, the JSON export would carry clean lists of `links` and the BibTeX key in `origin`, enough to build the note network in a graph database.
 
 ---
 
-## Data Science Integration
-CSV/Excel export support is good, but direct Pandas integration would be killer.
+## Detecting Ontological Redundancy
 
-Example: A Python library `import synesis` that allows loading the project directly into a DataFrame without going through the terminal, facilitating use in Jupyter Notebooks.
+The compiler would scan the ontology for concepts with similar spelling, preventing fragmentation of the knowledge graph. Today part of this need is met in assisted coding, by the `normalize` command of [synesis-coder](../howto/synesis_coder.qmd).
 
-## Possible Workflow
+* **Algorithm:** Levenshtein / Jaro-Winkler distance.
+* **Behaviour:** warning during compilation.
+* **Detection example:** `SocialInteraction` vs `Social_Interaction`.
 
-Correct. The premise is exact: the **Compiler Core** (Parser + Semantic Analysis) acts as the single source of truth. Both file export, the Python library (`synesis.load`), and the LSP server consume the same **Abstract Syntax Tree (AST)** and the same **Symbol Table**.
-
-Here is the objective workflow for this implementation, focusing on the "Compiler as a Library" architecture:
-
-### Step 1: I/O Decoupling (Input/Output)
-
-The first step is to ensure the compiler doesn't "know" it's writing files.
-
-* **Action:** Separate export functions. Today, there's probably a `export_csv(ast, filepath)` function.
-* **Refactoring:** Split into two:
-1. `transform_to_tabular_data(ast)`: Receives AST and returns lists of dictionaries/objects in memory (without touching disk).
-2. `write_csv(data, filepath)`: Receives data and only writes the file.
-
-
-
-### Step 2: Public Core API Exposure
-
-The main Synesis module should expose programmatic access to compilation.
-
-* **Action:** Make orchestration function externally accessible.
-* **Definition:** Create/Adjust a method (e.g., `Synesis.compile_source()`) that accepts a string or file path and returns the `Project` object (the semantic validation result containing all linked structures).
-
-### Step 3: Python Adapter Creation (Data Science)
-
-This is the consumer you suggested (`synesis.load`).
-
-* **Dependency:** Define Pandas as optional dependency.
-* **Flow:**
-1. Calls Step 2 API to get `Project` object in memory.
-2. Calls Step 1 transformation function (`transform_to_tabular_data`).
-3. Instantiates Pandas DataFrames using this data.
-4. Applies typing (converts strings to `datetime` objects, categories, etc.) based on AST types.
-
-
-
-### Step 4: LSP Adaptation (Editor Intelligence)
-
-LSP consumes same AST, but needs different data (location instead of value).
-
-* **Action:** Ensure AST nodes (Item, Source, Field) preserve origin metadata (`line`, `column`, `file`).
-* **Flow:**
-1. LSP sends current file text (even incomplete).
-2. Core attempts parsing (with error tolerance).
-3. Core returns **Symbol Table** (list of available ontologies and definitions).
-4. LSP uses this table to provide *Autocomplete* and *Go to Definition*.
-
-
-
-### Step 5: CLI as "Thin Client"
-
-The `synesis compile` terminal command becomes just another client, like Python or LSP.
-
-* **Action:** CLI only collects arguments, calls Step 2 API, and uses file writing functions (`write_csv`, `write_json`) defined in Step 1.
-
-### Data Flow Summary
-
-1. **Input:** `.syn` / `.synt` files
-2. **Central Engine (Synesis Core):** Generates AST + Semantic Validation.
-3. **Distribution:**
-* via **CLI** -> Writes to Disk (JSON/CSV).
-* via **Python SDK** -> Delivers Objects/DataFrames in Memory.
-* via **LSP** -> Delivers Position Metadata and Errors to Editor.
-*
 ---
+
+## New Structural Commands
+
+### CONSTRAINT (business rules)
+
+Logical invariants to ensure the methodological consistency of annotations.
+
+```synesis
+CONSTRAINT
+    # Mutual exclusion: an item cannot have both codes at once
+    FORBID Code "Sentiment: Positive" WITH Code "Risk: Critical"
+
+    # Logical dependency: code B requires code A
+    REQUIRE Code "Solution" IF Code "Problem" PRESENT
+END CONSTRAINT
+```
+
+### CROSSREF (citation network)
+
+Formalizes rhetorical relations between bibliographic sources, independently of internal annotations.
+
+```synesis
+CROSSREF
+    @smith2019 -> REFUTES -> @doe2018
+    @jones2020 -> EXTENDS -> @smith2019
+END CROSSREF
+```

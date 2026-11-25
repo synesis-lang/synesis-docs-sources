@@ -5,58 +5,54 @@ subtitle: "Referência do pipeline de projetos Synesis para grafos"
 
 # synesis-graph
 
-O `synesis-graph` transforma um projeto Synesis compilado em um **grafo navegável** — seja num banco de dados Neo4j, seja numa visualização HTML interativa e autocontida.
+O `synesis-graph` transforma um projeto Synesis compilado em um **grafo navegável**: num banco Neo4j, num banco ArcadeDB (em servidor ou local, sem servidor) ou numa visualização HTML autocontida.
 
-A tradução é **dinâmica**: a ferramenta lê o template do projeto (`.synt`) e deriva dele a estrutura do grafo. Não há nomes de campo, categorias ou rótulos fixos no código. Se você muda o template, o grafo muda junto — sem tocar na ferramenta.
+A tradução é **dinâmica**: a ferramenta lê o template do projeto (`.synt`) e deriva dele a estrutura do grafo. Se você muda o template, o grafo muda junto, sem tocar na ferramenta.
 
 ::: {.callout-note}
-## Zero-IO: sem arquivos intermediários
-O pipeline usa a API `synesis.load()` para compilar o projeto **em memória** e sincronizar direto com o destino. Não há passo de exportar JSON e depois importar. O compilador é a única fonte de verdade, e um erro de compilação interrompe o processo antes de qualquer escrita no banco.
+## Sem arquivos intermediários
+O pipeline compila o projeto **em memória** e sincroniza direto com o destino. O compilador é a única fonte de verdade: um erro de compilação interrompe o processo antes de qualquer escrita no banco.
 :::
 
 ---
 
 # Instalação {#sec-instalacao}
 
-Requer **Python 3.10+** e `synesis` ≥ 0.5.5.
+Requer **Python 3.10+** e `synesis` ≥ 0.16.0 (instalado como dependência).
 
 ```bash
-pip install "synesis-graph[neo4j]"
+pip install "synesis-graph[neo4j]"        # com o driver do Neo4j
+pip install synesis-graph                 # ArcadeDB (servidor e local) e HTML
+pip install "synesis-graph[embeddings]"   # busca semântica (traz o torch, ~2 GB)
 ```
-
-O extra `[neo4j]` traz o driver do banco. Para gerar apenas visualizações HTML, a instalação base é suficiente:
-
-```bash
-pip install synesis-graph
-```
-
-Verificar:
 
 ```bash
 synesis-graph --version
-# synesis-graph, version 0.3.1
+# synesis-graph, version 0.13.1
 ```
 
 ---
 
 # Os backends {#sec-backends}
 
-| Backend | Comando | Saída | Quando usar |
-|---------|---------|-------|-------------|
-| **Neo4j** | `synesis-graph neo4j` | Banco de grafos | Consultas Cypher, métricas de rede, GraphRAG, agentes MCP |
-| **HTML** | `synesis-graph html` | Arquivo `.html` único | Explorar visualmente, compartilhar, publicar |
+| Backend | Comando | Destino | Quando usar |
+|---------|---------|---------|-------------|
+| **Neo4j** | `synesis-graph neo4j` | servidor Neo4j (`bolt://`) | consultas Cypher, métricas GDS, agentes MCP |
+| **ArcadeDB** | `synesis-graph arcadedb` | servidor ArcadeDB (`http://`) | grafo compartilhado, algoritmos nativos |
+| **ArcadeDB local** | `synesis-graph arcadedb-embedded` | pasta no seu computador | trabalhar sozinho, sem servidor nem Java instalado |
+| **HTML** | `synesis-graph html` | arquivo `.html` único | explorar, compartilhar, publicar |
 
-Ambos consomem a mesma estrutura interna, derivada do template. O que muda é o destino e o recorte: o Neo4j recebe o grafo completo, enquanto o HTML aplica filtros de legibilidade (@sec-html).
+Os três backends de banco produzem o **mesmo grafo** a partir do mesmo projeto. O HTML aplica filtros de legibilidade (@sec-html).
 
 ## Fonte dos dados
 
-Todos os backends aceitam duas formas de entrada, mutuamente exclusivas:
+Todos aceitam duas formas de entrada, mutuamente exclusivas:
 
 ```bash
 # A partir do projeto — compila em memória
 synesis-graph neo4j --project projeto.synp
 
-# A partir de um JSON já exportado (schema v3.0)
+# A partir de um JSON exportado pelo compilador
 synesis-graph neo4j --json export.json
 ```
 
@@ -64,35 +60,33 @@ synesis-graph neo4j --json export.json
 
 # Modelo de dados: Template → Grafo {#sec-modelo}
 
-A tradução dos tipos de campo do template para elementos do grafo segue esta tabela:
-
 | Tipo no template | Elemento no grafo | Aresta criada |
 |------------------|-------------------|---------------|
 | `CODE` | Nó de conceito | `MENTIONS` (Item → Conceito) |
-| `CHAIN` | Relação explícita entre conceitos | `RELATES_TO` (com tipo e descrição) |
+| `CHAIN` | Relação entre conceitos | `RELATES_TO` (com tipo e descrição) |
 | `TOPIC` | Nó de taxonomia | `GROUPED_BY` |
-| `ASPECT` | Nó de taxonomia | `QUALIFIED_BY` |
-| `DIMENSION` | Nó de taxonomia | `BELONGS_TO` |
-| `ENUMERATED` | Propriedade do nó | — |
-| `TEXT` / `MEMO` | Propriedade do nó | — |
+| Campos `ASPECT` / `DIMENSION` do projeto | Nós de taxonomia | `QUALIFIED_BY` / `BELONGS_TO` |
+| `ROLE HIERARCHY KIND/PART/INSTANCE` | Hierarquia adotada | `KIND_OF`, `PART_OF`, `INSTANCE_OF` (filho → pai) |
+| `ENUMERATED`, `TEXT`, `MEMO` | Propriedade do nó | — |
 | `SCOPE SOURCE` | Propriedades do nó `Source` | — |
 
 : Mapeamento de tipos {.striped .hover}
+
+Os campos são reconhecidos pelo **tipo declarado**, não pelo nome: um `CHAIN` chamado `mecanismo` gera `RELATES_TO` normalmente. `aspect` e `dimension` não são tipos da linguagem; são desenhos de projetos específicos, reconhecidos pelo nome.
 
 ## Nós sempre criados
 
 | Nó | Representa | Propriedades |
 |----|-----------|--------------|
-| `Source` | A fonte (artigo, entrevista, documento) | `bibtex`, `title`, `author`, `year` + todos os campos `SCOPE SOURCE` |
-| `Item` | A unidade analítica extraída da fonte | `item_id`, `citation`, `description` |
+| `Source` | A fonte (artigo, entrevista, documento) | `bibtex`, `title`, `author`, `year` e os campos `SCOPE SOURCE` |
+| `Item` | A unidade analítica | identificador, citação, campos de ITEM, `source_file`, `source_line` |
+| `ProjectContext` | O contexto do projeto | veja @sec-contexto |
 
 : Nós base {.striped .hover}
 
-Cada `Item` é ligado à sua fonte por `(:Item)-[:FROM_SOURCE]->(:Source)` — a aresta que preserva a invariante da linguagem de que todo ITEM pertence a exatamente um SOURCE.
+Cada `Item` é ligado à sua fonte por `(:Item)-[:FROM_SOURCE]->(:Source)`, a invariante da linguagem de que todo ITEM pertence a um SOURCE.
 
 ## Exemplo de tradução
-
-Dado este template:
 
 ```synesis
 FIELD category TYPE CODE
@@ -104,45 +98,81 @@ FIELD theme TYPE TOPIC
 END FIELD
 ```
 
-O grafo resultante:
-
-```
+```text
 (:Item)-[:MENTIONS]->(:Category)-[:GROUPED_BY]->(:Theme)
 ```
 
-O rótulo do nó de conceito deriva do **nome do campo**, não de uma lista fixa: um campo `ordem_2a` gera nós com rótulo `Ordem_2a`.
+O rótulo do nó de conceito deriva do **nome do campo**: um campo `ordem_2a` gera nós `Ordem_2a`.
+
+## Nomes preteridos (`USE`)
+
+Um conceito consolidado com `ROLE USE` não vira nó: menções e cadeias vão ao alvo, que guarda o nome em `aliases`.
 
 ## Aresta entre taxonomias
 
-Além das arestas diretas, o pipeline deriva uma relação `IS_LINKED_TO` entre nós de taxonomia. Sua **força** (`strength`) é a contagem de relações `RELATES_TO` entre os conceitos das duas categorias — uma medida de quão acoplados dois temas estão no corpus.
+O pipeline deriva `IS_LINKED_TO` entre nós de taxonomia; a **força** (`strength`) conta as relações `RELATES_TO` entre os conceitos das duas categorias.
 
 ::: {.callout-important}
 ## Rastreabilidade preservada
-Cada nó e cada aresta carrega metadados de origem — `source_file`, `line`, `column`. Um conceito no grafo pode sempre ser rastreado até a linha exata do arquivo `.syn` que o originou. Isso é o que torna o grafo auditável: nenhum nó existe sem evidência textual localizável.
+Cada item guarda o arquivo e a linha de origem. Um conceito no grafo pode sempre ser rastreado até o trecho do `.syn` que o sustenta.
 :::
 
 ---
 
-# Backend Neo4j {#sec-neo4j}
+# O contexto viaja com o grafo: `ProjectContext` {#sec-contexto}
+
+Cada sincronização com um banco grava um vértice `ProjectContext`. Um esquema de banco informa a forma, não o significado; sem o contexto, quem consulta o grafo precisaria adivinhar os critérios de codificação.
+
+| Propriedade | Conteúdo |
+|---|---|
+| `description` | o bloco `DESCRIPTION` do `.synp`, literal |
+| `project_summary` | metadados, tamanho do corpus, proveniência e questões de competência |
+| `template_doc` | o template como documento legível: campos, escalas, **GUIDELINES**, regras e guia de navegação do grafo |
+| `source_count`, `item_count`, `concept_count` | contagens |
+| `compiler_version`, `synesis_graph_version`, `compiled_at`, `generated_at` | proveniência |
+| `load_state` | marca se a carga terminou |
+
+```cypher
+MATCH (p:ProjectContext) RETURN p.description, p.project_summary;
+MATCH (p:ProjectContext) RETURN p.template_doc;
+```
+
+O texto armazenado é escrito em português. O backend HTML não cria esse vértice.
+
+---
+
+# Backends de banco {#sec-neo4j}
 
 ```bash
 synesis-graph neo4j --project projeto.synp
+synesis-graph arcadedb --project projeto.synp
+synesis-graph arcadedb-embedded --project projeto.synp
 ```
 
-## Opções
+## Opções comuns
 
 | Opção | Descrição |
 |-------|-----------|
-| `--project` | Caminho do `.synp`. **Repetível** — ver @sec-multiprojeto |
-| `--json` | Alternativa: JSON v3.0 já exportado |
+| `--project` | Caminho do `.synp`. **Repetível** — veja @sec-multiprojeto |
+| `--json` | Alternativa: JSON já exportado |
 | `--config` | Arquivo TOML de configuração (padrão: `config.toml`) |
-| `--database` | Nome do banco Neo4j. Também nomeia o grafo unificado numa linkagem |
+| `--database` | Nome do banco; também nomeia o grafo unificado numa ligação |
+| `--mode rebuild\|update` | `rebuild` (padrão) apaga e reescreve; `update` grava só o que mudou, **sem remover** nada |
 
-: Opções do backend `neo4j` {.striped .hover}
+: Opções {.striped .hover}
+
+| Opção | Backends | Descrição |
+|---|---|---|
+| `--metrics all\|fast\|none` | ArcadeDB | `fast` pula *betweenness* e comunidades; `none` pula as métricas |
+| `--vector-embeddings CAMPOS` | ArcadeDB | cria vetores para busca semântica |
+| `--rebuild-embeddings` | ArcadeDB | recalcula todos os vetores |
+| `--db-path DIR` | ArcadeDB local | raiz onde o banco é criado (`<DIR>/databases/<projeto>`) |
+
+: Opções específicas {.striped .hover}
 
 ## Configuração
 
-Crie um `config.toml` na raiz do projeto:
+Crie um `config.toml` (há um `config.toml.example` no repositório):
 
 ```toml
 [neo4j]
@@ -150,77 +180,97 @@ uri = "bolt://127.0.0.1:7687"   # ou neo4j+s://... para o Aura
 user = "neo4j"
 password = "sua_senha"
 database = "meu_corpus"          # opcional
+# fulltext_analyzer = "brazilian"
+
+[arcadedb]
+uri = "http://localhost:2480"    # endpoint HTTP, não bolt://
+user = "root"
+password = "sua_senha"
+
+[arcadedb-embedded]              # seção opcional; não há credenciais
+# db_path = "."
 ```
 
 ::: {.callout-warning}
 ## Nunca versione as credenciais
-Adicione `config.toml` ao `.gitignore`. O repositório distribui um `config.toml.example` justamente para que o arquivo real permaneça fora do controle de versão.
+Adicione `config.toml` ao `.gitignore`.
 :::
 
-Sem `--database` e sem `database` no TOML, o nome do banco deriva do nome do `PROJECT`.
+Para um corpus em português, `fulltext_analyzer = "brazilian"` faz a busca textual encontrar variações com e sem acento e no plural.
 
 ## Métricas de rede
 
-O pipeline calcula métricas automaticamente e as grava como propriedades dos nós. Elas se dividem em dois níveis.
-
 ### Métricas nativas (sempre disponíveis)
 
-Calculadas em Cypher puro, sem dependências externas.
-
-**Nós de conceito:**
-
-| Métrica | Significado |
+| Nó | Métricas |
 |---------|-------------|
-| `degree` | Grau total (entrada + saída) — conectividade geral |
-| `in_degree` | Conceitos que apontam para este |
-| `out_degree` | Conceitos apontados por este |
-| `mention_count` | Quantas citações mencionam o conceito — frequência |
-| `source_count` | Em quantas fontes distintas aparece — dispersão |
-
-**Nós de taxonomia:**
-
-| Métrica | Significado |
-|---------|-------------|
-| `concept_count` | Conceitos classificados nesta categoria |
-| `weighted_degree` | Soma dos pesos das conexões `IS_LINKED_TO` |
-| `aspect_diversity` | Aspectos distintos entre os conceitos-filhos |
-| `dimension_diversity` | Dimensões distintas entre os conceitos-filhos |
-
-**Nós de fonte:**
-
-| Métrica | Significado |
-|---------|-------------|
-| `item_count` | Citações extraídas da fonte |
-| `concept_count` | Conceitos distintos mencionados |
+| Conceito | `degree`, `in_degree`, `out_degree`, `mention_count` (frequência), `source_count` (dispersão) |
+| Taxonomia | `concept_count`, `weighted_degree`, `aspect_diversity`, `dimension_diversity` |
+| Fonte | `item_count`, `concept_count` |
 
 ::: {.callout-tip}
 ## `mention_count` e `source_count` medem coisas diferentes
-Um conceito citado 40 vezes em uma única fonte tem alta frequência e baixa dispersão — é um tema daquele documento, não do corpus. Outro citado 8 vezes em 8 fontes distintas é um achado transversal. A distinção entre os dois é o que separa um padrão real de um artefato de uma fonte prolixa.
+Um conceito citado 40 vezes em uma única fonte é um tema daquele documento. Outro citado 8 vezes em 8 fontes é um achado transversal.
 :::
 
-### Métricas GDS (requerem plugin)
+### Métricas avançadas
 
-Com o plugin [Neo4j Graph Data Science](https://neo4j.com/docs/graph-data-science/current/installation/) instalado:
+`pagerank`, `betweenness` e `community` (Louvain) vêm de motores diferentes:
 
-| Métrica | Algoritmo | Interpretação |
-|---------|-----------|---------------|
-| `pagerank` | PageRank | Relevância por conectividade |
-| `betweenness` | Betweenness Centrality | Papel de "ponte" entre agrupamentos |
-| `community` | Louvain | Detecção de comunidades temáticas |
+| Backend | Motor | Requer |
+|---|---|---|
+| Neo4j | Graph Data Science | plugin [GDS](https://neo4j.com/docs/graph-data-science/current/installation/) |
+| ArcadeDB | algoritmos nativos (`algo.*`) | nada |
 
-Se o GDS não estiver instalado, o pipeline **avisa e continua** com as métricas nativas — não é erro.
+::: {.callout-warning}
+## Os valores não são comparáveis entre os dois
+O GDS calcula sobre o subgrafo de conceitos; os algoritmos do ArcadeDB rodam sobre o **grafo inteiro**, e arestas como `MENTIONS` e `GROUPED_BY` também pesam. Ambas são centralidades válidas, mas respondem perguntas um pouco diferentes.
+:::
 
-#### Estratégia de projeção
+Sem o GDS no Neo4j, o pipeline avisa e continua com as métricas nativas. No GDS, a projeção se adapta ao template: `RELATES_TO` (há `CHAIN`), `CO_TAXONOMY` (há `CODE` e `TOPIC`) ou `CO_CITATION` (alternativa). Numa projeção por co-citação, uma comunidade agrupa conceitos que **aparecem juntos**, não conceitos que o pesquisador declarou relacionados.
 
-O cálculo GDS precisa projetar o grafo, e a projeção se adapta ao tipo de template:
+## Busca semântica (ArcadeDB) {#sec-embeddings}
 
-| Estratégia | Quando é usada | Como conecta |
-|------------|----------------|--------------|
-| `RELATES_TO` | Template com `CHAIN` | Usa as relações explícitas entre conceitos |
-| `CO_TAXONOMY` | Template com `CODE` + `TOPIC` | Conecta conceitos que compartilham taxonomia |
-| `CO_CITATION` | Fallback | Conecta conceitos que co-ocorrem nas mesmas fontes |
+```bash
+synesis-graph arcadedb-embedded --project projeto.synp \
+    --vector-embeddings ontology_description,topic
+```
 
-A escolha importa para a leitura do resultado: numa projeção `CO_CITATION`, uma comunidade Louvain agrupa conceitos que **aparecem juntos**, não conceitos que o pesquisador declarou relacionados.
+Os vetores são gerados localmente, sem chave de API, e guardados em `<projeto>.embeddings.json`; só os conceitos cujo texto mudou são recalculados. Campos `TEXT` e `TOPIC` são os indicados; vocabulários fechados repetem o mesmo texto em muitos conceitos. Para corpus em português, use um modelo multilíngue (o padrão):
+
+```toml
+[arcadedb-embedded.embeddings]
+model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+fields = ["ontology_description", "topic"]
+```
+
+Veja o estudo medido em [Embeddings Vetoriais e GraphRAG](../explanation/graphrag_embeddings_vetoriais.qmd).
+
+## Cargas grandes
+
+A escrita é feita em segmentos. Se uma carga for interrompida, o `ProjectContext` fica marcado como incompleto: um novo `rebuild` resolve, e `--mode update` é recusado sobre um grafo parcial. Duas cargas simultâneas no mesmo grafo são recusadas.
+
+---
+
+# Perguntar ao grafo (`serve`) {#sec-serve}
+
+```bash
+synesis-graph serve                       # publica ./databases; Ctrl+C encerra
+synesis-graph serve --db-path ./grafos    # a mesma raiz usada na exportação
+synesis-graph serve --install claude-desktop
+synesis-graph serve --install vscode
+```
+
+`serve` mantém o banco local disponível por HTTP e por [MCP](https://modelcontextprotocol.io), para que o Claude Desktop ou o VS Code consultem o corpus em linguagem natural.
+
+| Opção | Descrição |
+|---|---|
+| `--db-path` | raiz do servidor (padrão: pasta atual) |
+| `--port` | porta HTTP (padrão: 2480) |
+| `--allow-writes` | permite alterar o corpus (desligado por padrão) |
+| `--install claude-desktop\|vscode` | acrescenta o servidor à configuração do cliente, com cópia de segurança |
+
+A senha é gerada uma vez e lembrada; para escolher a sua, defina `SYNESIS_DB_PASSWORD`.
 
 ---
 
@@ -230,28 +280,24 @@ A escolha importa para a leitura do resultado: numa projeção `CO_CITATION`, um
 synesis-graph html --project projeto.synp --output grafo.html
 ```
 
-Gera um arquivo HTML **único e autocontido** — sem servidor, sem dependências externas. Pode ser aberto localmente, anexado a um e-mail ou publicado como material suplementar de um artigo.
-
-## Opções
+Gera um arquivo HTML único, que pode ser aberto localmente, anexado ou publicado como material suplementar.
 
 | Opção | Padrão | Descrição |
 |-------|:------:|-----------|
-| `--output` | `./graph.html` | Caminho do arquivo de saída |
-| `--group-by` | automático | Campo de taxonomia usado para colorir comunidades |
-| `--min-frequency` | `3` | Oculta conceitos mencionados em menos de N itens |
-| `--min-source-count` | `2` | Oculta conceitos presentes em menos de N fontes |
-| `--max-nodes` | `200` | Limita aos N conceitos de maior grau (`0` = sem limite) |
-| `--max-hyperedges` | `50` | Máximo de hiperarestas renderizadas |
-| `--include-isolated` | desligado | Inclui conceitos sem nenhuma conexão de chain |
-| `--all` | — | Desliga **todos** os filtros de uma vez |
+| `--output` | `./graph.html` | arquivo de saída |
+| `--group-by` | automático | campo de taxonomia para colorir comunidades |
+| `--min-frequency` | `3` | oculta conceitos mencionados em menos de N itens |
+| `--min-source-count` | `2` | oculta conceitos presentes em menos de N fontes |
+| `--max-nodes` | `200` | os N conceitos de maior grau (`0` = sem limite) |
+| `--max-hyperedges` | `50` | máximo de hiperarestas |
+| `--include-isolated` | desligado | inclui conceitos sem conexões de cadeia |
+| `--all` | — | desliga **todos** os filtros |
 
 : Opções do backend `html` {.striped .hover}
 
 ## Por que há filtros por padrão
 
-Um corpus real produz uma cauda longa de conceitos que aparecem uma ou duas vezes. Renderizados todos, o grafo vira uma nuvem ilegível onde o padrão principal desaparece no ruído.
-
-Os padrões (`min_frequency: 3`, `min_source_count: 2`) mostram apenas conceitos que se repetem **e** atravessam fontes — os que sustentam alguma afirmação. Para ver o corpus inteiro, sem recorte:
+Um corpus real tem uma cauda longa de conceitos que aparecem uma ou duas vezes. Os padrões mostram os conceitos que se repetem **e** atravessam fontes. Para ver tudo:
 
 ```bash
 synesis-graph html --project projeto.synp --output grafo.html --all
@@ -259,31 +305,22 @@ synesis-graph html --project projeto.synp --output grafo.html --all
 
 ::: {.callout-note}
 ## O filtro é de visualização, não de dados
-Nada é descartado do projeto. O recorte existe só na renderização — o backend Neo4j recebe o grafo completo, incluindo os conceitos de baixa frequência.
+Nada é descartado do projeto; os backends de banco recebem o grafo completo.
 :::
 
 ## Hiperarestas
 
-Quando um único bloco ITEM conecta **três ou mais** conceitos distintos, a relação entre eles não é bem representada por arestas par a par — isso sugeriria três ligações independentes onde existe uma só observação conjunta.
-
-A visualização representa esses casos como **hiperarestas**: regiões sombreadas englobando os conceitos que co-ocorrem naquela unidade analítica. É a diferença entre "A e B se relacionam, B e C se relacionam" e "A, B e C aparecem juntos nesta passagem".
+Quando um ITEM conecta **três ou mais** conceitos, a visualização o representa como uma região sombreada: é a diferença entre "A–B e B–C se relacionam" e "A, B e C aparecem juntos nesta passagem".
 
 ## Camadas: ontologia e evidência
 
-A visualização separa duas camadas que não devem ser confundidas:
-
-- **Ontologia** — conceitos e sua taxonomia, derivados dos arquivos `.syno` e do template
-- **Evidência** — os itens concretos (`.syn`) que sustentam cada conceito, com as citações localizáveis
-
-Ao selecionar um nó, o painel lateral mostra a evidência textual correspondente, com colunas adicionais derivadas dos campos do próprio projeto. Um conceito sem evidência é visível como tal — o que é uma informação metodológica relevante, não um defeito de renderização.
+O painel separa a **ontologia** (conceitos, taxonomia e, com papéis, pais e filhos) da **evidência** (os itens que sustentam cada conceito). Um conceito sem evidência aparece como tal.
 
 ## Configuração via TOML
 
-As mesmas opções podem morar no `config.toml`, evitando repetir flags:
-
 ```toml
 [html]
-output_path = "./graph.html"
+output_path = "./graph.html"     # aceita o marcador {project}
 # group_by = "topic"
 min_frequency = 3
 min_source_count = 2
@@ -292,13 +329,11 @@ max_hyperedges = 50
 include_isolated = false
 ```
 
-O `output_path` aceita o marcador `{project}`, substituído pelo nome do arquivo `.synp`.
-
 ---
 
 # Grafos multiprojeto {#sec-multiprojeto}
 
-Quando vários projetos declaram `IDENTIFIES` / `REFERS TO` (ver [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd)), o backend Neo4j **reifica** essas identidades como nós do grafo.
+Quando vários projetos declaram `IDENTIFIES` / `REFERS TO` (veja [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd)), os backends de banco **reificam** essas identidades como nós.
 
 ```bash
 synesis-graph neo4j \
@@ -307,31 +342,19 @@ synesis-graph neo4j \
   --database Quinto_Andar
 ```
 
-Cada `--project` adicional entra na linkagem. O `--database` nomeia o grafo unificado; sem ele, o nome deriva dos membros (`lattes_abstracts`).
-
-## O que é criado
-
 | Elemento | Origem | Forma |
 |----------|--------|-------|
-| Nó de identidade | Cada valor distinto de um campo `IDENTIFIES` | `(:Researcher {entity_id})` — rótulo derivado do nome da entidade |
-| `IDENTIFIED_AS` | O SOURCE proprietário | `(:Source)-[:IDENTIFIED_AS]->(:Researcher)` |
-| `REFERS_TO` | Cada valor de um campo `REFERS TO` que casa | `(:Source)-[:REFERS_TO {entity, member}]->(:Researcher)` |
+| Nó de identidade | cada valor distinto de um campo `IDENTIFIES` | `(:Researcher {entity_id})` |
+| `IDENTIFIED_AS` | o SOURCE proprietário | `(:Source)-[:IDENTIFIED_AS]->(:Researcher)` |
+| `REFERS_TO` | cada valor de `REFERS TO` que casa | `(:Source)-[:REFERS_TO {entity, member}]->(:Researcher)` |
 
 : Elementos da reificação {.striped .hover}
 
-O nome da entidade viaja como **propriedade** (`entity`) em vez de virar parte do tipo da relação. Assim um único tipo `REFERS_TO` serve a todas as entidades, e uma consulta pode filtrar por entidade sem enumerar tipos.
-
-## Três garantias do modelo
-
-**O nó nasce apenas do `IDENTIFIES`.** Uma referência órfã — um `REFERS TO` cujo valor não casa com nenhuma chave primária — **não** cria nó algum. Sem isso, um erro de digitação inventaria uma entidade que não existe no corpus.
-
-**O casamento é exato**, após remover espaços nas pontas. Sem normalização de caixa, sem correspondência aproximada. Um valor que difere apenas em maiúsculas permanece órfão em vez de ser fundido a uma entidade que a fonte considera distinta.
-
-**Bibrefs e IDs são qualificados pelo alias do membro** (`abstracts:@artigo_a`). Dois corpora podem legitimamente compartilhar uma chave `.bib` — o mesmo perfil citado em `linkedin.bib` e em `posts.bib`. Sem a qualificação, os dois colapsariam num único nó, afirmando uma identidade que o dado nunca declarou. Junções de identidade passam **exclusivamente** por `IDENTIFIES` / `REFERS TO`.
+**O nó nasce apenas do `IDENTIFIES`** (uma referência órfã não cria nó); **o casamento é exato**, sem normalização de caixa; e **bibrefs são qualificados** pelo alias do membro (`abstracts:@artigo_a`), para que dois corpora não colapsem num só.
 
 ::: {.callout-warning}
 ## O backend HTML recusa multiprojeto
-`synesis-graph html` com mais de um `--project` falha com erro explícito. A visualização HTML é um grafo de **conceitos**; representar nós de identidade nela exige um design de camada próprio, ainda não decidido. Recusar é melhor do que unir os projetos silenciosamente sem reificar as identidades — o que produziria um grafo plausível e errado.
+`synesis-graph html` com mais de um `--project` falha com erro explícito.
 :::
 
 ---
@@ -339,25 +362,18 @@ O nome da entidade viaja como **propriedade** (`entity`) em vez de virar parte d
 # Fluxo típico {#sec-fluxo}
 
 ```bash
-# 1. Validar o projeto antes de tocar no banco
-synesis compile projeto.synp --stats
-
-# 2. Explorar visualmente durante a análise
-synesis-graph html --project projeto.synp --output grafo.html
-
-# 3. Sincronizar para consulta e métricas
-synesis-graph neo4j --project projeto.synp --database meu_corpus
+synesis compile projeto.synp --stats                           # 1. validar
+synesis-graph html --project projeto.synp --output grafo.html  # 2. explorar
+synesis-graph arcadedb-embedded --project projeto.synp         # 3. gravar o grafo
+synesis-graph serve                                            # 4. perguntar
 ```
-
-O passo 1 não é obrigatório — o `synesis-graph` compila o projeto de qualquer forma e aborta se houver erros. Mas rodar `compile` antes dá um retorno mais rápido enquanto o projeto ainda está sendo escrito.
 
 ---
 
 # Consultas Cypher úteis {#sec-cypher}
 
-Conceitos mais frequentes:
-
 ```cypher
+// Conceitos mais frequentes
 MATCH (c)
 WHERE c.mention_count IS NOT NULL
 RETURN c.name, c.mention_count, c.source_count
@@ -365,9 +381,8 @@ ORDER BY c.mention_count DESC
 LIMIT 10
 ```
 
-Conceitos que atravessam mais fontes (achados transversais):
-
 ```cypher
+// Achados transversais
 MATCH (c)
 WHERE c.source_count IS NOT NULL
 RETURN c.name, c.source_count, c.mention_count
@@ -375,23 +390,26 @@ ORDER BY c.source_count DESC
 LIMIT 10
 ```
 
-Evidência textual de um conceito:
-
 ```cypher
+// Evidência textual de um conceito
 MATCH (s:Source)<-[:FROM_SOURCE]-(i:Item)-[:MENTIONS]->(c {name: "Custo"})
 RETURN s.bibtex, i.citation
 ```
 
-Relações declaradas a partir de um conceito:
-
 ```cypher
+// Relações declaradas a partir de um conceito
 MATCH (a {name: "Custo"})-[r:RELATES_TO]->(b)
 RETURN a.name, r.type, b.name
 ```
 
-Num grafo multiprojeto — artigos ligados a um pesquisador:
+```cypher
+// Evidência de um conceito e de todos os subtipos, sem contar duas vezes
+MATCH (c {name: "phishing"})<-[:KIND_OF*0..]-(sub)<-[:MENTIONS]-(i:Item)
+RETURN count(DISTINCT i)
+```
 
 ```cypher
+// Grafo multiprojeto: fontes ligadas a um pesquisador
 MATCH (r:Researcher)<-[:REFERS_TO]-(s:Source)
 RETURN r.entity_id, collect(s.bibtex) AS fontes
 ```
@@ -400,7 +418,7 @@ RETURN r.entity_id, collect(s.bibtex) AS fontes
 
 # Próximos passos {#sec-proximos}
 
-- [Como Exportar para Neo4j](../howto/exportar_neo4j.qmd) --- instalação do Neo4j passo a passo e solução de problemas
-- [Knowledge Graphs & GraphRAG](../explanation/knowledge_graphs.qmd) --- por que grafos importam para pesquisa qualitativa
-- [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd) --- declarar as identidades que o grafo reifica
-- [Referência da Linguagem](guia_referencia.qmd) --- os tipos de campo que o modelo de dados traduz
+- [Como Exportar para Neo4j](../howto/exportar_neo4j.qmd)
+- [Knowledge Graphs & GraphRAG](../explanation/knowledge_graphs.qmd)
+- [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd)
+- [Referência da Linguagem](guia_referencia.qmd)

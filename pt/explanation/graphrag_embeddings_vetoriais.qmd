@@ -43,7 +43,7 @@ pct = lambda v: f"{v * 100:.1f}%".replace(".", ",")
 
 ## O que é o synesis-graph, e o que muda agora
 
-O `synesis-graph` é o pipeline que pega um projeto Synesis já codificado (as anotações qualitativas de um pesquisador, com seus conceitos, fontes e relações) e o transforma num banco de grafos consultável — hoje, Neo4j ou ArcadeDB. Não é um passo de exportação e pronto: é o que permite que Claude Desktop, conectado via **MCP** (o protocolo que dá a um LLM acesso a ferramentas e dados externos), leia o grafo e responda perguntas sobre a pesquisa em linguagem natural, com citação da fonte. Esse uso — pesquisador perguntando, agente respondendo com base no grafo — é o que chamamos de **GraphRAG**: Retrieval-Augmented Generation apoiada em uma estrutura de grafo em vez de um monte de trechos de texto soltos (ver [Knowledge Graphs e GraphRAG](knowledge_graphs.qmd) para essa base).
+O `synesis-graph` é o pipeline que pega um projeto Synesis já codificado (as anotações qualitativas de um pesquisador, com seus conceitos, fontes e relações) e o transforma num banco de grafos consultável — hoje, Neo4j ou ArcadeDB (em servidor ou local). Não é um passo de exportação e pronto: é o que permite que Claude Desktop, conectado via **MCP** (o protocolo que dá a um LLM acesso a ferramentas e dados externos), leia o grafo e responda perguntas sobre a pesquisa em linguagem natural, com citação da fonte. Esse uso — pesquisador perguntando, agente respondendo com base no grafo — é o que chamamos de **GraphRAG**: Retrieval-Augmented Generation apoiada em uma estrutura de grafo em vez de um monte de trechos de texto soltos (ver [Knowledge Graphs e GraphRAG](knowledge_graphs.qmd) para essa base).
 
 Instalação:
 
@@ -61,7 +61,7 @@ Até aqui, quando o Claude Desktop precisava achar um conceito no grafo, ele só
 
 ::: {.callout-note}
 ## Backend usado neste experimento
-A busca vetorial hoje só está implementada no backend **ArcadeDB** do `synesis-graph` — não no Neo4j. Todos os números deste documento vêm de `synesis-graph arcadedb --vector-embeddings ...` contra um banco ArcadeDB real, não de um ambiente simulado.
+A busca vetorial hoje só está implementada nos backends **ArcadeDB** do `synesis-graph` (`arcadedb` e `arcadedb-embedded`) — não no Neo4j. Todos os números deste documento vêm de `synesis-graph arcadedb --vector-embeddings ...` contra um banco ArcadeDB real, não de um ambiente simulado.
 :::
 
 ### Três termos, e o que cada um significa no seu trabalho
@@ -130,7 +130,7 @@ A resposta não vem de opinião nem de benchmark de terceiros. Vem de um experim
 ::: {.callout-tip}
 ## Quer conferir em vez de acreditar?
 
-O gabarito completo das 40 perguntas, os scripts que reproduzem tudo do zero, as consultas exatas enviadas ao banco e o resultado pergunta por pergunta estão em **[Como o benchmark foi feito](benchmark_rrf_metodologia.qmd)** — incluindo o que deu errado e as limitações do desenho.
+O gabarito completo das 40 perguntas, as consultas exatas enviadas ao banco, a descrição dos scripts e o resultado pergunta por pergunta estão em **[Como o benchmark foi feito](benchmark_rrf_metodologia.qmd)** — incluindo o que deu errado e as limitações do desenho.
 :::
 
 ---
@@ -450,7 +450,7 @@ Não muda nada do que você codificou. Os embeddings são um índice adicional, 
 Não. O `sentence-transformers` gera os vetores no seu próprio computador. Não há chamada a serviço externo, custo por uso, nem envio do seu material para fora. (O assistente que consome o grafo via MCP é outra questão — esse é o Claude Desktop, e vale a política de privacidade dele.)
 
 **Funciona em português?**
-O modelo padrão (`all-mpnet-base-v2`) foi treinado em inglês, e este experimento mediu um corpus em inglês. Para material em português, existem modelos multilíngues que se encaixam no mesmo lugar — mas não medimos, então não prometemos números. Se o seu projeto é em português, ligue e avalie no seu caso antes de contar com o ganho.
+O modelo padrão (`all-mpnet-base-v2`) foi treinado em inglês, e este experimento mediu um corpus em inglês. Para material em português, existem modelos multilíngues que se encaixam no mesmo lugar (o modelo é escolhido por projeto, em `[arcadedb.embeddings]` no `config.toml`) — mas não medimos, então não prometemos números. Se o seu projeto é em português, ligue e avalie no seu caso antes de contar com o ganho.
 
 **Vale a pena se meu projeto é pequeno?**
 Provavelmente menos. O problema que a busca por significado resolve — não lembrar o rótulo exato entre centenas de conceitos — quase não existe quando você tem trinta categorias e conhece todas de cabeça. O ganho cresce com o tamanho da ontologia.

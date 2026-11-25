@@ -33,7 +33,7 @@ O template define a estrutura que a IA deve preencher. Ele incorpora três frame
 - **Dimensões de Wüstenhagen**: aceitação comunitária, de mercado e sociopolítica
 
 ```synesis
-TEMPLATE bibliometrics version: "1.0" author: "Synesis Compiler Team"
+TEMPLATE bibliometrics version: "2.0" author: "Synesis Compiler Team"
 
 SOURCE FIELDS
     REQUIRED description, epistemic_model, method
@@ -45,9 +45,9 @@ ITEM FIELDS
 END ITEM FIELDS
 
 ONTOLOGY FIELDS
-    REQUIRED description
-    OPTIONAL topic, aspect, dimension, confidence, reasoning,
-             rgt_element_a, rgt_element_b, theoretical_significance
+    REQUIRED ontology_description
+    OPTIONAL topic, aspect, dimension, confidence, reasoning
+    OPTIONAL rgt_element_a, rgt_element_b, theoretical_significance
 END ONTOLOGY FIELDS
 ```
 
@@ -211,7 +211,7 @@ END FIELD
 
 :::{.callout-note}
 ## Composição de tipos e GUIDELINES
-Este template usa **7 tipos de campo diferentes** em um único projeto: TEXT, QUOTATION, MEMO, CHAIN (com RELATIONS e ARITY), TOPIC, ORDERED (com VALUES indexados), ENUMERATED (com VALUES), e SCALE (com FORMAT). A partir da versão 2.0, cada campo incorpora também um bloco `GUIDELINES` com as instruções metodológicas que governam o comportamento da IA — o template deixa de ser apenas esquema de dados e passa a ser o **playbook completo** da análise.
+Este template usa **8 tipos de campo diferentes** em um único projeto: TEXT, QUOTATION, MEMO, CHAIN (com RELATIONS e ARITY), TOPIC, ORDERED (com VALUES indexados), ENUMERATED (com VALUES), e SCALE (com FORMAT). A partir da versão 2.0, cada campo incorpora também um bloco `GUIDELINES` com as instruções metodológicas que governam o comportamento da IA — o template deixa de ser apenas esquema de dados e passa a ser o **playbook completo** da análise.
 :::
 
 ---
@@ -408,7 +408,7 @@ ONTOLOGY Cost
                competitiveness. High frequency (96) across broad
                sources (66) confirms central role.
 
-    description: Economic factor representing financial expenditure
+    ontology_description: Economic factor representing financial expenditure
                  associated with energy technologies and systems.
                  Acts as primary barrier constraining technology
                  development, site selection, and deployment when
@@ -446,7 +446,7 @@ ONTOLOGY Climate_Belief
                technologies like tidal and CCS. Low frequency (2)
                and sources (2) limit robustness.
 
-    description: Climate belief refers to individuals' conviction
+    ontology_description: Climate belief refers to individuals' conviction
                  regarding the existence and anthropogenic causation
                  of climate change. In energy transition contexts,
                  this worldview shapes acceptance of low-carbon
@@ -481,7 +481,7 @@ A IA produz resultados consistentes em escala, mas comete erros sistemáticos qu
 - **Conceitos duplicados**: variações de grafia (`Public Acceptance` vs `Social Acceptance`) podem gerar conceitos ontologicamente distintos que na verdade são o mesmo fenômeno
 - **Excertos truncados**: apesar das instruções, a IA ocasionalmente extrai fragmentos que não são auto-suficientes
 
-O Synesis facilita essa revisão porque o template **valida estruturalmente** os resultados: um conceito mencionado em `chain` que não existe na ontologia gera erro de compilação; um par nota/cadeia faltante viola o BUNDLE. Esses mecanismos transformam erros silenciosos em falhas explícitas.
+O Synesis facilita essa revisão porque o template **valida estruturalmente** os resultados: um conceito mencionado em `chain` sem definição na ontologia gera um aviso (erro com `--strict`); um par nota/cadeia incompleto viola o BUNDLE e é erro de compilação. Esses mecanismos transformam falhas silenciosas em mensagens explícitas.
 
 :::{.callout-tip}
 ## A IA codifica, o template valida, o pesquisador decide
@@ -499,11 +499,13 @@ O fluxo de trabalho é: a IA gera dados em escala → o compilador Synesis valid
 | Codificação | IA (LLM) | `.syn` (anotações) e `.syno` (ontologia) |
 | Validação estrutural | Compilador Synesis | Erros de referência, BUNDLE, ARITY, tipos |
 | Revisão de conteúdo | Pesquisador | Correções de generalização, relações e duplicatas |
-| Exportação | Compilador Synesis | JSON, Neo4j, Excel para análise quantitativa |
+| Exportação | Compilador Synesis e synesis-graph | JSON e Excel para análise quantitativa; grafo no Neo4j ou ArcadeDB |
 
 : Pipeline de codificação assistida por IA {.striped .hover}
 
 :::{.callout-note}
 ## De prompts externos a GUIDELINES no template
 Na versão 1.0 do projeto, "Design dos prompts" era uma etapa separada: as instruções metodológicas existiam em documentos externos e precisavam ser incluídas manualmente em cada chamada ao LLM. Na versão 2.0, essa etapa foi incorporada ao template via `GUIDELINES` — o `.synt` passou a ser o repositório único de estrutura **e** metodologia, versionado junto ao projeto.
+
+Hoje esse fluxo é executado pelo [synesis-coder](../howto/synesis_coder.qmd), que monta as instruções ao modelo a partir do próprio template.
 :::

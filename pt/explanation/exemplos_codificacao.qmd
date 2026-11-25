@@ -327,7 +327,7 @@ FIELD emocao TYPE ENUMERATED
     DESCRIPTION Estado emocional do participante
     VALUES
         medo: Receio ou temor
-        frustracão: Irritação por obstáculo
+        frustracao: Irritação por obstáculo
         esperanca: Expectativa positiva
         resignacao: Aceitação passiva
     END VALUES
@@ -348,7 +348,7 @@ ITEM @entrevista_dona_maria2026
     emocao: medo
     processo: Tentando_Usar_Sistema
 
-    emocao: frustracão
+    emocao: frustracao
     processo: Desistindo_do_Atendimento
 END ITEM
 ```

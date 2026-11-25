@@ -5,7 +5,7 @@ subtitle: "Por que grafos de conhecimento transformam pesquisa qualitativa"
 
 # Knowledge Graphs e GraphRAG
 
-Quando você export suas anotações Synesis para Neo4j, você não está apenas "salvando dados em outro formato". Você está transformando **texto estruturado em conhecimento navegável** — uma mudança fundamental na forma como interagimos com análises qualitativas.
+Quando você exporta suas anotações Synesis para um banco de grafos (Neo4j ou ArcadeDB, pelo [`synesis-graph`](../reference/synesis_graph.qmd)), você não está apenas "salvando dados em outro formato". Você está transformando **texto estruturado em conhecimento navegável** — uma mudança fundamental na forma como interagimos com análises qualitativas.
 
 ---
 
@@ -57,12 +57,12 @@ Você quer saber: *"Quais códigos são afetados por 'Falta de Infraestrutura'?"
 
 **Em Neo4j:**
 ```cypher
-MATCH (origem:Code {name: "Falta de Infraestrutura"})-[r*1..3]->(afetado:Code)
+MATCH (origem {name: "Falta_de_Infraestrutura"})-[r:RELATES_TO*1..3]->(afetado)
 RETURN DISTINCT afetado.name AS codigo_afetado, length(r) AS distancia
 ORDER BY distancia
 ```
 
-**Resultado:** Neo4j encontra automaticamente não apenas conexões diretas, mas também indiretas (chains com até 3 saltos).
+**Resultado:** o banco percorre conexões diretas e indiretas (até 3 saltos). Um caminho indireto, montado a partir de cadeias de fontes diferentes, é uma **hipótese a examinar**: nenhuma fonte precisa ter afirmado o percurso inteiro.
 
 ### 2. Análise de Rede Revela Padrões Invisíveis
 
@@ -131,51 +131,52 @@ Esses padrões são **emergentes** — você não os programou, eles emergem da 
 - Sugere análises adicionais baseadas em padrões do grafo
 - **Você pode verificar cada afirmação** clicando nos links ou executando a query Cypher
 
-Isso **não é possível** com RAG vetorial puro, que retornaria apenas trechos similares sem entender a estrutura relacional.
+Um RAG puramente vetorial retorna trechos semelhantes, sem a estrutura relacional que permite essas contagens e percursos. Os dois se complementam: veja [Embeddings Vetoriais e GraphRAG](graphrag_embeddings_vetoriais.qmd). A resposta de um assistente continua sujeita a erro; a vantagem é que cada afirmação pode ser conferida no grafo e no texto de origem.
 
 ---
 
 ## Arquitetura de um Knowledge Graph Synesis
 
-Quando você exporta um projeto Synesis para Neo4j, a seguinte estrutura de grafo é criada:
+Quando um projeto é exportado, a estrutura do grafo é:
 
-```cypher
-(Source)-[:HAS_ITEM]->(Item)-[:HAS_CODE]->(Code)
-(Item)-[:REFERENCES]->(Source)
-(Code)-[:CHAIN_RELATION {type: "INIBE"}]->(Code)
-(Code)-[:BELONGS_TO_TOPIC]->(Topic)
-(Topic)-[:DEFINED_IN]->(Ontology)
+```text
+(Item)-[:FROM_SOURCE]->(Source)
+(Item)-[:MENTIONS]->(Conceito)
+(Conceito)-[:RELATES_TO {type: "INIBE"}]->(Conceito)
+(Conceito)-[:GROUPED_BY]->(Tema)
+(Conceito)-[:KIND_OF]->(Conceito)        # com ROLE HIERARCHY
 ```
 
-### Nós Criados
+### Nós
 
-| Tipo | Propriedades Principais | Exemplo |
+| Tipo | Conteúdo | Exemplo |
 |------|------------------------|---------|
-| `Source` | bibref, author, year, title | Entrevista, artigo, documento |
-| `Item` | quote, memo, context, source_location | Anotação individual |
-| `Code` | name, definition, topic | Conceito analítico |
-| `Topic` | name | Agrupamento temático |
-| `Ontology` | name, version | Vocabulário do projeto |
-| `Chain` | codes[], relations[] | Sequência causal |
+| `Source` | referência bibliográfica e campos de SOURCE | entrevista, artigo, documento |
+| `Item` | citação, interpretação, campos de ITEM e localização no arquivo | unidade codificada |
+| Conceito (rótulo = nome do campo) | nome, definição e campos da ontologia | `:Code`, `:Fator`, `:Ordem_2a` |
+| Taxonomia (rótulo = nome do campo) | agrupamentos como `TOPIC` | `:Topic`, `:Grupo` |
+| `ProjectContext` | descrição do projeto, template e GUIDELINES | um por grafo |
 
-### Arestas Criadas
+### Arestas
 
-| Tipo | Significado | Propriedades |
-|------|-------------|--------------|
-| `HAS_ITEM` | Source contém Item | order (posição) |
-| `HAS_CODE` | Item foi codificado com Code | - |
-| `CHAIN_RELATION` | Code relaciona-se com outro Code via chain | relation_type (INIBE, FAVORECE, etc.), chain_id |
-| `BELONGS_TO_TOPIC` | Code pertence a Topic | - |
+| Tipo | Significado |
+|------|-------------|
+| `FROM_SOURCE` | o item vem daquela fonte |
+| `MENTIONS` | o item menciona o conceito |
+| `RELATES_TO` | relação afirmada numa cadeia, com o tipo |
+| `GROUPED_BY`, `QUALIFIED_BY`, `BELONGS_TO` | classificação do conceito |
+| `IS_LINKED_TO` | acoplamento entre categorias |
+| `KIND_OF`, `PART_OF`, `INSTANCE_OF` | hierarquia adotada no `.syno` |
 
-### Dinâmico vs Fixo
+### Dinâmico, não fixo
 
-**Crucial:** A estrutura do grafo é **derivada do template (.synt)**, não hardcoded. Se você adicionar um campo `FIELD context : TEXT`, o pipeline cria propriedades `context` nos nós `Item`. Isso significa que o mesmo código `synesis2neo4j` funciona para **qualquer domínio** (medicina, sociologia, engenharia de requisitos, análise literária).
+A estrutura do grafo é **derivada do template (`.synt`)**. Se você acrescenta um campo `FIELD contexto TYPE TEXT` de ITEM, ele passa a ser uma propriedade dos nós `Item`. Por isso a mesma ferramenta serve a qualquer domínio.
 
 ---
 
 ## Quando Grafos NÃO São a Resposta
 
-Grafos não são panaceia. **Não use Neo4j se:**
+Grafos não são panaceia. **Não use um banco de grafos se:**
 
 1. **Seu foco é análise quantitativa pura** (frequências, estatísticas descritivas)
    - Use CSV + R/Python. Mais simples e rápido.
@@ -189,7 +190,7 @@ Grafos não são panaceia. **Não use Neo4j se:**
 4. **Você não tem conhecimento prévio de Cypher**
    - Curva de aprendizado existe. Se é apenas para "ver bonitinho", use visualizadores de CSV (RAWGraphs, Flourish).
 
-**Use Neo4j quando:**
+**Use um banco de grafos quando:**
 
 - Você tem muitas chains (>20% das anotações têm chains)
 - Você quer calcular métricas de rede (centralidade, comunidades)
@@ -206,7 +207,7 @@ Neo4j Graph Data Science é uma biblioteca de algoritmos de grafo otimizados. Al
 
 ```cypher
 // Qual é o caminho mais curto entre "Custo" e "Satisfação"?
-MATCH path = shortestPath((a:Code {name:"Custo"})-[*]-(b:Code {name:"Satisfação"}))
+MATCH path = shortestPath((a {name:"Custo"})-[:RELATES_TO*]-(b {name:"Satisfacao"}))
 RETURN path
 ```
 
@@ -215,10 +216,11 @@ RETURN path
 ### Node Similarity (Similaridade)
 
 ```cypher
-// Quais códigos são estruturalmente similares a "Confiança"?
+// Quais conceitos são estruturalmente similares a "Confianca"?
+// (requer o plugin GDS e uma projeção chamada 'myGraph')
 CALL gds.nodeSimilarity.stream('myGraph')
 YIELD node1, node2, similarity
-WHERE gds.util.asNode(node1).name = "Confiança"
+WHERE gds.util.asNode(node1).name = "Confianca"
 RETURN gds.util.asNode(node2).name AS codigo_similar, similarity
 ORDER BY similarity DESC
 LIMIT 10
@@ -226,19 +228,18 @@ LIMIT 10
 
 **Insight:** Códigos com padrões de conexão similares podem ser candidatos para fusão ou categorias relacionadas.
 
-### Link Prediction
+### Lacunas: coocorrência sem relação afirmada
 
 ```cypher
-// Baseado no grafo atual, quais relações *deveriam* existir mas não foram anotadas?
-CALL gds.linkPrediction.predict.stream('myGraph')
-YIELD node1, node2, probability
-WHERE probability > 0.8
-RETURN gds.util.asNode(node1).name AS codigo1,
-       gds.util.asNode(node2).name AS codigo2,
-       probability
+// Pares que aparecem juntos em muitos itens, mas nunca foram ligados por uma cadeia
+MATCH (i:Item)-[:MENTIONS]->(a), (i)-[:MENTIONS]->(b)
+WHERE a.name < b.name AND NOT (a)-[:RELATES_TO]-(b)
+RETURN a.name, b.name, count(DISTINCT i) AS juntos
+ORDER BY juntos DESC
+LIMIT 20
 ```
 
-**Uso:** Identificar gaps na análise. Se o algoritmo sugere que "Custo" deveria conectar-se a "Exclusão Digital" (mas você não anotou), isso pode indicar padrão implícito nos dados que você ainda não capturou.
+**Uso:** apontar onde vale reler. Aparecer junto não significa que exista relação; a decisão volta ao texto.
 
 ---
 
@@ -267,6 +268,7 @@ A estrutura de grafo acomoda naturalmente essas extensões — você adiciona no
 
 ### Como Exportar (Prático)
 - [Como exportar para Neo4j](../howto/exportar_neo4j.qmd) — Guia hands-on
+- [synesis-graph](../reference/synesis_graph.qmd) — também ArcadeDB (sem servidor) e HTML
 
 ---
 

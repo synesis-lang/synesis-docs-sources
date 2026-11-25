@@ -1,0 +1,159 @@
+---
+title: "Synesis 101 Course"
+subtitle: "Short videos to understand Synesis from scratch"
+number-sections: false
+toc-depth: 2
+description: "An introductory video course on the Synesis language: from the craft of ideas to the files of a project, and the ecosystem of tools around the language."
+---
+
+**Synesis 101** is a course of short videos, two to six minutes each, for people who have never used the language. No programming knowledge is needed. The videos explain the ideas behind Synesis and show how they become files that people and computers can read.
+
+:::{.callout-note}
+## Language of the videos
+The videos linked on this page are the **Portuguese** edition of the course; titles below are translated.
+:::
+
+The course serves two audiences:
+
+- **researchers:** qualitative and mixed-methods researchers, graduate students and literature review teams;
+- **knowledge organizers:** people who build ontologies or knowledge maps, organize a team's knowledge or use AI agents to extract knowledge from documents.
+
+One central idea runs through every episode: the methods of qualitative research (coding, defining, grouping into themes, relating, recording provenance) serve to organize knowledge for any purpose, including for AI.
+
+All examples come from the same fictitious study: **barriers to telemedicine adoption in rural communities**. It is the study used in [Coding Methods in Synesis](exemplos_codificacao.qmd), so you will recognize the examples as you move from the videos to the documentation.
+
+:::{.callout-tip}
+## How to watch
+Follow the order: each episode builds on the previous one. Captions are burned into the video. On a phone, rotate the screen for full-screen viewing.
+:::
+
+---
+
+# Module 1 — Foundations {#sec-modulo-1}
+
+*From the craft of ideas to knowledge engineering.* The module starts from the work every researcher already does by hand and arrives at the files of a Synesis project. No software appears here: the focus is on concepts.
+
+## E01 · The Craft of Ideas {#sec-m1-e01}
+
+Reading, highlighting, annotating and organizing is not improvisation: it is a research method, qualitative coding, with its own stages and manuals. The episode follows a researcher who reads interviews and an article, highlights passages, notes concepts and groups them into themes.
+
+{{< video https://www.youtube.com/embed/ELxga5LHwsE title="Synesis 101 · E01 · The craft of ideas" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 3 min 42 s</span>
+
+## E02 · Three Blocks That Fit Together {#sec-m1-e02}
+
+Every annotation answers three questions: where it came from, what it says and what it means. Each answer corresponds to a Synesis block (**SOURCE**, **ITEM** and **ONTOLOGY**), and the blocks fit together like pieces. Still without a line of code.
+
+{{< video https://www.youtube.com/embed/I8g_h2WFUZ4 title="Synesis 101 · E02 · Three blocks that fit together" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 2 min 50 s</span>
+
+## E03 · From Blocks to Files {#sec-m1-e03}
+
+First contact with code. You will read a SOURCE, an ITEM and an ONTOLOGY block written in Synesis, see how the connections of the previous episode become names repeated in the text and learn in which file each block lives: `.syn` for annotations, `.syno` for the ontology.
+
+{{< video https://www.youtube.com/embed/NIXS8kVgPoQ title="Synesis 101 · E03 · From blocks to files" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 2 min 55 s</span>
+
+## E04 · The Template {#sec-m1-e04}
+
+Who decides which fields each block has? The template, a `.synt` file that works as the project's rulebook. It declares the fields, whether they are required and their types. Choosing the fields is choosing the method of analysis.
+
+{{< video https://www.youtube.com/embed/5-dW9bK7XZw title="Synesis 101 · E04 · The template" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 4 min 20 s</span>
+
+## E05 · The Project {#sec-m1-e05}
+
+The `.synp` project file brings together the template, annotations, ontology and references. The episode shows the optional blocks of a project, explains how several projects can share one ontology and closes the module by introducing the compiler.
+
+{{< video https://www.youtube.com/embed/L4epHnHY9x8 title="Synesis 101 · E05 · The project" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 2 min 9 s</span>
+
+---
+
+# Module 2 — Tools {#sec-modulo-2}
+
+*Compiler, editor and assisted coding.* With the concepts in place, the module presents the tools that work with the language.
+
+## E01 · The Ecosystem {#sec-m2-e01}
+
+The map of the tools around the language, before opening each one. At the centre is the compiler, which checks and exports the project. Around it: reference managers (Zotero, JabRef), the editor (VS Code), AI-assisted coding (synesis-coder) and the knowledge graph (synesis-graph), which AI agents can query.
+
+{{< video https://www.youtube.com/embed/NAVI-5iyd-U title="Synesis 101 · Module 2 · E01 · The ecosystem" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 3 min 51 s</span>
+
+## E01-2 · Synesis: What It Is, What It May Become, What It Is Not {#sec-m2-e01-2}
+
+A conceptual episode, before installing the tools. The word "ontology" does not mean the same in qualitative research and in ontology engineering. The episode places Synesis between those fields: a language with a compiler to record, check and trace knowledge extracted from texts, which is neither a method nor an automatic annotator. It shows where it already applies (qualitative research, literature reviews, auditable knowledge bases, data for AI and GraphRAG), what is out of scope today and where the language may grow.
+
+{{< video https://www.youtube.com/embed/ICp0CJfmv1E title="Synesis 101 · Module 2 · E01-2 · Synesis: what it is, what it may become, what it is not" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 6 min 15 s</span>
+
+## E02 · Installation {#sec-m2-e02}
+
+The basic ecosystem in a few minutes: the compiler, the language server (which connects the compiler to the editor), synesis-coder and the VS Code extension. The episode creates a test project, compiles it and opens it in the editor with the Synesis panels. It also shows what to do if the panels stay empty.
+
+{{< video https://www.youtube.com/embed/gpAv1MjqjIw title="Synesis 101 · Module 2 · E02 · Installation" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 1 min 40 s</span>
+
+The commands of the video, to copy. Python 3.10 or later is required.
+
+```bash
+pip install synesis synesis-lsp synesis-coder   # if pip is not found: python -m pip install ...
+synesis init                                    # in an empty folder: creates a test project
+synesis compile project.synp --stats            # no errors = working installation
+```
+
+In VS Code, install the **Synesis** extension by publisher **synesis-lang** from the Extensions panel. If the panels stay empty, search for Synesis in the settings and set the path to `synesis-lsp`.
+
+## E03 · The Compiler: Check and Export {#sec-m2-e03}
+
+The basic compiler commands in the terminal. The episode shows the compilation stages and the statistics. It teaches how to read an error message, with file, line, column, severity and problem, and explains the difference between error and warning. Then it exports the project to JSON, CSV, Excel and Alpaca. Two rules become clear: if no message appears, the project is correct; and export is all or nothing, because with an error no file is generated.
+
+{{< video https://www.youtube.com/embed/-4ZGcUwwdNI title="Synesis 101 · Module 2 · E03 · The compiler: check and export" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 2 min 37 s</span>
+
+The commands of the video, to copy:
+
+```bash
+synesis compile project.synp --stats            # stages + count of sources, excerpts and concepts
+synesis compile project.synp --check-codes      # lists codes missing from the ontology, with suggestions
+synesis compile project.synp --strict           # warnings count as errors
+synesis compile project.synp --json out.json --xls out.xlsx --csv csv
+synesis check annotations.syn                   # only the syntax of a file, without the template
+synesis validate-template template.synt         # checks the template as you write it
+```
+
+The full check is always `synesis compile`.
+
+## E06 · Synesis in Claude Desktop {#sec-m2-e06}
+
+An entry path for newcomers: the Synesis Skill for Claude Desktop. The video shows how to install it, what happens in the first session and what it leaves ready: the template, annotations, ontology, project and an audit dashboard. The division of roles is the same as in the rest of the course: the AI proposes, the compiler checks and you decide. For those who prefer the editor, the VS Code path remains.
+
+{{< video https://www.youtube.com/embed/i19RR7xNXfA title="Synesis 101 · Module 2 · E06 · Synesis in Claude Desktop" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Length: 2 min 28 s</span>
+
+The full guide, the Skill file and an example folder are in [Synesis in Claude Desktop](../tutorials/synesis_claude_desktop.qmd).
+
+:::{.callout-note}
+## Upcoming episodes
+The remaining episodes of Module 2 are in production and will be added to this page.
+:::
+
+---
+
+# Going Further {#sec-continuar}
+
+- [Getting Started](../tutorials/getting-started.qmd): build and compile your first project.
+- [What Synesis can express](show_case.qmd): every field type, with examples.
+- [Coding Methods in Synesis](exemplos_codificacao.qmd): the course study applied to each coding method.
+- [Language Reference](../reference/guia_referencia.qmd): the complete syntax.

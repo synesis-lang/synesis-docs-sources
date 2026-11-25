@@ -1,116 +1,156 @@
-# Guia rapido: Synesis Explorer (VS Code)
+# Guia rápido: a extensão Synesis para VS Code
 
-**Objetivo:** ajudar voce a instalar e usar a extensao para navegar seus arquivos Synesis (.syn, .synt, .synp, .syno) de forma simples.
+**Objetivo:** ajudar você a instalar e usar a extensão **Synesis** (versão 0.17) para escrever e navegar arquivos Synesis (`.synp`, `.synt`, `.syn`, `.syno`, `.synr`). Esta extensão também é conhecida como Synesis Explorer.
 
----
-
-## O que a extensao faz
-
-- Mostra suas referencias, codigos e relacoes em paineis laterais
-- Abre um grafo de relacoes e o resumo (abstract) das referencias
-- Ajuda a encontrar trechos com facilidade
-
-![Tela inicial do VS Code com a extensao instalada.](../../images/01_tela_inicial.png)
+A interface da extensão está em **inglês**.
 
 ---
 
-## Requisitos basicos
+## O que a extensão faz
 
-- VS Code instalado
-- Arquivos Synesis no seu computador
+- Valida os arquivos enquanto você digita e completa campos, códigos e relações
+- Mostra referências, códigos, relações, ontologia e campos do template em painéis laterais
+- Abre grafos de relações e o resumo (abstract) das referências
+- Codifica um trecho selecionado com o `synesis-coder`
+- Conversa com um banco de grafos do projeto no chat do VS Code
+
+![Tela inicial do VS Code com a extensão instalada.](../../images/01_tela_inicial.png)
 
 ---
 
-## Instalacao (arquivo VSIX)
+## Requisitos
 
-1. Abra o VS Code
-2. Clique no icone de extensoes (barra lateral)
-3. Clique nos tres pontinhos (menu) e escolha "Install from VSIX..."
-4. Selecione o arquivo `.vsix` da extensao
-5. Aguarde a instalacao e reinicie o VS Code se solicitado
+- VS Code
+- Python 3.10 ou superior
+- O compilador e o servidor de linguagem, que fazem a análise (a extensão é a interface):
+
+```bash
+pip install synesis synesis-lsp
+```
+
+---
+
+## Instalação
+
+1. No VS Code, abra a aba de extensões (`Ctrl+Shift+X`)
+2. Procure por **Synesis** (publicador `synesis-lang`)
+3. Clique em **Install**
+
+Para instalar a partir de um arquivo `.vsix`, use o menu `...` da aba de extensões e **Install from VSIX...**.
 
 ![Menu "Install from VSIX..."](../../images/02_install.png)
+
 ---
 
-## Como abrir seu projeto
+## Primeiro projeto
 
-1. Abra a pasta do seu projeto no VS Code
-2. Certifique-se de que seus arquivos `.syn` e o projeto `.synp` estao na pasta
+Numa pasta vazia:
+
+```bash
+synesis init
+```
+
+Abra a pasta no VS Code. O ícone do Synesis aparece na barra de atividades e os painéis se preenchem.
 
 ![Pasta do projeto aberta no VS Code.](../../images/03_projeto_synesis.png)
----
-
-## Onde encontrar o Synesis Explorer
-
-1. Na barra lateral esquerda, clique no icone "Synesis Explorer"
-2. Voce vera tres secoes:
-   - References
-   - Codes
-   - Relations (aparece quando houver relacoes)
-
-![Painel Synesis Explorer com as tres secoes.](../../images/04_painel_synesis.png)
----
-
-## Usando os Explorers
-
-### References
-- Lista suas fontes (SOURCE)
-- Use o botao de atualizar (refresh) quando mudar arquivos
-- Use o filtro para encontrar rapidamente uma referencia
-
-![Referencias com lista e botoes no topo.](../../images/05_references.png)
-
-### Codes
-- Mostra os codigos encontrados nos seus dados
-- Use refresh e filtro da mesma forma
-
-![Codes com lista de codigos.](../../images/06_codes.png)
-
-### Relations
-- Mostra relacoes (chains) encontradas
-- Se nao aparecer, verifique se há campos do tipo `chain:` nos arquivos de anotação (.syn)
-
-![Relations com algumas relacoes listadas.](../../images/07_relations.png)
 
 ---
 
-## Usando os Viewers
+## Os painéis
 
-### Graph Viewer
-- Mostra um grafo das relacoes
-- Atalho: `Ctrl+Alt+G` (Windows/Linux) ou `Cmd+Shift+G` (Mac)
+![Painéis do Synesis na barra de atividades.](../../images/04_painel_synesis.png)
+
+| Painel | Mostra |
+|---|---|
+| **References** | as fontes (`SOURCE`), com os itens dentro |
+| **Codes** | os códigos e cada ocorrência |
+| **Relations** | as cadeias (`CHAIN`), agrupadas por fonte |
+| **Ontology Topics** | os tópicos da ontologia; com `ROLE HIERARCHY`, a árvore de conceitos |
+| **Ontology (Annotations)** | onde os conceitos são usados nos `.syn` |
+| **Template Fields** | os campos do template, por escopo |
+
+Alguns painéis aparecem conforme o tipo de arquivo aberto. Clique numa entrada para ir à linha exata. Cada painel tem botões de atualizar e filtrar.
+
+![Painel de referências.](../../images/05_references.png)
+
+![Painel de códigos.](../../images/06_codes.png)
+
+![Painel de relações.](../../images/07_relations.png)
+
+Na árvore da ontologia, o menu de contexto de um conceito oferece **Subtree Evidence**: os itens do conceito e de todos os descendentes.
+
+---
+
+## Grafos e resumos
+
+| Ação | Atalho (Windows/Linux) | Mac |
+|---|---|---|
+| Grafo de relações por fonte | `Ctrl+Alt+G` | `Cmd+Shift+G` |
+| Grafo por arquivo | `Ctrl+Alt+F` | `Cmd+Shift+F` |
+| Grafo por item | `Ctrl+Alt+I` | `Cmd+Alt+I` |
+| Resumo (abstract) da referência | `Ctrl+Shift+A` | `Cmd+Shift+A` |
+| Codificar a seleção com IA | `Ctrl+Shift+I` | `Cmd+Shift+I` |
 
 ![Grafo aberto em uma aba.](../../images/08_graph_viewer.png)
 
-### Abstract Viewer
-- Mostra o abstract de referencias BibTeX
-- Atalho: `Ctrl+Shift+A` (Windows/Linux) ou `Cmd+Shift+A` (Mac)
-
-![Abstract aberto em uma aba.](../../images/09_abstract_viewer.png)
+![Resumo aberto em uma aba.](../../images/09_abstract_viewer.png)
 
 ---
 
-## Dicas rapidas
+## Edição
 
-- Se algo nao atualizar, clique em refresh
-- O Word Wrap é ativado automaticamente para facilitar a leitura
-- Use o filtro para reduzir listas grandes
+- **Diagnósticos em tempo real:** erros e avisos sublinhados e no painel *Problems* (`Ctrl+Shift+M`)
+- **Autocompletar:** campos, códigos, relações, valores de listas, papéis depois de `ROLE` e propriedades de `EXPORT`
+- **Hover:** definição do campo; em conceitos, pais, filhos e quantidade de evidências
+- **Ir à definição** (`F12`) e **renomear** (`F2`) códigos e referências em todo o projeto
+- **Snippets:** digite `field-chain`, `field-scale`, `field-ordered`… ou `SOURCE`, `ITEM`, `ONTOLOGY` e pressione `Tab`; os blocos de anotação trazem os campos obrigatórios do **seu** template
+- **Temas:** *Synesis Dark* e *Synesis Light*
+
+---
+
+## Codificar com IA
+
+Instale o `synesis-coder` (`pip install synesis-coder`), configure a chave no `.env` do projeto, selecione um trecho num `.syn` e use **Synesis: Code Selection** (`Ctrl+Shift+I`). Veja [Codificação com IA](../howto/synesis_coder.qmd).
+
+---
+
+## Conversar com o grafo
+
+A extensão registra um participante de chat que consulta um banco ArcadeDB do projeto, criado pelo [`synesis-graph`](../reference/synesis_graph.qmd). Os comandos **Synesis: Settings** (conexões e provedores), **Synesis: Select Chat Graph Database** e **Synesis: Show Turn Evidence and Queries** configuram o chat e mostram a trilha de auditoria de cada resposta. As chaves ficam no armazenamento seguro do VS Code.
+
+---
+
+## Configurações
+
+Em *Settings*, procure por "Synesis" (prefixo `synesisExplorer.`):
+
+| Configuração | Para quê |
+|---|---|
+| `lsp.pythonPath` | caminho do executável `synesis-lsp`, se não estiver no `PATH` |
+| `lsp.enabled` | liga ou desliga o servidor |
+| `diagnostics.enabled` | mostra os sublinhados |
+| `diagnostics.checkCodes` | avisa cada código ausente da ontologia (desligado por padrão: um resumo no `.synp`) |
+| `inlayHints.enabled` | mostra "(Autor, Ano)" depois das referências |
+| `semanticHighlighting.enabled` | realce baseado na árvore sintática |
+| `completion.autoImportCodes` | oferece os códigos da ontologia ao completar |
+| `coder.path` | caminho do `synesis-coder` |
 
 ---
 
 ## Problemas comuns
 
-**Nao vejo nada no painel**
-- Verifique se a pasta do projeto foi aberta no VS Code
-- Verifique se ha arquivos `.syn` na pasta
+**Os painéis estão vazios.** Confira se a pasta aberta tem um arquivo `.synp` e se o `synesis-lsp` está instalado (veja o canal de saída *Synesis LSP*).
 
-**Relations nao aparecem**
-- Verifique se existem linhas `chain:` nos arquivos
+**Um painel não aparece.** Vários dependem do tipo de arquivo aberto: abra um `.syn` ou `.syno`.
+
+**"Failed to start Synesis LSP".** Informe em `synesisExplorer.lsp.pythonPath` o caminho completo do executável.
+
+**Relações não aparecem.** Verifique se o template tem um campo `TYPE CHAIN` e se há cadeias anotadas.
 
 ---
 
 ## Pronto para usar
 
-Com isso, voce ja consegue navegar, filtrar e visualizar seus dados Synesis diretamente no VS Code.
+Com isso, você já consegue escrever, validar, navegar e visualizar seus dados Synesis no VS Code.
 
 ![Fluxo completo (arquivo aberto + explorer + viewer).](../../images/10_full_view.png)

@@ -1,0 +1,424 @@
+---
+title: "synesis-graph"
+subtitle: "Reference of the pipeline from Synesis projects to graphs"
+---
+
+# synesis-graph
+
+`synesis-graph` turns a compiled Synesis project into a **navigable graph**: in a Neo4j database, in an ArcadeDB database (on a server or local, with no server) or as a self-contained HTML visualization.
+
+The translation is **dynamic**: the tool reads the project template (`.synt`) and derives the graph structure from it. Change the template and the graph changes with it, without touching the tool.
+
+::: {.callout-note}
+## No intermediate files
+The pipeline compiles the project **in memory** and syncs straight to the destination. The compiler is the single source of truth: a compilation error stops the process before anything is written to the database.
+:::
+
+---
+
+# Installation {#sec-instalacao}
+
+Requires **Python 3.10+** and `synesis` ≥ 0.16.0 (installed as a dependency).
+
+```bash
+pip install "synesis-graph[neo4j]"        # with the Neo4j driver
+pip install synesis-graph                 # ArcadeDB (server and local) and HTML
+pip install "synesis-graph[embeddings]"   # semantic search (pulls torch, ~2 GB)
+```
+
+```bash
+synesis-graph --version
+# synesis-graph, version 0.13.1
+```
+
+---
+
+# Backends {#sec-backends}
+
+| Backend | Command | Destination | When to use |
+|---------|---------|---------|-------------|
+| **Neo4j** | `synesis-graph neo4j` | Neo4j server (`bolt://`) | Cypher queries, GDS metrics, MCP agents |
+| **ArcadeDB** | `synesis-graph arcadedb` | ArcadeDB server (`http://`) | shared graph, built-in algorithms |
+| **Local ArcadeDB** | `synesis-graph arcadedb-embedded` | a folder on your computer | working alone, with no server or Java to install |
+| **HTML** | `synesis-graph html` | a single `.html` file | exploring, sharing, publishing |
+
+The three database backends produce the **same graph** from the same project. HTML applies legibility filters (@sec-html).
+
+## Data Source
+
+All accept two mutually exclusive inputs:
+
+```bash
+# From the project — compiles in memory
+synesis-graph neo4j --project project.synp
+
+# From a JSON exported by the compiler
+synesis-graph neo4j --json export.json
+```
+
+---
+
+# Data Model: Template → Graph {#sec-modelo}
+
+| Template type | Graph element | Edge created |
+|------------------|-------------------|---------------|
+| `CODE` | Concept node | `MENTIONS` (Item → Concept) |
+| `CHAIN` | Relation between concepts | `RELATES_TO` (with type and description) |
+| `TOPIC` | Taxonomy node | `GROUPED_BY` |
+| Project fields `ASPECT` / `DIMENSION` | Taxonomy nodes | `QUALIFIED_BY` / `BELONGS_TO` |
+| `ROLE HIERARCHY KIND/PART/INSTANCE` | Adopted hierarchy | `KIND_OF`, `PART_OF`, `INSTANCE_OF` (child → parent) |
+| `ENUMERATED`, `TEXT`, `MEMO` | Node property | — |
+| `SCOPE SOURCE` | Properties of the `Source` node | — |
+
+: Type mapping {.striped .hover}
+
+Fields are recognized by their **declared type**, not by name: a `CHAIN` called `mechanism` produces `RELATES_TO` as usual. `aspect` and `dimension` are not language types; they are designs of specific projects, recognized by name.
+
+## Nodes Always Created
+
+| Node | Represents | Properties |
+|----|-----------|--------------|
+| `Source` | The source (article, interview, document) | `bibtex`, `title`, `author`, `year` and the `SCOPE SOURCE` fields |
+| `Item` | The analytical unit | identifier, citation, ITEM fields, `source_file`, `source_line` |
+| `ProjectContext` | The project context | see @sec-contexto |
+
+: Base nodes {.striped .hover}
+
+Each `Item` is linked to its source by `(:Item)-[:FROM_SOURCE]->(:Source)`, the language invariant that every ITEM belongs to a SOURCE.
+
+## Translation Example
+
+```synesis
+FIELD category TYPE CODE
+    SCOPE ITEM
+END FIELD
+
+FIELD theme TYPE TOPIC
+    SCOPE ONTOLOGY
+END FIELD
+```
+
+```text
+(:Item)-[:MENTIONS]->(:Category)-[:GROUPED_BY]->(:Theme)
+```
+
+The label of the concept node derives from the **field name**: a field `second_order` produces `Second_order` nodes.
+
+## Deprecated Names (`USE`)
+
+A concept consolidated with `ROLE USE` does not become a node: mentions and chains go to the target, which keeps the name in `aliases`.
+
+## Edge Between Taxonomies
+
+The pipeline derives `IS_LINKED_TO` between taxonomy nodes; its **strength** counts the `RELATES_TO` relations between the concepts of the two categories.
+
+::: {.callout-important}
+## Traceability preserved
+Each item keeps its source file and line. A concept in the graph can always be traced back to the passage of the `.syn` that supports it.
+:::
+
+---
+
+# Context Travels with the Graph: `ProjectContext` {#sec-contexto}
+
+Every sync to a database writes a `ProjectContext` vertex. A database schema gives the shape, not the meaning; without the context, whoever queries the graph would have to guess the coding criteria.
+
+| Property | Content |
+|---|---|
+| `description` | the `DESCRIPTION` block of the `.synp`, verbatim |
+| `project_summary` | metadata, corpus size, provenance and competency questions |
+| `template_doc` | the template as a readable document: fields, scales, **GUIDELINES**, rules and a graph navigation guide |
+| `source_count`, `item_count`, `concept_count` | counts |
+| `compiler_version`, `synesis_graph_version`, `compiled_at`, `generated_at` | provenance |
+| `load_state` | marks whether the load finished |
+
+```cypher
+MATCH (p:ProjectContext) RETURN p.description, p.project_summary;
+MATCH (p:ProjectContext) RETURN p.template_doc;
+```
+
+The stored text is written in Portuguese. The HTML backend does not create this vertex.
+
+---
+
+# Database Backends {#sec-neo4j}
+
+```bash
+synesis-graph neo4j --project project.synp
+synesis-graph arcadedb --project project.synp
+synesis-graph arcadedb-embedded --project project.synp
+```
+
+## Common Options
+
+| Option | Description |
+|-------|-----------|
+| `--project` | Path to the `.synp`. **Repeatable** — see @sec-multiprojeto |
+| `--json` | Alternative: an already exported JSON |
+| `--config` | TOML configuration file (default: `config.toml`) |
+| `--database` | Database name; also names the unified graph in a link |
+| `--mode rebuild\|update` | `rebuild` (default) wipes and rewrites; `update` writes only changes, **removing nothing** |
+
+: Options {.striped .hover}
+
+| Option | Backends | Description |
+|---|---|---|
+| `--metrics all\|fast\|none` | ArcadeDB | `fast` skips betweenness and communities; `none` skips metrics |
+| `--vector-embeddings FIELDS` | ArcadeDB | creates vectors for semantic search |
+| `--rebuild-embeddings` | ArcadeDB | recomputes every vector |
+| `--db-path DIR` | Local ArcadeDB | root where the database is created (`<DIR>/databases/<project>`) |
+
+: Specific options {.striped .hover}
+
+## Configuration
+
+Create a `config.toml` (the repository ships a `config.toml.example`):
+
+```toml
+[neo4j]
+uri = "bolt://127.0.0.1:7687"   # or neo4j+s://... for Aura
+user = "neo4j"
+password = "your_password"
+database = "my_corpus"           # optional
+# fulltext_analyzer = "english"
+
+[arcadedb]
+uri = "http://localhost:2480"    # HTTP endpoint, not bolt://
+user = "root"
+password = "your_password"
+
+[arcadedb-embedded]              # optional section; there are no credentials
+# db_path = "."
+```
+
+::: {.callout-warning}
+## Never commit credentials
+Add `config.toml` to `.gitignore`.
+:::
+
+Setting `fulltext_analyzer` to the language of your corpus (for instance `english` or `brazilian`) lets text search match inflected forms.
+
+## Network Metrics
+
+### Native Metrics (Always Available)
+
+| Node | Metrics |
+|---------|-------------|
+| Concept | `degree`, `in_degree`, `out_degree`, `mention_count` (frequency), `source_count` (spread) |
+| Taxonomy | `concept_count`, `weighted_degree`, `aspect_diversity`, `dimension_diversity` |
+| Source | `item_count`, `concept_count` |
+
+::: {.callout-tip}
+## `mention_count` and `source_count` measure different things
+A concept cited 40 times in a single source is a theme of that document. One cited 8 times across 8 sources is a cross-cutting finding.
+:::
+
+### Advanced Metrics
+
+`pagerank`, `betweenness` and `community` (Louvain) come from different engines:
+
+| Backend | Engine | Requires |
+|---|---|---|
+| Neo4j | Graph Data Science | the [GDS](https://neo4j.com/docs/graph-data-science/current/installation/) plugin |
+| ArcadeDB | built-in algorithms (`algo.*`) | nothing |
+
+::: {.callout-warning}
+## Values are not comparable between the two
+GDS computes over the concept subgraph; the ArcadeDB algorithms run over the **whole graph**, so edges such as `MENTIONS` and `GROUPED_BY` weigh in too. Both are valid centralities, answering slightly different questions.
+:::
+
+Without GDS on Neo4j, the pipeline warns and continues with native metrics. With GDS the projection adapts to the template: `RELATES_TO` (there are `CHAIN` fields), `CO_TAXONOMY` (there are `CODE` and `TOPIC`) or `CO_CITATION` (fallback). In a co-citation projection a community groups concepts that **appear together**, not concepts the researcher declared related.
+
+## Semantic Search (ArcadeDB) {#sec-embeddings}
+
+```bash
+synesis-graph arcadedb-embedded --project project.synp \
+    --vector-embeddings ontology_description,topic
+```
+
+Vectors are generated locally, with no API key, and cached in `<project>.embeddings.json`; only concepts whose text changed are recomputed. `TEXT` and `TOPIC` fields are the ones to use; closed vocabularies repeat the same text across many concepts. For Portuguese or multilingual corpora use a multilingual model (the default):
+
+```toml
+[arcadedb-embedded.embeddings]
+model = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+fields = ["ontology_description", "topic"]
+```
+
+See the measured study in [Vector Embeddings and GraphRAG](../explanation/graphrag_embeddings_vetoriais.qmd).
+
+## Large Loads
+
+Writing happens in segments. If a load is interrupted, `ProjectContext` stays marked as incomplete: a new `rebuild` fixes it, and `--mode update` is refused on a partial graph. Two simultaneous loads into the same graph are refused.
+
+---
+
+# Asking the Graph (`serve`) {#sec-serve}
+
+```bash
+synesis-graph serve                       # publishes ./databases; Ctrl+C stops
+synesis-graph serve --db-path ./graphs    # the same root used by the export
+synesis-graph serve --install claude-desktop
+synesis-graph serve --install vscode
+```
+
+`serve` keeps the local database available over HTTP and [MCP](https://modelcontextprotocol.io), so that Claude Desktop or VS Code can query the corpus in natural language.
+
+| Option | Description |
+|---|---|
+| `--db-path` | server root (default: current folder) |
+| `--port` | HTTP port (default: 2480) |
+| `--allow-writes` | allows changing the corpus (off by default) |
+| `--install claude-desktop\|vscode` | adds the server to the client configuration, with a backup |
+
+The password is generated once and remembered; to choose your own, set `SYNESIS_DB_PASSWORD`.
+
+---
+
+# HTML Backend {#sec-html}
+
+```bash
+synesis-graph html --project project.synp --output graph.html
+```
+
+Writes a single HTML file that can be opened locally, attached or published as supplementary material.
+
+| Option | Default | Description |
+|-------|:------:|-----------|
+| `--output` | `./graph.html` | output file |
+| `--group-by` | automatic | taxonomy field used to colour communities |
+| `--min-frequency` | `3` | hides concepts mentioned in fewer than N items |
+| `--min-source-count` | `2` | hides concepts present in fewer than N sources |
+| `--max-nodes` | `200` | the N concepts of highest degree (`0` = no limit) |
+| `--max-hyperedges` | `50` | maximum number of hyperedges |
+| `--include-isolated` | off | includes concepts without chain connections |
+| `--all` | — | turns **all** filters off |
+
+: `html` backend options {.striped .hover}
+
+## Why There Are Default Filters
+
+A real corpus has a long tail of concepts that appear once or twice. The defaults show the concepts that recur **and** span sources. To see everything:
+
+```bash
+synesis-graph html --project project.synp --output graph.html --all
+```
+
+::: {.callout-note}
+## The filter is visual, not on the data
+Nothing is discarded from the project; the database backends receive the full graph.
+:::
+
+## Hyperedges
+
+When an ITEM connects **three or more** concepts, the visualization shows it as a shaded region: the difference between "A–B and B–C are related" and "A, B and C appear together in this passage".
+
+## Layers: Ontology and Evidence
+
+The panel separates the **ontology** (concepts, taxonomy and, with roles, parents and children) from the **evidence** (the items supporting each concept). A concept without evidence shows as such.
+
+## TOML Configuration
+
+```toml
+[html]
+output_path = "./graph.html"     # accepts the {project} placeholder
+# group_by = "topic"
+min_frequency = 3
+min_source_count = 2
+max_nodes = 200
+max_hyperedges = 50
+include_isolated = false
+```
+
+---
+
+# Multi-project Graphs {#sec-multiprojeto}
+
+When several projects declare `IDENTIFIES` / `REFERS TO` (see [How to Link Independent Projects](../howto/ligar_projetos.qmd)), the database backends **reify** those identities as nodes.
+
+```bash
+synesis-graph neo4j \
+  --project lattes.synp \
+  --project abstracts.synp \
+  --database Study
+```
+
+| Element | Origin | Form |
+|----------|--------|-------|
+| Identity node | each distinct value of an `IDENTIFIES` field | `(:Researcher {entity_id})` |
+| `IDENTIFIED_AS` | the owning SOURCE | `(:Source)-[:IDENTIFIED_AS]->(:Researcher)` |
+| `REFERS_TO` | each matching `REFERS TO` value | `(:Source)-[:REFERS_TO {entity, member}]->(:Researcher)` |
+
+: Reification elements {.striped .hover}
+
+**A node is born only from `IDENTIFIES`** (an orphan reference creates none); **matching is exact**, with no case normalization; and **bibrefs are qualified** with the member alias (`abstracts:@article_a`), so that two corpora do not collapse into one.
+
+::: {.callout-warning}
+## The HTML backend refuses multi-project input
+`synesis-graph html` with more than one `--project` fails with an explicit error.
+:::
+
+---
+
+# Typical Flow {#sec-fluxo}
+
+```bash
+synesis compile project.synp --stats                            # 1. validate
+synesis-graph html --project project.synp --output graph.html   # 2. explore
+synesis-graph arcadedb-embedded --project project.synp          # 3. write the graph
+synesis-graph serve                                             # 4. ask
+```
+
+---
+
+# Useful Cypher Queries {#sec-cypher}
+
+```cypher
+// Most frequent concepts
+MATCH (c)
+WHERE c.mention_count IS NOT NULL
+RETURN c.name, c.mention_count, c.source_count
+ORDER BY c.mention_count DESC
+LIMIT 10
+```
+
+```cypher
+// Cross-cutting findings
+MATCH (c)
+WHERE c.source_count IS NOT NULL
+RETURN c.name, c.source_count, c.mention_count
+ORDER BY c.source_count DESC
+LIMIT 10
+```
+
+```cypher
+// Textual evidence of a concept
+MATCH (s:Source)<-[:FROM_SOURCE]-(i:Item)-[:MENTIONS]->(c {name: "Cost"})
+RETURN s.bibtex, i.citation
+```
+
+```cypher
+// Declared relations starting at a concept
+MATCH (a {name: "Cost"})-[r:RELATES_TO]->(b)
+RETURN a.name, r.type, b.name
+```
+
+```cypher
+// Evidence of a concept and all its subtypes, without double counting
+MATCH (c {name: "phishing"})<-[:KIND_OF*0..]-(sub)<-[:MENTIONS]-(i:Item)
+RETURN count(DISTINCT i)
+```
+
+```cypher
+// Multi-project graph: sources linked to a researcher
+MATCH (r:Researcher)<-[:REFERS_TO]-(s:Source)
+RETURN r.entity_id, collect(s.bibtex) AS sources
+```
+
+---
+
+# Next Steps {#sec-proximos}
+
+- [How to Export to Neo4j](../howto/exportar_neo4j.qmd)
+- [Knowledge Graphs & GraphRAG](../explanation/knowledge_graphs.qmd)
+- [How to Link Independent Projects](../howto/ligar_projetos.qmd)
+- [Language Reference](guia_referencia.qmd)

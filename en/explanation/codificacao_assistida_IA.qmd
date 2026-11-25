@@ -1,0 +1,511 @@
+---
+title: "AI-assisted Coding"
+subtitle: "A real case: bibliometric analysis of the social acceptance of energy transition technologies"
+---
+
+This document presents a real case of Synesis in academic research, in which qualitative coding was performed by artificial intelligence and manually reviewed by the researcher. The project analyzes **factors of social acceptance of energy transition technologies** from a corpus of scientific articles selected through bibliometrics.
+
+:::{.callout-important}
+## Real data
+Unlike the fictitious examples on other pages of this documentation, all data shown here are real --- extracted from published scientific articles and processed by the pipeline described in this document.
+:::
+
+---
+
+# Project Overview {#sec-visao-geral}
+
+The `Social_Acceptance` project combines three steps:
+
+1. **Corpus selection**: ~450 scientific articles identified through bibliometrics (citation analysis, co-citation and bibliographic coupling)
+2. **AI coding**: each abstract was processed by a language model (LLM) following methodological prompts, producing the `.syn` (annotations) and `.syno` (ontology) files
+3. **Human review**: the researcher reviewed and adjusted the results, correcting excessive generalizations, imprecise relations and duplicated concepts
+
+The result is a knowledge graph with hundreds of concepts and causal relations, structured in Synesis and exportable to Neo4j, Excel and JSON.
+
+---
+
+# The Template: an Advanced Analytical Structure {#sec-template}
+
+The template defines the structure the AI must fill in. It incorporates three theoretical frameworks:
+
+- **Grounded Theory**: inductive extraction of concepts and relations from the data
+- **Dooyeweerd's Modal Aspects**: classification of concepts into 16 modal aspects (from the numerical to the pistic, or fiducial)
+- **Wüstenhagen's Dimensions**: community, market and socio-political acceptance
+
+```synesis
+TEMPLATE bibliometrics version: "2.0" author: "Synesis Compiler Team"
+
+SOURCE FIELDS
+    REQUIRED description, epistemic_model, method
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED text
+    REQUIRED BUNDLE note, chain
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED ontology_description
+    OPTIONAL topic, aspect, dimension, confidence, reasoning
+    OPTIONAL rgt_element_a, rgt_element_b, theoretical_significance
+END ONTOLOGY FIELDS
+```
+
+Three design decisions deserve attention:
+
+1. **SOURCE with epistemic metadata**: each source declares its epistemological model and method, so results can be crossed by theoretical tradition
+2. **BUNDLE of note + chain**: each analytical interpretation (memo) is necessarily paired with its formalization as a causal chain
+3. **Multidimensional ONTOLOGY**: each concept receives a modal classification (Dooyeweerd), a dimensional one (Wüstenhagen), a confidence level and a bipolar construct (Repertory Grid Theory)
+
+Here are the full definitions of the most relevant fields. From version 2.0 of the template on, each field carries a `GUIDELINES` block with the methodological instructions that used to be supplied in external prompts:
+
+```synesis
+FIELD text TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt extracted from the bibliographic source
+    GUIDELINES
+        Extract COMPLETE, SELF-CONTAINED semantic units (1-3 sentences).
+        Each excerpt must include: subject + verb + object + qualifiers.
+        The excerpt must be intelligible without surrounding context.
+
+        GOOD: 'Community trust and environmental concern are the most important
+        factors determining willingness to participate in renewable energy projects'
+        BAD: 'determining such willingness' (lacks subject/context)
+
+        Score analytical value 1-5 BEFORE extraction. Extract only score 3-5:
+        Score 5: Reveals causal mechanism or multi-step pathway (explains HOW acceptance works)
+        Score 4: Shows enabling/shaping relationship with clear mechanism
+        Score 3: Theoretically significant association (flag as *borderline*)
+        Score 2: Simple association without mechanism (SKIP)
+        Score 1: Trivial/obvious/redundant (SKIP)
+
+        TEST: 'Does this explain HOW or WHY social acceptance occurs?'
+        YES + mechanism visible = Extract. Otherwise SKIP.
+    END GUIDELINES
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Analytical memo explaining the interpretation and the causal mechanism identified
+    GUIDELINES
+        Write an analytical description of the mechanism, significance, or rationale
+        revealed by the excerpt. Do NOT merely restate the excerpt.
+        Maximum 25 words (up to 50 words if flagged *complex*).
+
+        State the causal mechanism or theoretical insight, not a description of the text.
+
+        GOOD: 'Reveals dual mechanism: Integration and Engagement independently
+        enable transition via complementary pathways'
+        BAD: 'The excerpt describes how factors influence willingness'
+
+        Add *borderline* flag if analytical value score is 3.
+        Add *complex* flag if 4+ factors converge on the same outcome.
+    END GUIDELINES
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Causal/relational chain between ontology concepts
+    RELATIONS
+        ENABLES: Necessary or facilitating condition (A allows B to occur)
+        INFLUENCES: Direct causal effect (A affects or changes B)
+        CONSTRAINS: Limits or restricts (A reduces the options or viability of B)
+        CONTESTED-BY: Active opposition (A is contested or challenged by B)
+        RELATES-TO: Generic significant association (A is related to B)
+    END RELATIONS
+    GUIDELINES
+        RELATION SELECTION PRIORITY: ENABLES > INFLUENCES > CONSTRAINS > CONTESTED-BY > RELATES-TO
+
+        Selection tests for each relation type:
+        ENABLES: 'Can B exist without A?' If NO, use ENABLES.
+        INFLUENCES: 'Does A increase/decrease/modify B?' If YES, use INFLUENCES.
+        CONSTRAINS: 'Does A impose boundaries on B?' If YES, use CONSTRAINS.
+        RELATES-TO: Theoretically significant association. LAST RESORT — use in less than 5% of relations.
+
+        SEQUENTIAL vs PARALLEL CHAINS (CRITICAL):
+        SEQUENTIAL (A->B->C): Keep in ONE chain when factors form a causal pathway.
+        'Ownership enables financing which enables deployment'
+        -> Ownership -> ENABLES -> Financing -> ENABLES -> Deployment
+
+        PARALLEL (X,Y,Z->A): Create SEPARATE ITEM blocks when multiple factors
+        independently affect the same outcome.
+        'Environmental concern, education, trust determine participation'
+        -> Three separate ITEM blocks, each with its own note and chain.
+
+        FACTOR GRANULARITY (target: fewer than 150 unique factors across the full corpus):
+        Level 1 - Core concept: Acceptance, Deployment, Policy, Trust, Cost
+        Level 2 - Qualified concept (when distinction matters): Public_Acceptance, Community_Trust
+        Level 3 - Full specification (only when Level 2 loses critical meaning): Offshore_Wind_Acceptance
+        DECISION: 'Will this term appear in 5+ abstracts?' If unlikely, generalize to Level 1-2.
+    END GUIDELINES
+END FIELD
+```
+
+```synesis
+FIELD aspect TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Dooyeweerd's modal aspects (order is meaningful)
+    VALUES
+        [0] Undefined: Not available
+        [1] Quantitative: Measurements, statistics
+        [2] Spatial: Location, geography
+        [3] Kinematic: Movement, flow, dynamics
+        [4] Physical: Material properties, energy systems
+        [5] Biotic: Ecological, environmental, health impacts
+        [6] Sensitive: Perception, awareness, emotional responses
+        [7] Analytical: Research, analysis, methodological elements
+        [8] Formative: Planning, design, innovation
+        [9] Lingual: Communication, documentation
+        [10] Social: Community relations, collective dynamics
+        [11] Economic: Costs, markets, finance
+        [12] Aesthetic: Visual qualities, aesthetics
+        [13] Juridical: Legal, regulatory, governance
+        [14] Ethical: Moral responsibility, equity
+        [15] Fiducial: Trust, belief, values, worldview
+    END VALUES
+    GUIDELINES
+        Classify the factor's primary modal nature using the Dooyeweerd framework.
+        The semantic domain of the factor name determines the base classification.
+
+        PRIMARY classification mapping:
+        Economic terms -> aspect 11
+        Governance/regulation -> aspect 13
+        Psychological/trust/attitudes -> aspect 15 or 6
+        Environmental/impact/ecology -> aspect 5
+        Technical/method/assessment -> aspect 7
+        Social/community/participation -> aspect 10
+
+        Critical rule: Semantic meaning > relations > co-occurrence > statistics.
+    END GUIDELINES
+END FIELD
+
+FIELD confidence TYPE ENUMERATED
+    SCOPE ONTOLOGY
+    DESCRIPTION Confidence level based on frequency and sources
+    VALUES
+        LOW: Low frequency or limited sources
+        MEDIUM: Moderate frequency with reasonable support
+        HIGH: High frequency and broad empirical support
+    END VALUES
+    GUIDELINES
+        Assign confidence based on statistical evidence:
+        HIGH: frequency > 10 AND sources > 5
+        MEDIUM: frequency 5-10 OR sources 3-5
+        LOW: frequency < 5 OR sources < 3
+    END GUIDELINES
+END FIELD
+
+FIELD theoretical_significance TYPE SCALE
+    SCOPE ONTOLOGY
+    FORMAT [0..5]
+    DESCRIPTION Theoretical significance of the concept (0=low, 5=high)
+    GUIDELINES
+        Rate based on frequency, source diversity, and centrality in causal chains.
+        0: No theoretical significance identified
+        3: Moderate significance, appears in multiple chains across several sources
+        5: Core concept, foundational to the theoretical framework
+    END GUIDELINES
+END FIELD
+```
+
+:::{.callout-note}
+## Composing types and GUIDELINES
+This template uses **8 different field types** in a single project: TEXT, QUOTATION, MEMO, CHAIN (with RELATIONS and ARITY), TOPIC, ORDERED (with indexed VALUES), ENUMERATED (with VALUES) and SCALE (with FORMAT). From version 2.0 on, each field also carries a `GUIDELINES` block with the methodological instructions that govern the AI's behaviour — the template stops being only a data schema and becomes the **complete playbook** of the analysis.
+:::
+
+---
+
+# Methodological Instructions in the Template {#sec-prompts}
+
+The AI does not code freely --- it follows precise methodological instructions that govern each extraction and classification decision. In version 1.0 of the project these instructions were supplied in prompts external to the template. In version 2.0 they moved into the template itself through the `GUIDELINES` block, making the `.synt` the single versioned repository of the whole methodology.
+
+:::{.callout-tip}
+## The template as methodological playbook
+With `GUIDELINES`, the template stops being a data schema and becomes an **executable playbook**: each field defines not only *what* to store but *how* the AI should decide what to extract. The instructions live next to the structure, versioned in the same file, auditable by any collaborator.
+:::
+
+## Excerpt Selection
+
+The `text` field instructs the AI to extract only **complete semantic units** (1-3 sentences) with subject, verb, object and qualifiers. Each candidate excerpt receives an analytical value score before extraction --- only scores 3-5 are included:
+
+> Score 5: Reveals a causal mechanism or multi-step pathway (explains *how* acceptance works)
+>
+> Score 4: Shows enabling/shaping with a clear mechanism
+>
+> Score 3: Theoretically significant association (`*borderline*`)
+>
+> Score 2: Simple association without mechanism (SKIP)
+>
+> Score 1: Trivial, obvious or redundant (SKIP)
+
+The decisive test, written into the field's `GUIDELINES`: *"Does this explain HOW or WHY social acceptance occurs?"*
+
+## Controlling Conceptual Granularity
+
+The `GUIDELINES` of the `chain` field fight **concept proliferation** — the greatest risk of automated coding — with a generalization hierarchy and a pragmatic decision rule:
+
+> Level 1 --- Core concept: `Acceptance`, `Deployment`, `Policy`, `Trust`, `Cost`
+>
+> Level 2 --- Qualified concept (when the distinction matters): `Public_Acceptance`, `Community_Trust`
+>
+> Level 3 --- Full specification (only when Level 2 loses critical meaning): `Offshore_Wind_Acceptance`
+>
+> *"Will this specific term appear in 5+ abstracts? Likely 1-2 uses → Generalize to Level 1-2."*
+
+The target: fewer than **150 unique concepts** across 450 articles.
+
+## Separating Sequential and Parallel Paths
+
+The `GUIDELINES` of the `chain` field explicitly distinguish the two structural patterns:
+
+**Sequential chain** (A causes B, which causes C) → a single `chain`:
+
+```synesis
+chain: Ownership -> ENABLES -> Financing -> ENABLES -> Deployment
+```
+
+**Parallel paths** (A, B and C independently affect D) → separate `ITEM` blocks, each with its own `note`/`chain` pair:
+
+```synesis
+chain: Trust -> INFLUENCES -> Acceptance
+chain: Cost -> INFLUENCES -> Acceptance
+chain: Policy -> INFLUENCES -> Acceptance
+```
+
+This distinction is critical to the quality of the resulting graph: parallel paths mixed into a single chain would create spurious relations.
+
+## Ontological Classification
+
+The `GUIDELINES` of the `aspect`, `dimension` and `confidence` fields instruct the AI to classify each extracted concept following an explicit priority hierarchy:
+
+1. **Semantic meaning** of the concept (primary)
+2. **Relational profile** --- dominant relation types (secondary)
+3. **Co-occurrence patterns** --- frequently associated concepts (tertiary)
+4. **Statistical profile** --- frequency and source diversity (quaternary)
+5. **Taxonomic semantics** --- hierarchical and part-whole relations (quinary)
+
+---
+
+# Real Examples {#sec-exemplos}
+
+The following examples were taken directly from the project and show the full pipeline: source → annotation → ontology.
+
+---
+
+## SOURCE: Epistemic Metadata
+
+Each source records not only *what* the study investigates but *how* --- epistemological model and data collection method.
+
+```synesis
+SOURCE @ashworth2019
+    description: Comparative study of public attitudes toward CCS and
+                 low-carbon energy technologies in Australia and China,
+                 examining factors associated with support levels.
+    epistemic_model: Social acceptance of energy technologies,
+                     comparative public opinion research
+    method: Online survey (Australia n=2383, China n=1266)
+END SOURCE
+```
+
+The `epistemic_model` field allows filtering results by theoretical tradition. At the end of the analysis the researcher can ask: *"Do the causal relations identified by researchers using Diffusion of Innovations differ from those identified by users of Justice Theory?"*
+
+Another example shows a study with a different approach:
+
+```synesis
+SOURCE @aly2019
+    description: Investigates institutional, financial, and technological
+                 barriers to large-scale solar power deployment in Tanzania
+                 through stakeholder interviews.
+    epistemic_model: Stakeholder analysis, barrier identification framework
+    method: Semi-structured interviews (30 experts from public institutions,
+            research, private sector, civil society, development partners,
+            financial institutions)
+END SOURCE
+```
+
+---
+
+## ITEM: Causal Chains with BUNDLE
+
+Each item contains an excerpt and one or more note/chain pairs in a BUNDLE. Here is an example with **multi-factor convergence** --- four independent factors affect the same outcome:
+
+```synesis
+ITEM @ashworth2019
+    text: However, male respondents, those who perceived themselves to
+          have higher knowledge of CCS, and those who valued economic
+          outcomes over environmental protection were more likely to
+          support CCS - as long as the risks were not perceived to
+          outweigh the benefits.
+
+    note: *complex* Four-factor convergence (gender, knowledge,
+          economic values, risk perception) reveals multi-domain
+          determinants requiring integrated communication strategies
+    chain: Gender -> INFLUENCES -> CCS_Support
+
+    note: Self-assessed knowledge increases support, revealing
+          information deficit mechanism where perceived understanding
+          drives acceptance
+    chain: Knowledge -> INFLUENCES -> CCS_Support
+
+    note: Economic prioritization over environmental values predicts
+          support, indicating value-based acceptance mechanism
+    chain: Economic_Value -> INFLUENCES -> CCS_Support
+
+    note: Risk-benefit assessment constrains support, revealing
+          conditional acceptance mechanism where perceived risks
+          override other positive factors
+    chain: Risk_Perception -> CONSTRAINS -> CCS_Support
+END ITEM
+```
+
+Note:
+
+- **4 note/chain pairs** for the same excerpt --- the BUNDLE guarantees positional correspondence
+- The first note carries the `*complex*` flag, indicating multi-factor convergence
+- Three relations are `INFLUENCES` (direct causal effect) and one is `CONSTRAINS` (limitation) --- the semantic distinction is preserved
+- The 4 paths are **parallel** (each factor independently affects `CCS_Support`), so they are separate chains within the same ITEM
+
+Now an example of a **sequential chain** --- one factor triggers another in cascade:
+
+```synesis
+ITEM @aly2019
+    text: Institutional barriers for the diffusion of large-scale solar
+          power technologies are found to be predominant, and they often
+          trigger financial and technological barriers.
+
+    note: Reveals sequential triggering mechanism where institutional
+          barriers activate downstream financial and technological
+          constraints
+    chain: Institutional_Barrier -> ENABLES -> Financial_Barrier
+                                 -> ENABLES -> Technological_Barrier
+END ITEM
+```
+
+Here a single chain of 3 concepts expresses the sequential mechanism: institutional barriers *enable* (make possible) financial barriers, which in turn *enable* technological barriers. The `ENABLES` relation is used in the sense of necessary condition --- without the institutional barrier, the others would not appear.
+
+---
+
+## ONTOLOGY: Multidimensional Classification
+
+Each concept mentioned in the chains is defined in the ontology with a classification along several dimensions. Here are two contrasting concepts:
+
+### A High-confidence Concept
+
+```synesis
+ONTOLOGY Cost
+    topic: Economics
+    aspect: 11
+    dimension: 2
+    confidence: HIGH
+
+    reasoning: Aspect 11: Core economic factor representing financial
+               expenditure. Mainly constrains deployment/technology
+               development while enabling market penetration when
+               reduced. Co-occurs with Deployment and Acceptance,
+               indicating market-consumer relevance. Dimension 2:
+               Directly affects investors, consumers, and market
+               competitiveness. High frequency (96) across broad
+               sources (66) confirms central role.
+
+    ontology_description: Economic factor representing financial expenditure
+                 associated with energy technologies and systems.
+                 Acts as primary barrier constraining technology
+                 development, site selection, and deployment when
+                 high, while enabling market penetration, technology
+                 transition, and sustainable solutions when reduced.
+
+    rgt_element_a: Low_Cost
+    rgt_element_b: High_Cost
+    theoretical_significance: 0
+END ONTOLOGY
+```
+
+- **topic** `Economics` --- emergent thematic grouping (TOPIC, open values)
+- **aspect** `11` (Economic) --- Dooyeweerd's modal classification (ORDERED, 16 values)
+- **dimension** `2` (Market_Acceptance) --- Wüstenhagen's dimension (ORDERED, 5 values)
+- **confidence** `HIGH` --- frequency 96, in 66 different sources (ENUMERATED)
+- **reasoning** --- justification of the classification, including statistical evidence (TEXT)
+- **rgt_element_a/b** --- bipolar construct: `Low_Cost` vs `High_Cost` (TEXT)
+- **theoretical_significance** --- 0-5 scale (SCALE)
+
+### A Low-confidence Concept
+
+```synesis
+ONTOLOGY Climate_Belief
+    topic: Worldview
+    aspect: 15
+    dimension: 1
+    confidence: LOW
+
+    reasoning: Aspect 15 (Fiducial): Climate belief represents
+               worldview and conviction about climate change causation.
+               Relations show influences on acceptability and support.
+               Co-occurs with CCS support and acceptability factors.
+               Dimension 1: Affects community-level acceptance of
+               technologies like tidal and CCS. Low frequency (2)
+               and sources (2) limit robustness.
+
+    ontology_description: Climate belief refers to individuals' conviction
+                 regarding the existence and anthropogenic causation
+                 of climate change. In energy transition contexts,
+                 this worldview shapes acceptance of low-carbon
+                 technologies, with believers in human-induced
+                 climate change showing differential support patterns.
+
+    rgt_element_a: Strong_Climate_Belief
+    rgt_element_b: Weak_Climate_Belief
+    theoretical_significance: 0
+END ONTOLOGY
+```
+
+The contrast is instructive:
+
+| | Cost | Climate_Belief |
+|---|---|---|
+| **confidence** | HIGH (96 occurrences, 66 sources) | LOW (2 occurrences, 2 sources) |
+| **aspect** | 11 Economic | 15 Fiducial |
+| **dimension** | 2 Market | 1 Community |
+| **topic** | Economics | Worldview |
+
+`Cost` is a central concept of the corpus --- it appears in 66 different articles. `Climate_Belief` is peripheral --- it emerges in only 2 sources. Both receive the same classification structure, but the `confidence` field tells the researcher which deserves more weight in the analysis.
+
+---
+
+# The Role of Human Review {#sec-revisao}
+
+The AI produces consistent results at scale but makes systematic errors the researcher must correct:
+
+- **Excessive generalization**: the AI tends to simplify concepts beyond what is desirable (e.g. collapsing `Procedural Justice` and `Distributive Justice` into just `Justice`)
+- **Imprecise relations**: the distinction between `ENABLES` and `INFLUENCES` requires contextual judgement the AI does not always get right
+- **Duplicated concepts**: wording variants (`Public Acceptance` vs `Social Acceptance`) can create ontologically distinct concepts that are actually the same phenomenon
+- **Truncated excerpts**: despite the instructions, the AI occasionally extracts fragments that are not self-contained
+
+Synesis supports this review because the template **structurally validates** the results: a concept mentioned in `chain` without a definition in the ontology produces a warning (an error with `--strict`); an incomplete note/chain pair violates the BUNDLE and is a compilation error. These mechanisms turn silent failures into explicit messages.
+
+:::{.callout-tip}
+## The AI codes, the template validates, the researcher decides
+The workflow is: the AI generates data at scale → the Synesis compiler validates the structure → the researcher reviews the content. Each actor does what it does best.
+:::
+
+---
+
+# Summary {#sec-resumo}
+
+| Step | Who does it | What it produces |
+|-------|---------|--------------|
+| Corpus selection | Researcher (bibliometrics) | List of ~450 relevant articles |
+| Template design | Researcher | `.synt` with analytical structure, theoretical frameworks and per-field `GUIDELINES` |
+| Coding | AI (LLM) | `.syn` (annotations) and `.syno` (ontology) |
+| Structural validation | Synesis compiler | Reference, BUNDLE, ARITY and type errors |
+| Content review | Researcher | Corrections to generalization, relations and duplicates |
+| Export | Synesis compiler and synesis-graph | JSON and Excel for quantitative analysis; Neo4j or ArcadeDB graph |
+
+: AI-assisted coding pipeline {.striped .hover}
+
+:::{.callout-note}
+## From external prompts to GUIDELINES in the template
+In version 1.0 of the project, "Prompt design" was a separate step: the methodological instructions lived in external documents and had to be included manually in each call to the LLM. In version 2.0 this step was absorbed into the template through `GUIDELINES` — the `.synt` became the single repository of structure **and** methodology, versioned with the project.
+
+Today this workflow is run by [synesis-coder](../howto/synesis_coder.qmd), which assembles the instructions to the model from the template itself.
+:::

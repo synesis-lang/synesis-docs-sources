@@ -1,0 +1,216 @@
+---
+title: "Synesis for Legal Professionals"
+subtitle: "How a structured language turns legal knowledge into auditable institutional heritage"
+---
+
+Human knowledge is naturally intricate, full of nuance and deep connections. In the course of their work, legal professionals accumulate contract analyses, read and annotated opinions, case law, meeting notes and hearing records — plus a vast amount of qualitative knowledge.
+
+## A Language That Both People and Computers Understand
+
+Legal professionals already live with specialized languages. **Legal Latin** is the clearest example: expressions absent from everyday speech, with a rich vocabulary and their own rules of use, which any jurist understands precisely.
+
+Synesis is a computer Domain-Specific Language (DSL) that plays an analogous role for textual knowledge. Its grammar is recognized by both people and computers. It imposes structure on annotations so that the computer can check automatically whether they conform to a pre-established contract — the **template**.
+
+The template is flexible enough to serve completely different configurations, defined according to each professional's or team's needs. A lawyer may create a configuration to organize cases and documents, classify them into categories and establish explicit connections among them. In a case database, for instance, it is possible to identify themes, recurring concepts and relations between the parties involved.
+
+Synesis records not only **what** — a fact, an argument, a doctrinal position — but also **why** and **how it connects to other things**. A legal professional may document, for example, that the absence of objective good faith in a contractual relationship tends to compromise performance — and link that interpretation directly to the contract passage that supports it, the scholarly article that informed it and the precedent that confirms it. This web of causal and conceptual relations, previously scattered across documents and memory, comes to exist explicitly, verifiably and shareably.
+
+
+## The Synesis Ecosystem
+
+The language itself is only the starting point. The **Synesis ecosystem** is the set of tools that makes the process practical, covering several stages of knowledge governance.
+
+**Creating and validating annotations.** A dedicated editing environment assists the professional while annotating: it checks in real time whether required fields are filled in, whether values are correct and whether references between documents are consistent. Problems are flagged immediately, before they pile up.
+
+**Organizing and exporting knowledge.** Accumulated knowledge can be converted into the formats most used in professional data work — spreadsheets, specialized structured formats — and becomes available for analysis, sharing or integration with other tools. For larger projects, the whole network of concepts and relations built along the way can be visualized.
+
+**Natural language querying.** The compiled collection becomes queryable as a conversation. A professional can ask which decisions deal with a theme, which concepts connect to a specific precedent or how an understanding evolved over time — and obtain answers traceable to the original sources.
+
+
+## What Synesis Is Not
+
+It is also important to say what Synesis **is not**. A compiler validates structure — it ensures that required fields are present and declared values are valid. The intellectual content — interpreting a ruling, identifying a *ratio decidendi*, building a line of argument — is and remains human work.
+
+Annotations are stored as plain text files, readable in any editor, with no dependence on a platform or proprietary format. Annotations may nonetheless be produced with the help of Artificial Intelligence, speeding up knowledge curation in a process that people can easily audit.
+
+For a law firm, this means that the knowledge built by an experienced partner over decades is not trapped in their memory or lost in disorganized files. It becomes **institutional heritage**, auditable and evolving.
+
+---
+
+## Practical Examples
+
+The examples use Brazilian law and keep the original Portuguese legal terms where they are part of the data.
+
+### The Structure of an Annotation
+
+A Synesis annotation consists of three blocks which together capture all the knowledge produced about a document. The following example starts from a ruling of the Brazilian Superior Court of Justice (STJ) on the right to privacy.
+
+**SOURCE block — the traceable origin**
+
+Records the source document with all its metadata. No ITEM exists without a corresponding SOURCE — traceability is structurally enforced.
+
+```synesis
+SOURCE @stj_petition_1234
+    access_date: 2026-02-17
+    document_type: RULING
+    court: STJ
+    case_number: 1234/2025
+    reporting_judge: Justice John Doe
+    judgment_date: 2025-11-10
+    publication_date: 2025-11-20
+    judging_body: Third Panel
+    outcome: GRANTED
+    url: https://processo.stj.jus.br/processo/pesquisa/?tipoPesquisa=tipoPesquisaNumeroRegistro&termo=1234
+END SOURCE
+```
+
+**ITEM block — the passage and its interpretation**
+
+Records the relevant passage, the professional's interpretation and the connections with other concepts. The `chain` field expresses explicit relations between concepts — not only that two themes appear in the same document, but how one prevails over the other.
+
+```synesis
+ITEM @stj_petition_1234
+    locus: Federal Constitution, art. 5, item X
+    quote: "intimacy, private life, honor and image of persons are inviolable"
+    note: The provision enshrines privacy as an absolute fundamental right, the ratio decidendi of the appealed decision.
+    chain: Right_to_Privacy -> OVERRULES -> Unauthorized_Exposure
+END ITEM
+```
+
+**ONTOLOGY block — the controlled vocabulary**
+
+Defines the concepts used in annotations. It ensures that every team member uses the same terms with the same meaning — removing fragmentation by synonymy at the root.
+
+```synesis
+ONTOLOGY Right_to_Privacy
+    topic: Personality_Rights
+    description: Fundamental individual right securing control over one's intimate sphere, personal data and private life, barring unconsented interference by third parties or the State. Basis: Federal Constitution, art. 5, item X; Civil Code, art. 21; General Data Protection Law, art. 2, I.
+END ONTOLOGY
+```
+
+### The Template — the Contract Governing the Whole Analysis
+
+The template defines which fields are required, which are optional and which values are accepted. It is what lets the compiler validate each annotation automatically. Although its syntax looks technical, a template is usually defined once at the start of a project — with specialist support or with the help of artificial intelligence.
+
+```synesis
+TEMPLATE privacy_case_law version: "1.0"
+
+SOURCE FIELDS
+    REQUIRED document_type, court, case_number
+    REQUIRED judgment_date, outcome
+    OPTIONAL reporting_judge, judging_body, publication_date
+    OPTIONAL url, access_date
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED locus, quote, note
+    OPTIONAL chain
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED description
+    OPTIONAL topic
+END ONTOLOGY FIELDS
+
+FIELD document_type TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Type of legal document
+    VALUES
+        RULING:    Appellate ruling
+        JUDGMENT:  First-instance judgment
+        OPINION:   Legal opinion
+        STATUTE:   Normative text
+    END VALUES
+END FIELD
+
+FIELD outcome TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Outcome of the judgment
+    VALUES
+        GRANTED:        Appeal granted
+        DENIED:         Appeal denied
+        PARTIAL:        Partially granted
+        NOT_ADMITTED:   Appeal not admitted
+    END VALUES
+END FIELD
+
+FIELD court TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Court or body issuing the document
+END FIELD
+
+FIELD case_number TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Case identification number
+END FIELD
+
+FIELD judgment_date TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Date of judgment
+END FIELD
+
+FIELD reporting_judge TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Name of the reporting justice or judge
+END FIELD
+
+FIELD judging_body TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Panel, chamber or body responsible for the judgment
+END FIELD
+
+FIELD publication_date TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Date the decision was published
+END FIELD
+
+FIELD url TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Address of the document in the court system
+END FIELD
+
+FIELD access_date TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Date the document was accessed
+END FIELD
+
+FIELD locus TYPE TEXT
+    SCOPE ITEM
+    DESCRIPTION Location of the passage within the norm or decision
+END FIELD
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Passage quoted literally from the document
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Professional's interpretation and analysis of the passage
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relation between legal concepts identified in the passage
+    RELATIONS
+        OVERRULES:        Thesis prevails over a previous understanding
+        CITES_PRECEDENT:  Decision grounded in a previous case
+        DISTINGUISHES:    Current case distinguished from the general rule
+    END RELATIONS
+END FIELD
+
+FIELD description TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definition of the legal concept, including normative basis
+END FIELD
+
+FIELD topic TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Branch or legal domain the concept belongs to
+END FIELD
+```
+
+This is only one of countless possible configurations. A labour lawyer may structure a case-law base completely differently. A corporate legal department may create one template for contract management, another for regulatory monitoring and another for internal opinions. A legal scholar may map the doctrinal evolution of a concept over decades.
+
+The grammar is the same. What changes is what each professional decides to build within it.

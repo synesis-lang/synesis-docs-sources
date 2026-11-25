@@ -5,7 +5,7 @@ subtitle: "A especificação formal LALR(1) do Synesis — comentada regra por r
 
 ::: {.callout-tip}
 ## Para quem é este documento?
-Devs que precisam entender, estender ou depurar a sintaxe do Synesis. A gramática abaixo é a **especificação canônica** — o compilador a executa literalmente. Se o compilador aceita ou rejeita algo, a resposta está aqui.
+Devs que precisam entender, estender ou depurar a sintaxe do Synesis. A gramática abaixo é a **especificação canônica** — o compilador a executa literalmente. Se o compilador aceita ou rejeita algo na sintaxe, a resposta está aqui. Esta página acompanha o arquivo `synesis/grammar/synesis.lark` do **synesis 0.16.0**.
 
 Para entender o fluxo completo de compilação (não apenas a gramática), veja [Por Dentro do Compilador](../explanation/fluxo_compilacao_interno.qmd).
 :::
@@ -13,7 +13,7 @@ Para entender o fluxo completo de compilação (não apenas a gramática), veja 
 
 ## Como ler este documento
 
-A gramática usa o formato **Lark EBNF**, que funciona assim:
+A gramática usa o formato **Lark EBNF**:
 
 | Sintaxe | Significado |
 |---|---|
@@ -24,12 +24,17 @@ A gramática usa o formato **Lark EBNF**, que funciona assim:
 | `A?` | `A` é opcional (zero ou uma vez) |
 | `"texto"` | Literal exato |
 | `/regex/` | Padrão regex |
-| `/regex/i` | Regex case-insensitive |
+| `/regex/i` | Regex que ignora maiúsculas e minúsculas |
 | `TOKEN.N` | Token com prioridade `N` (maior = preferido em caso de ambiguidade) |
 | `_INDENT` / `_DEDENT` | Tokens de indentação gerados automaticamente |
 
 Regras em **minúsculas** (`project_block`) são regras gramaticais — produzem nós na árvore sintática.
 Regras em **MAIÚSCULAS** (`IDENTIFIER`) são tokens — unidades atômicas reconhecidas pelo lexer.
+
+::: {.callout-note}
+## Gramática permissiva, semântica rigorosa
+Várias restrições da linguagem **não** estão na gramática, e sim no validador semântico. É deliberado: um erro de gramática é um "token inesperado"; um erro semântico explica o que fazer. **Erro de gramática não ensina; erro semântico sim.**
+:::
 
 
 ## Ponto de partida {#sec-start}
@@ -48,24 +53,19 @@ block: project_block
      | field_def_block
 ```
 
-Um arquivo Synesis é uma lista de blocos. Quais blocos são válidos depende do tipo de arquivo:
+Um arquivo Synesis é uma lista de blocos. Quais blocos fazem sentido depende do tipo de arquivo:
 
 - **`.synp`** contém um `project_block`
 - **`.syn`** contém `source_block` e `item_block`
 - **`.syno`** contém `ontology_block`
 - **`.synt`** contém `template_header`, `field_spec_block` e `field_def_block`
 
-A gramática não impõe essa regra — ela aceita qualquer combinação. É o **validador semântico** (estágio posterior) que verifica se os blocos fazem sentido no contexto do tipo de arquivo.
-
-::: {.callout-note}
-## Por que `(block | NEWLINE)*`?
-As linhas em branco (`NEWLINE`) entre blocos precisam ser aceitas explicitamente. Sem isso, o parser exigiria que os blocos fossem colados uns nos outros.
-:::
+A gramática aceita qualquer combinação; é o validador semântico que verifica o contexto. Um `.syn` ou `.syno` vazio, ou só com comentários, é tratado antes do parser e não declara bloco algum.
 
 
 ## Keywords {#sec-keywords}
 
-Todas as palavras-chave são **case-insensitive** — `PROJECT`, `project` e `Project` são equivalentes:
+Todas as palavras-chave ignoram maiúsculas e minúsculas — `PROJECT`, `project` e `Project` são equivalentes:
 
 ```lark
 KW_PROJECT.5: /project/i
@@ -76,6 +76,7 @@ KW_TEMPLATE.5: /template/i
 KW_FIELD.5: /field/i
 KW_END.5: /end/i
 KW_INCLUDE.5: /include/i
+KW_SHARED.5: /shared(?![\p{L}\p{N}_-])/i
 KW_BIBLIOGRAPHY.5: /bibliography/i
 KW_ANNOTATIONS.5: /annotations/i
 KW_FIELDS.5: /fields/i
@@ -86,41 +87,48 @@ KW_BUNDLE.5: /bundle/i
 KW_TYPE.5: /type/i
 KW_SCOPE.5: /scope/i
 KW_FORMAT.5: /format/i
-KW_DESCRIPTION.5: /description/i
+KW_DESCRIPTION.5: /description(?![\p{L}\p{N}_-])/i
 KW_ARITY.5: /arity/i
 KW_VALUES.5: /values/i
 KW_RELATIONS.5: /relations/i
 KW_METADATA.5: /metadata/i
-KW_QUOTATION.5: /quotation/i
-KW_MEMO.5: /memo/i
-KW_CODE.5: /code/i
-KW_CHAIN.5: /chain/i
-KW_TEXT.5: /text/i
-KW_DATE.5: /date/i
-KW_SCALE.5: /scale/i
-KW_ENUMERATED.5: /enumerated/i
-KW_ORDERED.5: /ordered/i
+KW_QUOTATION.5: /quotation(?![\p{L}\p{N}_-])/i
+KW_MEMO.5: /memo(?![\p{L}\p{N}_-])/i
+KW_CODE.5: /code(?![\p{L}\p{N}_-])/i
+KW_CHAIN.5: /chain(?![\p{L}\p{N}_-])/i
+KW_TEXT.5: /text(?![\p{L}\p{N}_-])/i
+KW_DATE.5: /date(?![\p{L}\p{N}_-])/i
+KW_SCALE.5: /scale(?![\p{L}\p{N}_-])/i
+KW_ENUMERATED.5: /enumerated(?![\p{L}\p{N}_-])/i
+KW_ORDERED.5: /ordered(?![\p{L}\p{N}_-])/i
 KW_TOPIC.5: /topic(?![\p{L}\p{N}_-])/i
 KW_GUIDELINES.5: /guidelines/i
-KW_SHARED.5: /shared(?![\p{L}\p{N}_-])/i
+
+// blocos do .synp
+KW_EXPORT.5: /export(?![\p{L}\p{N}_-])/i
+KW_MAP.5: /map(?![\p{L}\p{N}_-])/i
+KW_QUESTIONS.5: /questions(?![\p{L}\p{N}_-])/i
+KW_PHASE.5: /phase(?![\p{L}\p{N}_-])/i
+
+// propriedades de FIELD e origem de valores
+KW_ROLE.5: /role(?![\p{L}\p{N}_-])/i
 KW_IDENTIFIES.5: /identifies(?![\p{L}\p{N}_-])/i
 KW_REFERS.5: /refers(?![\p{L}\p{N}_-])/i
 KW_TO.5: /to(?![\p{L}\p{N}_-])/i
 KW_ON.5: /on(?![\p{L}\p{N}_-])/i
+KW_DATASET.5: /dataset(?![\p{L}\p{N}_-])/i
+KW_CONTEXT.5: /context(?![\p{L}\p{N}_-])/i
+KW_FROM.5: /from(?![\p{L}\p{N}_-])/i
 ```
 
-A prioridade `.5` garante que keywords tenham preferência sobre `IDENTIFIER` e `FIELD_NAME` (prioridade `.1`) quando há ambiguidade. Isso é crítico — sem essa prioridade, `SOURCE` seria reconhecido como um identificador genérico em vez de uma keyword.
+A prioridade `.5` garante que as keywords prevaleçam sobre `IDENTIFIER` e `FIELD_NAME` (prioridade `.1`). Sem ela, `SOURCE` seria reconhecido como identificador genérico.
 
 ### Lookahead de fronteira
 
-Algumas keywords trazem o sufixo `(?![\p{L}\p{N}_-])` — um *negative lookahead* que impede o token de casar como **prefixo de um nome maior**. Sem ele, um campo chamado `topic_principal` teria seu início consumido pela keyword `TOPIC`, e o restante (`_principal`) viraria lixo sintático.
-
-O cuidado é especialmente necessário nas palavras curtas introduzidas pela ligação entre projetos: `TO` e `ON` casariam dentro de nomes comuns como `to_do`, `total`, `on_hold` ou `onset`. Com o lookahead, `FIELD total TYPE TEXT` continua sendo um nome de campo, não a keyword `TO` seguida de `tal`.
+O sufixo `(?![\p{L}\p{N}_-])` é um *negative lookahead* que impede o token de casar como **prefixo de um nome maior**. Sem ele, um campo chamado `code_quality` teria o início consumido pela keyword `CODE`, e o restante viraria lixo sintático. Isso vale para os nomes dos tipos e para as palavras curtas: `TO` e `ON` casariam dentro de `total`, `to_do`, `on_hold` ou `onset`. Com o lookahead, `texto`, `chain_length`, `date_created` e `topic_area` são nomes de campo.
 
 
 ## Bloco PROJECT {#sec-project}
-
-O bloco PROJECT é o ponto de entrada de todo projeto Synesis:
 
 ```lark
 project_block: KW_PROJECT IDENTIFIER NEWLINE project_body KW_END KW_PROJECT
@@ -128,58 +136,66 @@ project_block: KW_PROJECT IDENTIFIER NEWLINE project_body KW_END KW_PROJECT
 project_body: _INDENT project_items _DEDENT
             | project_items
 
-project_items: (include_stmt | metadata | description | NEWLINE)+
+project_items: (include_stmt | metadata | description | questions
+                | phase_block | export_block | NEWLINE)+
 ```
 
-Aceita um nome (`IDENTIFIER`), seguido de declarações internas: includes, metadata e description.
+O corpo pode estar todo recuado ou todo na coluna 0.
 
-### Declarações INCLUDE e TEMPLATE
+### TEMPLATE e INCLUDE
 
 ```lark
 include_stmt: KW_TEMPLATE STRING NEWLINE
             | KW_INCLUDE include_type STRING NEWLINE
-include_type: KW_SHARED? (KW_BIBLIOGRAPHY | KW_ANNOTATIONS | KW_ONTOLOGY)
+include_type: KW_SHARED? (KW_BIBLIOGRAPHY | KW_ANNOTATIONS | KW_ONTOLOGY | KW_DATASET)
 ```
 
-O TEMPLATE é declarado diretamente; os demais arquivos usam `INCLUDE tipo "caminho"`.
-
-Exemplo de uso:
 ```synesis
 PROJECT demo
     TEMPLATE "template.synt"
     INCLUDE BIBLIOGRAPHY "references.bib"
-    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ANNOTATIONS "annotations/"
     INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE DATASET "records/*.toml"
     INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
 END PROJECT
 ```
 
-::: {.callout-note}
-## Por que a gramática é permissiva com `SHARED`
+`KW_SHARED?` aparece antes de **qualquer** tipo, embora só valha para `ONTOLOGY`: `INCLUDE SHARED BIBLIOGRAPHY` faz o parse e recebe o [erro E084](guia_erros.qmd#sec-e084), com a explicação.
 
-`KW_SHARED?` aparece antes de **qualquer** tipo de inclusão, embora `SHARED` só seja válido para `ONTOLOGY`. A restrição é **semântica**, não sintática: `INCLUDE SHARED BIBLIOGRAPHY "..."` faz o parse normalmente e depois recebe o erro 84, com mensagem explicando por que a exceção existe apenas para ontologia.
-
-Codificar a restrição na gramática produziria um "token inesperado" cru — sintaticamente correto, mas pedagogicamente inútil. A escolha é deliberada: **erro de gramática não ensina; erro semântico sim.**
-:::
-
-### Metadata e Description
+### METADATA, DESCRIPTION e QUESTIONS
 
 ```lark
-metadata: KW_METADATA NEWLINE _INDENT (metadata_line | NEWLINE)+ _DEDENT
-          KW_END KW_METADATA NEWLINE
+metadata: KW_METADATA NEWLINE _INDENT (metadata_line | NEWLINE)+ _DEDENT KW_END KW_METADATA NEWLINE
 metadata_line: TEXT_LINE NEWLINE
 
-description: KW_DESCRIPTION NEWLINE description_lines
-             KW_END KW_DESCRIPTION NEWLINE?
+description: KW_DESCRIPTION NEWLINE description_lines KW_END KW_DESCRIPTION NEWLINE?
 description_lines: (TEXT_LINE NEWLINE | NEWLINE)+
+
+questions: KW_QUESTIONS NEWLINE _INDENT question_lines _DEDENT KW_END KW_QUESTIONS NEWLINE?
+question_lines: (TEXT_LINE NEWLINE | NEWLINE)+
 ```
 
-Metadata e description são blocos de texto livre, delimitados por `END METADATA` e `END DESCRIPTION`.
+São blocos de texto livre. Note a diferença de recuo: `DESCRIPTION` **não** declara `_INDENT` (as linhas ficam no mesmo nível da keyword), enquanto `METADATA` e `QUESTIONS` exigem linhas recuadas. A forma `<id>: <texto>` das questões é conferida pelo compilador ([E091](guia_erros.qmd#sec-e091)–[E093](guia_erros.qmd#sec-e093)).
+
+### PHASE e EXPORT
+
+```lark
+phase_block: KW_PHASE phase_scope IDENTIFIER NEWLINE _INDENT (export_prop | NEWLINE)+ _DEDENT KW_END KW_PHASE NEWLINE?
+phase_scope: KW_ANNOTATIONS | KW_ONTOLOGY
+
+export_block: KW_EXPORT IDENTIFIER IDENTIFIER? NEWLINE _INDENT (map_stmt | export_prop | NEWLINE)+ _DEDENT KW_END KW_EXPORT NEWLINE?
+export_prop: (IDENTIFIER | KW_DESCRIPTION) TEXT_LINE NEWLINE
+
+map_stmt: KW_MAP KW_RELATIONS? map_names (KW_FROM IDENTIFIER)? KW_TO map_target NEWLINE
+map_names: field_key ("," field_key)*
+map_target: IDENTIFIER+
+```
+
+As propriedades (`OUTPUT`, `NAMESPACE`, `FIELDS`, `INPUT`…) são **palavras comuns**, e o formato do `EXPORT` é um identificador. A gramática não muda quando surge uma propriedade nova; quem as confere é o compilador.
 
 
 ## Blocos de anotação {#sec-annotation}
-
-Os três blocos de anotação compartilham a mesma estrutura interna — apenas a keyword de abertura/fechamento muda:
 
 ```lark
 source_block: KW_SOURCE BIBREF NEWLINE
@@ -197,24 +213,20 @@ ontology_block: KW_ONTOLOGY concept_name NEWLINE
 concept_name: CONCEPT_NAME
 ```
 
-Aspectos importantes:
-
-- **SOURCE** e **ITEM** recebem um `BIBREF` (ex: `@smith2024`).
-- **ONTOLOGY** recebe um `concept_name` — que é mais flexível (pode conter espaços; veja a seção de [Tokens](#sec-tokens)).
-- O corpo `(field_entry | NEWLINE)*` é **opcional** — blocos vazios são sintaticamente válidos (mas o validador semântico pode rejeitá-los, como E023: EmptyItemBlock).
-- A indentação (`_INDENT`/`_DEDENT`) delimita o corpo do bloco.
+- `SOURCE` e `ITEM` recebem um `BIBREF` (ex.: `@smith2024`).
+- `ONTOLOGY` recebe um `concept_name`, mais permissivo (veja [Tokens](#sec-tokens)).
+- O corpo é **opcional**: blocos vazios são sintaticamente válidos, mas o validador pode rejeitá-los ([E023](guia_erros.qmd#sec-e023)).
+- A indentação (`_INDENT`/`_DEDENT`) delimita o corpo.
 
 
 ## Campos e valores {#sec-fields}
-
-Os campos (`field_entry`) aparecem dentro dos blocos de anotação. São o coração dos dados:
 
 ```lark
 field_entry: field_key ":" value NEWLINE continuation_block?
            | field_key ":" NEWLINE _INDENT text_block _DEDENT NEWLINE?
 ```
 
-Duas formas: valor na mesma linha (com continuação opcional), ou valor multilinha indentado.
+Duas formas: valor na mesma linha (com continuação opcional) ou valor que começa na linha seguinte, recuado.
 
 ### Chaves de campo
 
@@ -225,7 +237,7 @@ field_key: FIELD_NAME
          | KW_SCALE | KW_ENUMERATED | KW_ORDERED
 ```
 
-O `field_key` aceita tanto nomes definidos pelo usuário (`FIELD_NAME`) quanto keywords que podem ser usadas como nomes de campo. Isso permite campos como `code:`, `chain:` e `description:` — que são simultaneamente keywords e nomes de campo.
+Além dos nomes definidos pelo usuário (`FIELD_NAME`), as keywords de tipo podem nomear campos — daí `code:`, `chain:` e `description:`.
 
 ### Tipos de valor
 
@@ -238,27 +250,20 @@ value: STRING
      | TEXT_LINE
 ```
 
-O parser tenta cada alternativa na ordem acima. A prioridade dos tokens (`.2`, `.3`, `.4`) resolve ambiguidades:
-
-- `NUMBER.4` tem prioridade máxima — `42` é reconhecido como número, não como texto
-- `CHAIN_ELEMENT.2` e `CODE_ELEMENT.2` têm prioridade intermediária
-- `TEXT_LINE.3` captura todo o resto
+As prioridades dos tokens (`.2`, `.3`, `.4`) resolvem ambiguidades. A interpretação final do valor depende do **tipo declarado no template**: um `TEXT` com `->` continua sendo texto.
 
 ### Listas de código e expressões de cadeia
 
 ```lark
 code_list: CODE_ELEMENT ("," CODE_ELEMENT)*
-
 chain_expr: CHAIN_ELEMENT ("->" CHAIN_ELEMENT)+
 ```
 
-Códigos são separados por vírgula; elementos de cadeia são separados por `->`.
-
-Exemplos:
 ```synesis
-code: Social_Cohesion, Collective_Action
-
-chain: Trust -> Cooperation -> Collective_Action
+ITEM @smith2024
+    code: Social_Cohesion, Collective_Action
+    chain: Trust -> Cooperation -> Collective_Action
+END ITEM
 ```
 
 ### Texto multilinha
@@ -268,20 +273,18 @@ continuation_block: _INDENT text_block _DEDENT
 text_block: TEXT_LINE (NEWLINE TEXT_LINE)* NEWLINE?
 ```
 
-Quando o valor de um campo não cabe numa linha, o texto continua nas linhas seguintes com indentação:
-
 ```synesis
-note: Participant describes spontaneous collective action as a
-    primary resilience mechanism, bypassing formal institutions.
-    Suggests strong bonding social capital.
+ITEM @smith2024
+    note: Participant describes spontaneous collective action as a
+        primary resilience mechanism, bypassing formal institutions.
+        Suggests strong bonding social capital.
+END ITEM
 ```
 
-O `_INDENT` e `_DEDENT` são gerados pelo `SynesisIndenter` — funciona como a indentação significativa do Python.
+`_INDENT` e `_DEDENT` são gerados pelo `SynesisIndenter`, como na indentação significativa do Python. A partir do synesis 0.16.0, as linhas de continuação chegam inteiras ao valor, também em listas de códigos e cadeias.
 
 
 ## Bloco TEMPLATE {#sec-template}
-
-O template define a estrutura que todos os blocos de anotação devem seguir:
 
 ### Cabeçalho
 
@@ -290,7 +293,9 @@ template_header: KW_TEMPLATE IDENTIFIER template_meta*
 template_meta: IDENTIFIER ":" value
 ```
 
-### Especificação de campos por escopo
+Não há `NEWLINE` na regra: os metadados vão **na mesma linha** do nome.
+
+### Campos por escopo
 
 ```lark
 field_spec_block: scope_type KW_FIELDS NEWLINE _INDENT field_list _DEDENT
@@ -299,35 +304,27 @@ scope_type: KW_SOURCE | KW_ITEM | KW_ONTOLOGY
 
 field_list: (requirement_clause | NEWLINE)*
 requirement_clause: KW_REQUIRED bundle_modifier? field_names
-                  | KW_OPTIONAL field_names
+                  | KW_OPTIONAL bundle_modifier? field_names
                   | KW_FORBIDDEN field_names
                   | KW_REQUIRED field_key KW_ON KW_BIBLIOGRAPHY
                   | KW_OPTIONAL field_key KW_ON KW_BIBLIOGRAPHY
+                  | KW_REQUIRED field_key KW_ON KW_DATASET STRING
+                  | KW_OPTIONAL field_key KW_ON KW_DATASET STRING
 
 bundle_modifier: KW_BUNDLE
 field_names: field_key ("," field_key)*
 ```
 
-Define quais campos são obrigatórios, opcionais ou proibidos para cada escopo. O modificador `BUNDLE` indica que os campos devem aparecer sempre juntos.
-
-Exemplo:
-```synesis
-ITEM FIELDS
-    REQUIRED citation, note, code
-END ITEM FIELDS
-```
-
-O sufixo `ON BIBLIOGRAPHY` declara que o valor do campo vem da entrada `.bib` do SOURCE, não do texto do documento:
+As alternativas com `ON BIBLIOGRAPHY` e `ON DATASET` usam `field_key` (singular), não `field_names`. Numa lista, `REQUIRED a, b ON BIBLIOGRAPHY` seria ambíguo; a gramática elimina o caso.
 
 ```synesis
 SOURCE FIELDS
     REQUIRED lattes_id ON BIBLIOGRAPHY
+    OPTIONAL regiao ON DATASET "entrevista.regiao"
 END SOURCE FIELDS
 ```
 
-Note que as duas alternativas com `ON BIBLIOGRAPHY` usam `field_key` (singular), não `field_names` (lista). Isso é deliberado: numa lista, `REQUIRED a, b, c ON BIBLIOGRAPHY` seria ambíguo — o sufixo se aplicaria a `c` apenas, ou aos três? A gramática resolve a ambiguidade eliminando o caso: **lista + `ON BIBLIOGRAPHY` é erro de sintaxe.**
-
-### Definição de campo individual
+### Definição de campo
 
 ```lark
 field_def_block: KW_FIELD field_key KW_TYPE type_spec
@@ -337,56 +334,34 @@ field_def_block: KW_FIELD field_key KW_TYPE type_spec
 
 type_spec: simple_type | KW_CHAIN | KW_ENUMERATED | KW_ORDERED | KW_TOPIC
 simple_type: KW_QUOTATION | KW_MEMO | KW_CODE | KW_TEXT | KW_DATE | KW_SCALE
-```
 
-Cada campo tem um nome, um tipo, e propriedades opcionais:
-
-```lark
 field_props: KW_SCOPE scope_type
+           | KW_ROLE IDENTIFIER+
            | KW_FORMAT format_spec
            | KW_DESCRIPTION TEXT_LINE
            | KW_ARITY COMPARATOR NUMBER
            | KW_VALUES value_list KW_END KW_VALUES
            | KW_RELATIONS relation_list KW_END KW_RELATIONS
-           | guidelines_block
            | KW_IDENTIFIES entity_label
            | KW_REFERS KW_TO entity_label
+           | KW_CONTEXT KW_FROM KW_DATASET dataset_paths
+           | guidelines_block
 
 entity_label: FIELD_NAME
+dataset_paths: STRING ("," STRING)*
 ```
 
-Cada tipo de campo usa propriedades diferentes:
+A gramática aceita qualquer propriedade em qualquer tipo; a matriz é semântica:
 
-| Tipo | Propriedades típicas |
-|---|---|
-| `QUOTATION`, `MEMO`, `TEXT` | SCOPE, DESCRIPTION |
-| `CODE` | SCOPE, DESCRIPTION |
-| `CHAIN` | SCOPE, ARITY, RELATIONS, DESCRIPTION |
-| `SCALE` | SCOPE, FORMAT (`[min..max]`), DESCRIPTION |
-| `ORDERED` | SCOPE, VALUES (com `[N]` prefixo), DESCRIPTION |
-| `ENUMERATED` | SCOPE, VALUES, DESCRIPTION |
-| `TOPIC` | SCOPE, DESCRIPTION |
-| `DATE` | SCOPE, DESCRIPTION |
+| Tipo | Obrigatória | Exclusivas |
+|---|---|---|
+| `CHAIN` | `ARITY` | `ARITY`, `RELATIONS` |
+| `ORDERED` | `VALUES` (com `[N]`) | `VALUES` |
+| `ENUMERATED` | `VALUES` (sem `[N]`) | `VALUES` |
+| `SCALE` | `FORMAT` | `FORMAT` |
+| demais | — | — |
 
-### Modificadores de ligação
-
-`IDENTIFIES` e `REFERS TO` declaram a participação do campo na ligação entre projetos independentes:
-
-```synesis
-FIELD lattes_id TYPE TEXT
-    SCOPE SOURCE
-    IDENTIFIES researcher      # chave primária da entidade
-END FIELD
-
-FIELD autor_id TYPE TEXT
-    SCOPE SOURCE
-    REFERS TO researcher       # chave estrangeira para a entidade
-END FIELD
-```
-
-O rótulo da entidade (`entity_label`) reusa o token `FIELD_NAME` — mesma classe léxica de um nome de campo. Como qualquer propriedade em `field_props`, os dois modificadores são aceitos pela gramática em campos de **qualquer** escopo; a restrição a `SCOPE SOURCE` é semântica (erro 78), pela mesma razão pedagógica do `SHARED`.
-
-Ver [Ligação entre Projetos](guia_referencia.qmd) no Guia de Referência para a semântica completa.
+`DESCRIPTION`, `GUIDELINES` e `CONTEXT FROM DATASET` valem para todos. `IDENTIFIES` e `REFERS TO` só em `SCOPE SOURCE` ([E078](guia_erros.qmd#sec-e078)); `ROLE` só em `SCOPE ONTOLOGY` ([E108](guia_erros.qmd#sec-e108)). O papel depois de `ROLE` é uma sequência de palavras comuns, conferida contra o catálogo do compilador.
 
 ### VALUES e RELATIONS
 
@@ -403,7 +378,7 @@ relation_list: (relation_entry | NEWLINE)+
 relation_entry: IDENTIFIER ":" TEXT_LINE
 ```
 
-VALUES aceita um prefixo de índice opcional (`[1]`, `[2]`, etc.) para campos `ORDERED`.
+Cada valor é um `IDENTIFIER` (sem espaços) seguido de `:` e de uma descrição. O prefixo `[N]` é obrigatório em `ORDERED` e proibido em `ENUMERATED` ([E087](guia_erros.qmd#sec-e087)).
 
 ### FORMAT e ARITY
 
@@ -412,50 +387,33 @@ format_spec: IDENTIFIER | scale_format
 scale_format: "[" NUMBER ".." NUMBER "]"
 ```
 
-FORMAT define o intervalo para campos SCALE: `[0..10]`, `[1..5]`, etc.
-
-```lark
-KW_ARITY COMPARATOR NUMBER
-```
-
-ARITY define quantos elementos um CHAIN deve ter: `>=2`, `=3`, `<5`, etc.
+`FORMAT` define o intervalo de um `SCALE`: `[0..10]`, `[1..5]`. `ARITY` usa um comparador e um número inteiro: `>= 2`, `= 3`, `< 5`.
 
 ### Bloco GUIDELINES
 
 ```lark
-guidelines_block: KW_GUIDELINES NEWLINE guidelines_lines
-                  KW_END KW_GUIDELINES
+guidelines_block: KW_GUIDELINES NEWLINE guidelines_lines KW_END KW_GUIDELINES
 guidelines_lines: (_INDENT | _DEDENT | guideline_line | NEWLINE)*
 guideline_line: guideline_token+ NEWLINE
-```
-
-O GUIDELINES é um bloco de texto livre dentro de uma definição de FIELD. Aceita praticamente qualquer token — incluindo keywords, identificadores, strings, números e operadores — porque seu conteúdo é documentação em prosa, não código estruturado.
-
-```lark
-guideline_token: TEXT_LINE | IDENTIFIER | FIELD_NAME | BIBREF | STRING
-               | NUMBER | COMPARATOR
-               | KW_PROJECT | KW_SOURCE | KW_ITEM | KW_ONTOLOGY
-               | KW_TEMPLATE | KW_FIELD | KW_INCLUDE | KW_BIBLIOGRAPHY
-               | KW_ANNOTATIONS | KW_FIELDS | KW_REQUIRED | KW_OPTIONAL
-               | KW_FORBIDDEN | KW_BUNDLE | KW_TYPE | KW_SCOPE | KW_FORMAT
-               | KW_DESCRIPTION | KW_ARITY | KW_VALUES | KW_RELATIONS
-               | KW_METADATA | KW_QUOTATION | KW_MEMO | KW_CODE | KW_CHAIN
-               | KW_TEXT | KW_DATE | KW_SCALE | KW_ENUMERATED | KW_ORDERED
-               | KW_TOPIC | KW_GUIDELINES
+guideline_token: TEXT_LINE | IDENTIFIER | FIELD_NAME | BIBREF | STRING | NUMBER | COMPARATOR
+               | KW_PROJECT | KW_SOURCE | KW_ITEM | ... | KW_GUIDELINES
                | COLON | "," | "->"
-
-COLON: ":"
 ```
+
+É prosa dentro de um `FIELD`, por isso aceita quase qualquer token. O texto é remontado a partir dos tokens originais, com a grafia do arquivo.
+
+::: {.callout-tip}
+## Evite começar uma linha de GUIDELINES com keyword
+Palavras como `Include`, `Item`, `Source`, `Field` ou `End` no começo da linha podem confundir a leitura. Reescreva ("Para incluir…" → "Acrescente…"). `#` dentro de `GUIDELINES` não é comentário: a linha vai para o modelo.
+:::
 
 
 ## Tokens {#sec-tokens}
 
-Os tokens são as unidades atômicas reconhecidas pelo lexer, antes de qualquer regra gramatical ser aplicada.
-
 ### Identificadores e referências
 
 ```lark
-BIBREF: "@" /[a-zA-Z][a-zA-Z0-9_-]*/
+BIBREF: "@" /[a-zA-Z0-9][a-zA-Z0-9_-]*/
 
 IDENTIFIER.1: /[\p{L}_][\p{L}\p{N}_\-]*/u
 
@@ -466,35 +424,29 @@ CONCEPT_NAME.0: /[^\s#\n\r][^#\n\r]*/u
 
 | Token | Aceita | Exemplo |
 |---|---|---|
-| `BIBREF` | `@` + letra + alfanumérico/underline/hífen | `@smith2024`, `@WHO-2023` |
-| `IDENTIFIER` | Letra/underline + alfanumérico/underline/hífen | `demo`, `Social_Cohesion` |
-| `FIELD_NAME` | Como IDENTIFIER, mas exclui `END` | `code`, `citation` (nunca `end`) |
-| `CONCEPT_NAME` | Qualquer texto até `#` ou fim de linha | `Social Cohesion`, `Trust-Based Cooperation` |
+| `BIBREF` | `@` + letra ou dígito + alfanumérico/`_`/`-` | `@smith2024`, `@WHO-2023`, `@001` |
+| `IDENTIFIER` | letra/`_` + alfanumérico/`_`/`-` | `demo`, `Social_Cohesion` |
+| `FIELD_NAME` | como `IDENTIFIER`, exceto `END` | `code`, `citation` |
+| `CONCEPT_NAME` | qualquer texto até `#` ou fim de linha | `Social_Cohesion` |
 
 ::: {.callout-important}
 ## FIELD_NAME vs END
-O `FIELD_NAME` usa um lookahead negativo `(?![eE][nN][dD]\b)` para evitar que a keyword `END` seja capturada como nome de campo. Sem isso, `END ITEM` seria parseado como um campo chamado `END` com valor `ITEM`.
+O lookahead negativo `(?![eE][nN][dD]\b)` impede que `END` seja lido como nome de campo; sem ele, `END ITEM` seria um campo chamado `END`.
 :::
 
 ::: {.callout-note}
-## CONCEPT_NAME e espaços
-`CONCEPT_NAME` tem prioridade `.0` (a mais baixa) e aceita espaços. Isso permite conceitos como `Social Cohesion` na ontologia. Os outros tokens (`IDENTIFIER`, `FIELD_NAME`) não aceitam espaços, garantindo que a gramática não seja ambígua nos demais contextos.
+## `CONCEPT_NAME` e espaços
+A gramática aceita espaços no nome de um bloco `ONTOLOGY`, mas um conceito com espaços não pode ser citado em cadeias ([E015](guia_erros.qmd#sec-e015)) nem usado como código ([E033](guia_erros.qmd#sec-e033)). Use `_`.
 :::
 
 ### Elementos de código e cadeia
 
 ```lark
 CHAIN_ELEMENT.2: /[\p{L}_](?:(?!->)[\p{L}\p{N}_\- ])*/u
-
 CODE_ELEMENT.2: /[\p{L}_](?:(?!,)[\p{L}\p{N}_\- ])*/u
 ```
 
-Ambos aceitam espaços internos, mas param antes do seu delimitador:
-
-- `CHAIN_ELEMENT` para antes de `->` (operador de cadeia)
-- `CODE_ELEMENT` para antes de `,` (separador de lista)
-
-Isso permite códigos com espaços como `Social Cohesion` em listas: `Social Cohesion, Collective Action`.
+Ambos capturam espaços internos e param antes do delimitador (`->` ou `,`). Capturar o espaço permite que o validador explique o erro em vez de o parser falhar.
 
 ### Valores e texto
 
@@ -502,62 +454,53 @@ Isso permite códigos com espaços como `Social Cohesion` em listas: `Social Coh
 STRING: /"[^"]*"/
 NUMBER.4: /[0-9]+(\.[0-9]+)?/
 COMPARATOR: ">=" | "<=" | "=" | ">" | "<"
-
 TEXT_LINE.3: /[^\s\n\r:][^\n\r]*/
 ```
 
 | Token | Aceita | Prioridade |
 |---|---|---|
-| `STRING` | Texto entre aspas duplas | — |
-| `NUMBER` | Inteiro ou decimal | `.4` (alta) |
-| `COMPARATOR` | Operadores de comparação | — |
-| `TEXT_LINE` | Qualquer texto que não começa com espaço/`:` | `.3` |
+| `STRING` | texto entre aspas duplas | — |
+| `NUMBER` | inteiro ou decimal | `.4` |
+| `COMPARATOR` | operadores de comparação | — |
+| `TEXT_LINE` | texto que não começa com espaço ou `:` | `.3` |
 
-`TEXT_LINE` é o token "coringa" — captura tudo que não foi reconhecido por tokens mais específicos. A restrição `[^\s\n\r:]` no primeiro caractere evita conflito com o `:` dos campos e com indentação.
+`TEXT_LINE` captura o que os tokens mais específicos não capturam. Permite símbolos científicos (`n=2383`, `p<0.05`).
 
 ### Tokens especiais
 
 ```lark
 COMMENT: "#" /[^\n]*/
-
 NEWLINE: /(\r?\n[ \t]*)+/
 %declare _INDENT _DEDENT
-
 %ignore /[ \t]+/
 %ignore COMMENT
 ```
 
-- **Comentários** (`#`) são ignorados pelo parser — podem aparecer em qualquer lugar.
-- **NEWLINE** captura quebras de linha junto com espaços/tabs iniciais da linha seguinte — isso alimenta o `SynesisIndenter` que gera os tokens `_INDENT`/`_DEDENT`.
-- **Espaços e tabs** são ignorados (fora do contexto de NEWLINE), tornando a indentação de conteúdo flexível.
+- **Comentários** (`#`) são ignorados pelo parser, salvo dentro de `GUIDELINES`.
+- **`NEWLINE`** captura a quebra de linha e o recuo seguinte, o que alimenta o `SynesisIndenter`.
+- **Espaços e tabs** fora desse contexto são ignorados.
 
 
-## Prioridades — como ambiguidades são resolvidas {#sec-prioridades}
-
-A tabela abaixo resume as prioridades e por que cada uma é necessária:
+## Prioridades — como as ambiguidades são resolvidas {#sec-prioridades}
 
 | Token | Prioridade | Por que |
 |---|---|---|
-| Keywords (`KW_*`) | `.5` | Sempre prevalecem sobre identificadores |
+| Keywords (`KW_*`) | `.5` | prevalecem sobre identificadores |
 | `NUMBER` | `.4` | `42` é número, não texto |
-| `TEXT_LINE` | `.3` | Captura texto genérico, mas cede a tokens mais específicos |
-| `CHAIN_ELEMENT`, `CODE_ELEMENT` | `.2` | Prevalecem sobre `IDENTIFIER` em contexto de valor |
-| `IDENTIFIER`, `FIELD_NAME` | `.1` | Prioridade base para nomes |
-| `CONCEPT_NAME` | `.0` | Menor prioridade — só usado quando nada mais encaixa |
-
-Se um trecho de texto casa com múltiplos tokens, o de maior prioridade vence. Isso é o que permite à gramática LALR(1) funcionar sem ambiguidade.
+| `TEXT_LINE` | `.3` | texto genérico |
+| `CHAIN_ELEMENT`, `CODE_ELEMENT` | `.2` | prevalecem sobre `IDENTIFIER` em valores |
+| `IDENTIFIER`, `FIELD_NAME` | `.1` | base para nomes |
+| `CONCEPT_NAME` | `.0` | só quando nada mais encaixa |
 
 
 ## Indentação significativa {#sec-indentacao}
 
-O Synesis usa indentação significativa (como Python). O `SynesisIndenter` — um componente do lexer — processa as linhas e gera tokens `_INDENT` e `_DEDENT`:
+Como o Python, o Synesis usa indentação significativa. O `SynesisIndenter` processa as linhas e gera `_INDENT` e `_DEDENT`:
 
 1. Tabs são convertidos em 4 espaços
-2. Se uma linha tem mais indentação que a anterior → gera `_INDENT`
-3. Se tem menos → gera `_DEDENT`
-4. Se tem a mesma → nada
-
-Os tokens `_INDENT`/`_DEDENT` são declarados com `%declare` e geridos pelo Lark, não pela gramática em si. Eles aparecem nas regras como delimitadores de bloco:
+2. Mais recuo que a linha anterior → `_INDENT`
+3. Menos recuo → `_DEDENT`
+4. Mesmo recuo → nada
 
 ```lark
 project_body: _INDENT project_items _DEDENT
@@ -566,5 +509,10 @@ source_block: KW_SOURCE BIBREF NEWLINE (_INDENT ... _DEDENT)? KW_END KW_SOURCE
 
 ::: {.callout-warning}
 ## Indentação inconsistente
-Se um arquivo mistura tabs e espaços de forma inconsistente, o `SynesisIndenter` pode gerar tokens `_INDENT`/`_DEDENT` inesperados, resultando em erros de sintaxe difíceis de diagnosticar. A normalização de tabs para 4 espaços ameniza, mas não elimina completamente esse risco.
+Fechar um bloco numa coluna que não corresponde a nenhum nível aberto produz erro de sintaxe, com a posição aproximada. Evite misturar tabs e espaços.
 :::
+
+
+## O parser gerado {#sec-standalone}
+
+Em produção, o compilador usa `synesis_standalone.py`, um parser LALR pré-gerado a partir do `.lark` (partida mais rápida, mesma gramática). Quem altera a gramática precisa **regenerar** esse arquivo; há testes que comparam os dois.

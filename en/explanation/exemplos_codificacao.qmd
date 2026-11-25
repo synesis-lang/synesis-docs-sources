@@ -1,0 +1,382 @@
+---
+title: "Coding Methods in Synesis"
+subtitle: "How to express qualitative coding traditions with Synesis templates"
+---
+
+Qualitative coding has dozens of methods, each with its own analytical purpose. This document shows how the most representative ones, as systematized by Saldaña (2013), are expressed through Synesis template features.
+
+The central idea is simple: **the template defines the analytical structure, and the coding method emerges from the configuration chosen** --- not from the compiler itself. Synesis imposes no method; it gives you the blocks to assemble yours.
+
+All examples belong to the same fictitious study: **barriers to telemedicine adoption in rural communities**.
+
+:::{.callout-tip}
+## Before reading
+If you do not yet know the Synesis field types (CODE, CHAIN, ENUMERATED etc.), read [What Synesis can express](show_case.qmd) first.
+:::
+
+---
+
+# Coding with CODE {#sec-code}
+
+`CODE` is the most versatile Synesis feature. It assigns conceptual labels to excerpts and connects each label to the project ontology. Different coding methods emerge from how you use it.
+
+---
+
+## Descriptive Coding
+
+**Descriptive Coding** (Saldaña, 2013) summarizes the topic of a passage in a word or short phrase --- typically a noun. It is the most direct method: one excerpt, one code.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL code
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt from the source
+END FIELD
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Descriptive conceptual label
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "The internet drops all the time here, you can't have an appointment like that"
+    code: Poor_Infrastructure
+END ITEM
+```
+
+The code `Poor_Infrastructure` summarizes the central topic of the excerpt. It should exist as a concept in the project ontology.
+
+---
+
+## Simultaneous Coding
+
+**Simultaneous Coding** applies two or more codes to the same excerpt to capture its complexity. In Synesis you simply list several codes.
+
+**The template is the same as in Descriptive Coding** --- the difference lies in use, not configuration.
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "I'd even like to use it, but I don't know how, and on top of that the internet doesn't work"
+    code: Low_Digital_Literacy, Poor_Infrastructure
+END ITEM
+```
+
+:::{.callout-note}
+Two distinct phenomena coexist in one utterance: the individual barrier (literacy) and the structural barrier (infrastructure). Simultaneous coding preserves that complexity without forcing a choice.
+:::
+
+---
+
+## In Vivo Coding
+
+**In Vivo Coding** takes a word or phrase from the participant's own language as the code. The code *is* the speech --- not an abstraction by the researcher.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL invivo_code
+END ITEM FIELDS
+
+FIELD invivo_code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Code taken from the participant's language (in vivo)
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mr_joao2026
+    quote: "That's a city thing, out here we manage differently"
+    invivo_code: City_Thing
+END ITEM
+```
+
+:::{.callout-tip}
+## In vivo in the ontology
+The concept `City_Thing` in the ontology can keep the original speech as part of its definition:
+
+```synesis
+ONTOLOGY City_Thing
+    definition: Native expression denoting the perception that health technologies are foreign to rural life
+    theme: Cultural_Perceptions
+END ONTOLOGY
+```
+
+The participant's voice is thus formally preserved in the controlled vocabulary.
+:::
+
+---
+
+# Coding with ENUMERATED {#sec-enumerated}
+
+`ENUMERATED` restricts values to a closed list. It suits methods that categorize data along predefined dimensions.
+
+---
+
+## Values Coding
+
+**Values Coding** (Saldaña, 2013) labels the participant's integrated system of **values** (what matters), **attitudes** (ways of thinking) and **beliefs** (perceptions). In Synesis each dimension becomes an ENUMERATED value.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL value_type
+END ITEM FIELDS
+
+FIELD value_type TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Dimension of the participant's value system
+    VALUES
+        value: What the participant considers important
+        attitude: Way of thinking or feeling about something
+        belief: Perception or conviction about reality
+    END VALUES
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "Health is eye to eye, the doctor has to really see you"
+    value_type: belief
+END ITEM
+
+ITEM @interview_mr_joao2026
+    quote: "What matters is quick access, never mind if it's through a screen"
+    value_type: value
+END ITEM
+```
+
+:::{.callout-note}
+The same excerpt could be coded as `value` or `belief` depending on the researcher's interpretation. The template does not resolve that ambiguity --- it only ensures the choice is explicit and consistent.
+:::
+
+---
+
+# Coding with SCALE {#sec-scale}
+
+`SCALE` records numbers within a range. Combined with other types, it expresses methods that add quantitative dimensions to qualitative analysis.
+
+---
+
+## Magnitude Coding
+
+**Magnitude Coding** (Saldaña, 2013) adds a supplementary indicator of intensity, frequency or direction to a code. In Synesis, combine CODE with SCALE in the same template.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL code
+    OPTIONAL intensity
+    OPTIONAL valence
+END ITEM FIELDS
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Conceptual label
+END FIELD
+
+FIELD intensity TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Perceived intensity of the phenomenon (1=low, 5=high)
+    FORMAT [1..5]
+END FIELD
+
+FIELD valence TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Evaluative direction of the participant
+    VALUES
+        positive: Favorable stance
+        negative: Unfavorable stance
+        neutral: No clear stance
+    END VALUES
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "The internet drops all the time here, you can't have an appointment like that"
+    code: Poor_Infrastructure
+    intensity: 5
+    valence: negative
+END ITEM
+
+ITEM @interview_dr_ana2026
+    quote: "With the new system I can see three times more patients a day"
+    code: Care_Efficiency
+    intensity: 4
+    valence: positive
+END ITEM
+```
+
+:::{.callout-tip}
+## Composing types
+This is a good example of how types compose: `CODE` captures *what*, `SCALE` captures *how much* and `ENUMERATED` captures *in which direction*. Each type does one thing; together they express the richness of Magnitude Coding.
+:::
+
+---
+
+# Coding with CHAIN {#sec-chain}
+
+`CHAIN` expresses directed relations between concepts. It is the natural feature for methods that map causality, processes or tensions.
+
+---
+
+## Causation Coding
+
+**Causation Coding** (Saldaña, 2013) extracts causal beliefs by mapping a three-part sequence: **Antecedent → Mediator → Outcome**. In Synesis this is expressed directly as a qualified CHAIN with RELATIONS.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Interpretation of the causal mechanism
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Causal sequence between concepts
+    ARITY >= 2
+    RELATIONS
+        CAUSES: Direct causal effect (antecedent produces outcome)
+        MEDIATES: Intermediate element in the causal process
+        INHIBITS: Factor that reduces or prevents the outcome
+        ENABLES: Condition that makes the outcome possible
+    END RELATIONS
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "Since the internet doesn't work properly, I can't learn to use the app, and then I give up for good"
+
+    note: Poor infrastructure prevents learning, which in turn blocks uptake
+    chain: Poor_Infrastructure -> INHIBITS -> Digital_Literacy -> MEDIATES -> Telemedicine_Uptake
+END ITEM
+```
+
+The chain `Poor_Infrastructure -> INHIBITS -> Digital_Literacy -> MEDIATES -> Telemedicine_Uptake` maps exactly Saldaña's Antecedent → Mediator → Outcome sequence, with the flexibility of naming each relation.
+
+:::{.callout-note}
+## BUNDLE keeps consistency
+Since `note` and `chain` are in a BUNDLE, the compiler guarantees that each causal interpretation (note) is paired with its formalization (chain). The researcher cannot write an interpretation without formalizing it, or the reverse.
+:::
+
+---
+
+# Coding with BUNDLE {#sec-bundle}
+
+The `BUNDLE` modifier groups fields that must appear together. It expresses methods requiring several simultaneous analytical perspectives on one excerpt.
+
+---
+
+## Emotion + Process
+
+**Emotion Coding** labels participants' feelings. **Process Coding** captures ongoing actions (gerunds). Used together through BUNDLE, each emotion is paired with the process that provokes it.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    REQUIRED BUNDLE emotion, process
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt
+END FIELD
+
+FIELD emotion TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Participant's emotional state
+    VALUES
+        fear: Apprehension or dread
+        frustration: Irritation at an obstacle
+        hope: Positive expectation
+        resignation: Passive acceptance
+    END VALUES
+END FIELD
+
+FIELD process TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Observed action or process (conceptual gerund)
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quote: "I'm afraid of pressing the wrong button and losing the appointment. I tried three times and gave up"
+
+    emotion: fear
+    process: Trying_to_Use_System
+
+    emotion: frustration
+    process: Giving_Up_on_Care
+END ITEM
+```
+
+:::{.callout-note}
+## Two readings of one excerpt
+BUNDLE guarantees positional correspondence: the first pair (`fear` + `Trying_to_Use_System`) captures the experience during the attempt; the second (`frustration` + `Giving_Up_on_Care`) captures the emotional consequence of failure. Without BUNDLE these associations would be ambiguous.
+:::
+
+---
+
+# Summary {#sec-resumo}
+
+The table below sums up how each of Saldaña's coding methods is expressed in Synesis.
+
+| Saldaña method | Synesis feature | What the template configures |
+|--------------------|----------------|----------------------------|
+| **Descriptive** | CODE | 1 CODE field, OPTIONAL |
+| **Simultaneous** | CODE (multiple) | Same CODE field, several values per item |
+| **In Vivo** | CODE | Code reproduces speech; ontology keeps origin |
+| **Values (V/A/B)** | ENUMERATED | Closed list: value, attitude, belief |
+| **Magnitude** | SCALE + ENUMERATED | Numeric intensity + evaluative direction |
+| **Causation** | CHAIN + RELATIONS | Qualified chain with named relations |
+| **Emotion + Process** | BUNDLE | Required pairing of emotion (ENUMERATED) + process (CODE) |
+
+: Coding methods and their Synesis features {.striped .hover}
+
+:::{.callout-tip}
+## The template is the method
+In Synesis, choosing a coding method materializes in the template configuration. One compiler supports everything from the simplest descriptive coding to complex causal chains with several analytical dimensions --- just configure the right fields.
+:::

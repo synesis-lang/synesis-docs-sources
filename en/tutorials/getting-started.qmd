@@ -1,0 +1,486 @@
+---
+title: "Getting Started with Synesis"
+subtitle: "Your first project in 30 minutes"
+---
+
+# Welcome to the Getting Started Tutorial
+
+In this tutorial **we will** build your first complete Synesis project together. By the end you will have created a system of structured annotations, validated its consistency and exported the results for analysis.
+
+**What you will build:**
+
+- A project analysing interviews about technology adoption
+- A custom template defining fields and rules
+- Structured interpretive annotations
+- An ontology of conceptual codes
+- Exports to JSON, CSV and Excel
+
+**Prerequisites:**
+
+- Python 3.10 or later installed
+- VS Code (recommended, but optional)
+- 30 minutes of dedicated time
+
+:::{.callout-tip}
+## Prefer to start by talking?
+The [Synesis Skill for Claude Desktop](synesis_claude_desktop.qmd) installs the tools and builds the project with you. This tutorial walks the same path by hand, so that you understand each piece.
+:::
+
+---
+
+## Step 1: Install the Compiler
+
+Open a terminal and run:
+
+```bash
+pip install synesis
+```
+
+Check it:
+
+```bash
+synesis --version
+```
+
+**The output starts like this:**
+
+```text
+synesis 0.16.0
+```
+
+:::{.callout-note}
+## Checkpoint ✓
+If you see the version number, the compiler is installed. If not, see [Troubleshooting](#troubleshooting).
+:::
+
+For real-time validation in the editor, also install the language server, VS Code and the **Synesis** extension:
+
+```bash
+pip install synesis-lsp
+```
+
+The instructions are in the [Synesis Explorer Tutorial](synesis_explorer_tutorial.qmd).
+
+---
+
+## Step 2: Create the Project Structure
+
+Create a folder and initialize the project:
+
+```bash
+mkdir my-first-project
+cd my-first-project
+synesis init
+```
+
+**What happened?** Synesis created five files:
+
+```text
+my-first-project/
+├── project.synp       # project file (orchestrator)
+├── template.synt      # template (defines the fields)
+├── references.bib     # bibliography
+├── annotations.syn    # annotations
+└── ontology.syno      # ontology
+```
+
+The new project is a small example that already compiles:
+
+```bash
+synesis compile project.synp
+```
+
+In the next steps we replace the content of these files with our own study.
+
+---
+
+## Step 3: Define the Template
+
+The template is the **contract** between you and the compiler. Open `template.synt` in your editor (`code template.synt`, or a plain text editor) and **replace the whole content** with:
+
+<!-- file: template.synt -->
+```synesis
+TEMPLATE analysis version: "1.0"
+
+ITEM FIELDS
+    REQUIRED quote, memo, code
+    OPTIONAL chain
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Literal quotation taken from the source
+    GUIDELINES
+        Copy one to three sentences exactly as they appear in the source.
+        Do not correct or summarize.
+    END GUIDELINES
+END FIELD
+
+FIELD memo TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Your interpretation of the excerpt
+    GUIDELINES
+        Explain in one or two sentences what the excerpt reveals.
+        Do not repeat the quotation.
+    END GUIDELINES
+END FIELD
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Ontology concepts the excerpt is evidence of
+    GUIDELINES
+        Use only concepts defined in the ontology.
+    END GUIDELINES
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Causal relation between concepts, when the excerpt states it
+    RELATIONS
+        INHIBITS: one factor reduces or prevents another
+        FAVORS: one factor promotes or eases another
+    END RELATIONS
+    GUIDELINES
+        Record the relation only when the source states it.
+    END GUIDELINES
+END FIELD
+
+ONTOLOGY FIELDS
+    REQUIRED definition, group
+END ONTOLOGY FIELDS
+
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definition of the concept and when to apply it
+    GUIDELINES
+        Define it in one or two sentences, with the application criterion.
+    END GUIDELINES
+END FIELD
+
+FIELD group TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Theme that groups the concept
+    GUIDELINES
+        Use a single term, without spaces.
+    END GUIDELINES
+END FIELD
+```
+
+**What does this mean?**
+
+- `ITEM FIELDS` and `ONTOLOGY FIELDS` say which fields each block accepts and which are required
+- Each `FIELD` declares the **type** and the **scope** of a field
+- `ARITY >= 2` requires a chain to link at least two concepts
+- `RELATIONS` fixes the allowed relations
+- `GUIDELINES` records how to fill in the field: it is your coding protocol, for people and for AI
+
+:::{.callout-important}
+## Golden Rule
+The template is the **single source of truth**. What you declare here, the compiler validates. What you use without declaring, it refuses. The field names are yours.
+:::
+
+Check the template:
+
+```bash
+synesis validate-template template.synt
+```
+
+---
+
+## Step 4: Define the Ontology
+
+Replace the content of `ontology.syno` with:
+
+<!-- file: ontology.syno -->
+```synesis
+ONTOLOGY cost
+    definition: Economic factors linked to price and required investment
+    group: adoption_factors
+END ONTOLOGY
+
+ONTOLOGY ease_of_use
+    definition: Perceived simplicity or complexity of the technology
+    group: adoption_factors
+END ONTOLOGY
+
+ONTOLOGY perceived_usefulness
+    definition: Belief that the technology will bring practical benefits
+    group: adoption_factors
+END ONTOLOGY
+
+ONTOLOGY ai_adoption
+    definition: Decision to bring artificial intelligence into the organization's processes
+    group: outcomes
+END ONTOLOGY
+```
+
+---
+
+## Step 5: Register the Sources
+
+Replace the content of `references.bib` with:
+
+<!-- file: references.bib -->
+```bibtex
+@misc{interview_john2026,
+  author = {Smith, John},
+  title = {Interview on AI adoption},
+  year = {2026},
+  note = {IT manager, mid-sized company (fictitious data)}
+}
+
+@misc{interview_mary2026,
+  author = {Jones, Mary},
+  title = {Interview on technology resistance},
+  year = {2026},
+  note = {Systems analyst, startup (fictitious data)}
+}
+```
+
+:::{.callout-warning}
+## Real interviews
+Do not record participants' names. Use neutral keys (`int01`, `int02`) and remove identifying data from the texts.
+:::
+
+---
+
+## Step 6: Create the Annotations
+
+Now the main part. Replace the content of `annotations.syn` with:
+
+<!-- file: annotations.syn -->
+```synesis
+SOURCE @interview_john2026
+END SOURCE
+
+ITEM @interview_john2026
+    quote: "The upfront cost is prohibitive for our scale of operation"
+    memo: The interviewee presents an economic barrier to AI adoption
+    code: cost, ai_adoption
+    chain: cost -> INHIBITS -> ai_adoption
+END ITEM
+
+ITEM @interview_john2026
+    quote: "It looks very complex, we have nobody who knows how to do it"
+    memo: The lack of technical skills appears as an obstacle
+    code: ease_of_use
+END ITEM
+
+SOURCE @interview_mary2026
+END SOURCE
+
+ITEM @interview_mary2026
+    quote: "If it were cheaper, we would try it. The technology looks good"
+    memo: Acknowledges usefulness, but cost limits the decision
+    code: cost, perceived_usefulness
+    chain: cost -> INHIBITS -> ai_adoption
+    chain: perceived_usefulness -> FAVORS -> ai_adoption
+END ITEM
+```
+
+:::{.callout-tip}
+## Notice the pattern
+Each `ITEM` links:
+
+1. a literal quotation (`quote`)
+2. your interpretation (`memo`)
+3. concepts (`code`)
+4. when the source states it, a relation (`chain`)
+
+This is **bidirectional traceability**: from evidence to interpretation and back.
+:::
+
+---
+
+## Step 7: Validate
+
+To check only the syntax of a file:
+
+```bash
+synesis check annotations.syn
+```
+
+To validate the whole project (template, bibliography, annotations and ontology):
+
+```bash
+synesis compile project.synp --stats
+```
+
+**The output ends like this:**
+
+```text
+Compilation Summary:
+  Sources        2
+  Items          3
+  Model entries  4  (4 concepts)
+  Active codes   4
+  Chains         3
+```
+
+:::{.callout-note}
+## Checkpoint ✓
+No line with `[ERROR]` or `[WARNING]`: the project is consistent.
+:::
+
+### Watch the Compiler Work
+
+Append to `annotations.syn` an item with a code that does not exist and an undeclared relation:
+
+<!-- demo-error -->
+```synesis
+ITEM @interview_mary2026
+    quote: "We would need training"
+    memo: Points to the need for training
+    code: training
+    chain: training -> REQUIRES -> ai_adoption
+END ITEM
+```
+
+```bash
+synesis compile project.synp --check-codes
+```
+
+The compiler points to the file, the line and the problem: the relation `REQUIRES` is an **error**, and the code `training`, which has no concept in the ontology, a **warning**. Remove the item before going on.
+
+---
+
+## Step 8: Export
+
+```bash
+synesis compile project.synp --json out/analysis.json --csv out/csv --xls out/analysis.xlsx
+```
+
+**What was generated:**
+
+```text
+out/
+├── analysis.json       # full project structure
+├── analysis.xlsx       # workbook with several sheets
+└── csv/
+    ├── items.csv       # one row per analytical unit
+    ├── ontologies.csv  # concepts
+    └── chains.csv      # relations (from, relation, to)
+```
+
+There is a `sources.csv` when the template declares `SOURCE` fields.
+
+:::{.callout-tip}
+## Explore the results
+Open `analysis.xlsx` in Excel or LibreOffice: you can already count, filter and cross your qualitative data, and every row points to its source file and line.
+:::
+
+### Declare the Exports in the Project
+
+To avoid repeating the options, declare the artifacts in `project.synp`:
+
+<!-- file: project.synp -->
+```synesis
+PROJECT technology_adoption
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+
+    QUESTIONS
+        Q1: Which factors do interviewees point to for adopting AI or not?
+    END QUESTIONS
+
+    EXPORT JSON
+        OUTPUT "out/analysis.json"
+    END EXPORT
+
+    EXPORT XLS
+        OUTPUT "out/analysis.xlsx"
+    END EXPORT
+END PROJECT
+```
+
+And run:
+
+```bash
+synesis export project.synp
+```
+
+---
+
+## Step 9 (optional): VS Code
+
+With the **Synesis** extension installed, open the project folder:
+
+```bash
+code .
+```
+
+You get syntax highlighting, real-time validation, autocompletion of codes and relations, and the views of references, codes, relations and ontology. See the [Synesis Explorer Tutorial](synesis_explorer_tutorial.qmd).
+
+---
+
+## 🎉 Congratulations!
+
+You created your first complete Synesis project. You learned to:
+
+- ✅ Install the compiler and create a project
+- ✅ Define your own template
+- ✅ Create an ontology
+- ✅ Register sources and write structured annotations
+- ✅ Validate and read diagnostics
+- ✅ Export to JSON, CSV and Excel
+
+---
+
+## Next Steps
+
+### Go Deeper
+- [Guide for Researchers](guia_pesquisadores.qmd)
+- [Language Reference](../reference/guia_referencia.qmd)
+
+### Solve Specific Problems
+- [How to define an ontology](../howto/definir_ontologia.qmd)
+- [How to create chains](../howto/criar_chains.qmd)
+- [AI coding (synesis-coder)](../howto/synesis_coder.qmd)
+- [How to export to Neo4j](../howto/exportar_neo4j.qmd)
+
+### Understand the Concepts
+- [Why not Excel?](../explanation/guia_sincero.qmd)
+- [Why structured annotation matters](../explanation/por_que_estrutura_importa.qmd)
+
+---
+
+## Troubleshooting {#troubleshooting}
+
+### `command not found: synesis` (or "not recognized as a command")
+
+The Python scripts folder is not on the `PATH`.
+
+```bash
+python -m pip install --user synesis
+```
+
+Open a new terminal after installing. Alternatively, install with `uv tool install synesis`.
+
+### `Template 'template.synt' not found`
+
+Either the path is wrong (run the commands in the project folder) or the template has a **syntax error**: the message can be the same in both cases. Check with:
+
+```bash
+synesis validate-template template.synt
+```
+
+The most common causes are `version:` on its own line, an `ORDERED` index without brackets and a missing `END`.
+
+### `Code 'XYZ' is not defined in the organizing model`
+
+You used a code with no block in `ontology.syno`. Add the corresponding `ONTOLOGY` or fix the spelling.
+
+### `Reference '@abc' not found in the .bib`
+
+The key does not exist in `references.bib`, or is spelled differently.
+
+### I want to understand an error
+
+They are all in the [Error Guide](../reference/guia_erros.qmd). In the terminal: `pip install synesis-help` and `synesis-help lookup E010`.
+
+---
+
+**Questions?** Open a discussion on [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) or read the [documentation](https://synesis-lang.org).

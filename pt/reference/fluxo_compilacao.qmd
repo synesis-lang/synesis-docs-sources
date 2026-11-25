@@ -1,19 +1,21 @@
 # O Fluxo de Compilação
 
-A compilação no Synesis ocorre em múltiplas fases, assegurando a integridade formal e conceitual do corpo de conhecimento.
+A compilação no Synesis ocorre em fases, assegurando a integridade formal e conceitual do corpo de conhecimento.
 
-Na fase sintática, o compilador verifica se os comandos de abertura e fechamento de blocos estão corretamente declarados, se os nomes dos campos correspondem ao padrão definido e se a sequência estrutural dos elementos respeita o template (*.synt*). Essa etapa garante conformidade gramatical com a linguagem.
+Na fase sintática, o compilador verifica se os blocos estão corretamente abertos e fechados e se cada arquivo segue a gramática da linguagem.
 
-Em seguida, ocorre a validação estrutural e de vínculos. O compilador verifica se:
+Em seguida, ocorre a validação semântica e de vínculos. O compilador verifica se:
 
-* Os itens estão corretamente associados às fontes declaradas;
-* A ordem dos campos nos blocos segue o padrão estabelecido;
-* As palavras-chave (códigos) utilizadas nos itens correspondem às categorias previamente definidas na ontologia;
-* As relações declaradas são semanticamente válidas dentro das regras configuradas.
+* os itens estão associados a fontes declaradas, e as fontes, à bibliografia;
+* os campos usados existem no template, no escopo certo, com o tipo e a obrigatoriedade declarados;
+* os campos agrupados em `BUNDLE` aparecem emparelhados;
+* os códigos usados nos itens têm um conceito definido na ontologia;
+* as relações das cadeias são as declaradas, e a aridade é respeitada;
+* a hierarquia e os rótulos do modelo organizador são consistentes (quando há `ROLE`).
 
-Todos esses critérios — nomes de campos, tipagem, obrigatoriedade, sequência e regras de relacionamento — são definidos no arquivo de template, que pode ser adaptado pelo usuário conforme seus próprios parâmetros metodológicos.
+Todos esses critérios — nomes de campos, tipos, obrigatoriedade e regras de relacionamento — vêm do arquivo de template, que o usuário adapta aos seus parâmetros metodológicos. A ordem em que os campos aparecem dentro de um bloco é livre.
 
-Esse processo em camadas garante que os arquivos de saída sejam estruturalmente íntegros e que o corpo de conhecimento permaneça logicamente consistente e computacionalmente confiável.
+Esse processo em camadas garante que as saídas sejam estruturalmente íntegras e que o corpo de conhecimento permaneça consistente e computacionalmente confiável. Ele não julga a leitura: se a fonte sustenta o que foi anotado é decisão do pesquisador.
 
 ```{mermaid}
 flowchart TB
@@ -30,33 +32,33 @@ flowchart TB
     subgraph Input ["Arquivos de Entrada"]
         direction LR
         D["Template<br/>(.synt)"]:::defaultNode
-        A["Fontes<br/>(.bib)"]:::defaultNode
+        A["Fontes<br/>(.bib, .toml)"]:::defaultNode
         B["Anotações<br/>(.syn)"]:::defaultNode
         E["Ontologia<br/>(.syno)"]:::defaultNode
     end
 
     %% --- CAMADA 3: COMPILADOR ---
-    C["Compilador Synesis<br/>• Parsing • Vínculos <br/>• Validação • Exportação ."]:::compiler
+    C["Compilador Synesis<br/>• Parsing • Validação <br/>• Vínculos • Exportação ."]:::compiler
 
     %% --- CAMADA 4: OUTPUTS HORIZONTAIS ---
-    subgraph Output ["Formatos de Intercâmbio"]
+    subgraph Output ["Formatos de Saída"]
         direction LR
         F["JSON"]:::defaultNode
-        G["CSV/Excel"]:::defaultNode
-        H["DOCX/REFI-QDA"]:::defaultNode
+        G["CSV / Excel"]:::defaultNode
+        H["Alpaca / OKF / SKOS"]:::defaultNode
     end
 
     %% --- CAMADA 5: API/BRIDGE ---
     subgraph Bridge ["Camada de Interface"]
         direction LR
         API["API do Compilador ."]:::bridge
-        S["Connector para Grafos"]:::bridge
+        S["synesis-graph"]:::bridge
     end
 
     %% --- CAMADA 6: ECOSSISTEMA ---
     subgraph Ecosystem ["Ecossistema de Aplicação"]
         direction LR
-        I["Bancos de Grafos<br/>Neo4j • Memgraph"]:::highValue
+        I["Grafos<br/>Neo4j • ArcadeDB • HTML"]:::highValue
         J["Agentes de IA<br/>MCP"]:::highValue
         K["Data Science<br/>R • Python • Jupyter"]:::highValue
     end

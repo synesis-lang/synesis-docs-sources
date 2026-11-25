@@ -1,0 +1,287 @@
+---
+title: "How to Export to Neo4j"
+subtitle: "A practical guide to building knowledge graphs from Synesis annotations"
+---
+
+# How to Export to Neo4j
+
+This guide shows **how to turn your Synesis annotations into a knowledge graph in Neo4j**, for network analysis, visualization and querying with AI assistants.
+
+**Use this guide if you:**
+
+- Need to explore complex relations between concepts
+- Want to compute centrality, communities or PageRank
+- Want to query the corpus with an assistant over MCP
+
+:::{.callout-tip}
+## No database server?
+`synesis-graph` can also write a **local** ArcadeDB database, with no server or Java to install:
+
+```bash
+pip install synesis-graph
+synesis-graph arcadedb-embedded --project my_project.synp
+synesis-graph serve
+```
+
+It also renders an [HTML graph](../reference/synesis_graph.qmd#sec-html) that opens in the browser. See the [reference](../reference/synesis_graph.qmd).
+:::
+
+---
+
+## Prerequisites
+
+- Python 3.10+
+- A Synesis project that compiles without errors
+- Neo4j Desktop, Neo4j Server or Neo4j Aura
+
+---
+
+## Step 1: Install Neo4j
+
+### Option A: Neo4j Desktop (local development)
+
+1. Download from <https://neo4j.com/download/>
+2. Create a database (DBMS) and choose a strong password
+3. Start it (**Start**)
+
+:::{.callout-note}
+## Checkpoint ✓
+In Neo4j Browser, run:
+```cypher
+RETURN "Hello, Neo4j!" AS message
+```
+:::
+
+### Option B: Neo4j Aura (cloud)
+
+1. Go to <https://neo4j.com/cloud/aura/> and create an instance
+2. Download the credentials file (URI, user, password) and keep it safe
+
+::: {.callout-warning}
+## Sensitive data
+A cloud database receives the passages of your corpus. Check what your research ethics approval and data protection law allow.
+:::
+
+---
+
+## Step 2: Install synesis-graph
+
+```bash
+pip install "synesis-graph[neo4j]"
+synesis-graph --version
+# synesis-graph, version 0.13.1
+```
+
+:::{.callout-note}
+## Former name
+The tool used to be called `synesis2graph` (and before that `synesis2neo4j`). If you have the old version, remove it with `pip uninstall synesis2graph`.
+:::
+
+---
+
+## Step 3: Configure the Connection
+
+Create `config.toml` in the folder you run the command from:
+
+```toml
+[neo4j]
+uri = "bolt://127.0.0.1:7687"      # Aura: neo4j+s://xxxxx.databases.neo4j.io
+user = "neo4j"
+password = "YourPassword"
+# database = "my_corpus"            # optional; default: PROJECT name
+# fulltext_analyzer = "english"     # language-aware text search
+```
+
+:::{.callout-warning}
+## Security
+Never commit `config.toml`:
+```bash
+echo "config.toml" >> .gitignore
+```
+:::
+
+---
+
+## Step 4: Export
+
+```bash
+synesis-graph neo4j --project my_project.synp --config config.toml
+```
+
+`config.toml` is the default, so `--config` may be omitted. The pipeline compiles the project in memory (an error stops everything before the database is touched), connects, writes the graph, computes the metrics and writes the project context into the `ProjectContext` vertex.
+
+:::{.callout-note}
+## Checkpoint ✓
+```cypher
+MATCH (n) RETURN count(n) AS total_nodes
+```
+:::
+
+---
+
+## Step 5: Explore in Neo4j Browser
+
+```cypher
+MATCH (n) RETURN n LIMIT 100
+```
+
+:::{.callout-important}
+## Labels come from your template
+A concept node takes the label of the **field name**: a field `category` produces `:Category`; a field `criterion`, `:Criterion`. The queries below omit the label so they work on any project. To get to know the graph: `MATCH (p:ProjectContext) RETURN p.template_doc`.
+:::
+
+```cypher
+// a concept and its relations
+MATCH path = (c {name: "Cost"})-[r]->(target)
+RETURN path
+```
+
+```cypher
+// annotations of a concept, with their location
+MATCH (s:Source)<-[:FROM_SOURCE]-(i:Item)-[:MENTIONS]->(c {name: "Cost"})
+RETURN s.bibtex, i.citation, i.source_file, i.source_line
+```
+
+---
+
+## Step 6: Analytical Queries
+
+### Most Frequent Concepts
+
+```cypher
+MATCH (c)
+WHERE c.mention_count IS NOT NULL
+RETURN c.name AS concept, c.mention_count AS frequency, c.source_count AS sources
+ORDER BY frequency DESC
+LIMIT 10
+```
+
+### Co-occurrences
+
+```cypher
+MATCH (i:Item)-[:MENTIONS]->(c1), (i)-[:MENTIONS]->(c2)
+WHERE c1.name < c2.name
+RETURN c1.name, c2.name, count(DISTINCT i) AS co_occurrence
+ORDER BY co_occurrence DESC
+LIMIT 20
+```
+
+### Most Recurrent Relations
+
+```cypher
+MATCH (c1)-[r:RELATES_TO]->(c2)
+RETURN c1.name AS source, r.type AS relation, c2.name AS target, count(r) AS occurrences
+ORDER BY occurrences DESC
+```
+
+### Bridge Nodes
+
+```cypher
+MATCH (c)
+WHERE c.betweenness IS NOT NULL
+RETURN c.name AS concept, c.betweenness AS centrality
+ORDER BY centrality DESC
+LIMIT 10
+```
+
+:::{.callout-note}
+## `betweenness` requires the GDS plugin
+Without GDS use `degree`, always available.
+:::
+
+---
+
+## Step 7: Update the Graph
+
+Run the same command after new annotations:
+
+```bash
+synesis-graph neo4j --project my_project.synp
+```
+
+| `--mode` | What it does | When to use |
+|---|---|---|
+| `rebuild` (default) | wipes and rewrites the graph | always correct: mirrors the corpus exactly |
+| `update` | writes only what changed | large corpus; **does not remove** what was deleted from the project |
+
+The graph is a **derived artifact**: the source of truth is the project files. After renaming or deleting material, use `rebuild`.
+
+---
+
+## Step 8: Advanced Metrics (Graph Data Science)
+
+Install the **Graph Data Science Library** plugin on your database (Neo4j Desktop: **Plugins**) and restart. The pipeline detects it: with it, `pagerank`, `betweenness` and `community` are computed; without it, it warns and continues with the native metrics.
+
+```cypher
+MATCH (c)
+WHERE c.pagerank IS NOT NULL
+RETURN c.name, c.degree, c.pagerank, c.betweenness, c.community
+ORDER BY c.pagerank DESC
+LIMIT 20
+```
+
+- High **PageRank**: a concept pointed to by other relevant concepts
+- High **betweenness**: a concept linking clusters
+- **Community** (Louvain): same number, same cluster; read it according to the projection used (see the [reference](../reference/synesis_graph.qmd#sec-neo4j))
+
+---
+
+## Querying with an AI Assistant (MCP)
+
+With the graph in Neo4j, the `mcp-neo4j-cypher` MCP server lets you query it in natural language from Claude Desktop. In `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "synesis-neo4j": {
+      "command": "uvx",
+      "args": ["mcp-neo4j-cypher@0.5.2", "--read-only"],
+      "env": {
+        "NEO4J_URI": "bolt://localhost:7687",
+        "NEO4J_USERNAME": "neo4j",
+        "NEO4J_PASSWORD": "your_password",
+        "NEO4J_DATABASE": "database_name"
+      }
+    }
+  }
+}
+```
+
+The file is in `%APPDATA%\Claude\` (Windows) or `~/Library/Application Support/Claude/` (macOS). Keep `--read-only`. The repository ships a full guide in the `mcp/` folder.
+
+---
+
+## Troubleshooting
+
+### `Connection refused (bolt://localhost:7687)`
+Neo4j is not running: click **Start** or run `neo4j start`.
+
+### `Authentication failed`
+Check the password in `config.toml`.
+
+### `Database not found`
+List the names with `SHOW DATABASES` and adjust `database`.
+
+### The command stops with compilation errors
+```bash
+synesis compile my_project.synp
+```
+Fix what the compiler reports and export again.
+
+### Large Loads Are Slow
+- Use `--mode update` when you only added material
+- An interrupted load leaves the graph marked as incomplete: run a `rebuild`
+
+---
+
+## References
+
+- [synesis-graph — Reference](../reference/synesis_graph.qmd)
+- [Knowledge Graphs & GraphRAG](../explanation/knowledge_graphs.qmd)
+- [How to Link Independent Projects](ligar_projetos.qmd)
+- [Synesis API](../reference/synesis_load.qmd)
+- [Neo4j Cypher Manual](https://neo4j.com/docs/cypher-manual/)
+
+---
+
+**Questions?** Open an issue in the [synesis-graph repository](https://github.com/synesis-lang/synesis-graph).

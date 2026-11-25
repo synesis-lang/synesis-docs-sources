@@ -1,0 +1,34 @@
+## The Architectural Position of Synesis {#sec-posicionamento}
+
+Knowledge modelling and the annotation of qualitative corpora face a classic architectural dilemma: the tension between **human ergonomics** (the fluency a researcher needs to write and think) and **computational formal rigor** (the strict structure machines need to compile, validate and export the data).
+
+Synesis was designed as a declarative Domain-Specific Language (DSL) precisely to resolve this dilemma, turning interpretive annotations into canonical structures while keeping both human readability and formal rigor. To understand the design decisions of the language, it helps to look at how other knowledge representation paradigms handle the same tension.
+
+
+### The Extreme of Rigor: TEI/XML and the Semantic Web
+
+Historically, approaches that prioritize mechanical validation and data structure sacrifice human readability.
+
+The TEI/XML paradigm: the XML-based *Text Encoding Initiative* (TEI) is the gold standard of digital humanities. It offers absolute ontological rigor, but writing in it is exhausting. The constant nesting of opening and closing tags clutters the document, drains the researcher's cognitive energy and hinders fluent reading of the analytical text.
+
+The RDF/Turtle paradigm (Semantic Web): designed to build knowledge graphs, RDF expresses data as triples (Subject → Predicate → Object). It is excellent for network analysis, but it is a data modelling language hostile to deep qualitative analysis. Placing long excerpts or dense analytical memos among RDF statements breaks the natural flow of the hermeneutic process.
+
+### The Extreme of Ergonomics: Markdown and PKMs
+
+On the other side, *Personal Knowledge Management* (PKM) tools such as Obsidian or Logseq popularized Markdown with YAML front matter for agile annotation (Zettelkasten).
+
+The illusion of structure: Markdown offers an unbeatable, light writing experience. But it lacks a strict compiler. Since the format essentially accepts any free text, no validation engine stops the researcher from using inconsistent field names or leaving out required metadata.
+
+The extraction problem: without strict rules, extracting reliable tabular data, relationship matrices or consistent graphs from Markdown notes often becomes expensive *data wrangling*.
+
+### The Synesis Synthesis
+
+Synesis finds its place by combining the readability of plain text with the predictability of a strongly typed programming language. The balance rests on three design invariants:
+
+1. **Separation of rules and data:** unlike Markdown, the language splits the responsibilities of a project. Validation rules (which fields are required or optional) are isolated in the Template file (`.synt`), while the researcher concentrates on interpretation in the Annotation files (`.syn`).
+2. **Text and graphs as first-class citizens:** the language lets dense blocks of human text — source excerpts (`QUOTATION`) or analytical notes (`MEMO`) — coexist cleanly with topological connectors (`CHAIN`). Semantic chains reproduce graph logic, joining codes and relations, with a fluent syntax.
+3. **Deterministic compilation:** the compiler does not try to "guess" formats, so the same input always produces the same output. A full compilation produces rigorous structured artifacts (JSON, CSV, Excel) or fails instructively, reporting diagnostics with context and exact file, line and column. Validation covers the form and consistency of what was annotated; whether the interpretation holds remains the researcher's judgement.
+
+## 💡 Ready for Data Science
+
+By requiring data to follow the contract set by the template, Synesis removes the need for post-analysis data cleaning. The compiler produces structured qualitative corpora — with full traceability in CSV through the `source_file`, `source_line` and `source_column` columns — delivering datasets ready for Data Science workflows and graph databases.

@@ -80,7 +80,7 @@ SOURCE @burke2018
     metodo: Conceptual review
 END SOURCE
 
-ITEM @burke2018@
+ITEM @burke2018
     text: Distributed energy-politics posits that distributed energy sources and technologies enable and organize distributed political power and vice versa.
 
     note: Distributed energy systems can reorganize political power structures
@@ -89,7 +89,7 @@ ITEM @burke2018@
 END ITEM
 ```
 
-Esta nova abordagem permitiu que 
+Esta nova abordagem permitiu que a anotação humana e a gerada por IA passassem pelo mesmo texto e pelas mesmas regras, conferidas por um compilador.
 
 
 ## Synesis como síntese

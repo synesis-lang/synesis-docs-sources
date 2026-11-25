@@ -1,0 +1,42 @@
+---
+title: "Explanation"
+subtitle: "Texts to understand Synesis: the why, the context and the ideas behind the tools"
+toc: false
+number-sections: false
+---
+
+These texts explain **why** Synesis is the way it is. They are not step-by-step material (for that, see the [Tutorials](../tutorials/getting-started.qmd)) nor recipes for a task (see the [How-to Guides](../howto/guia_profissionais.qmd)). Choose by the question you have.
+
+## I want to understand what Synesis is
+
+- [**Synesis 101 course (videos)**](curso_synesis_101.qmd): short videos explaining Synesis from scratch (in Portuguese).
+- [What Synesis can express](show_case.qmd): a panoramic view of the annotation possibilities.
+- [Why structured annotation matters](por_que_estrutura_importa.qmd): rigor, freedom and the future of qualitative knowledge.
+- [Why not just do it in Excel?](guia_sincero.qmd): an honest answer about when Synesis makes sense and when it does not.
+- [How Synesis came about](como_surgiu.qmd): the research problem that gave rise to the language.
+- [The architectural position](posicionamento_arquitetural.qmd): how Synesis balances readability for people and rigor for machines.
+
+## I want to code with method
+
+- [Coding methods in Synesis](exemplos_codificacao.qmd): expressing qualitative coding traditions with templates.
+- [AI-assisted coding](codificacao_assistida_IA.qmd): a real case of bibliometric analysis.
+  - [Research metrics](codificacao_assistida_IA_metricas.qmd)
+  - [Comparison of AI models](codificacao_assistida_IA_comparacao.qmd)
+
+## I want to connect knowledge and AI
+
+- [Knowledge graphs and GraphRAG](knowledge_graphs.qmd): why knowledge graphs transform qualitative research.
+- [Vector embeddings and GraphRAG](graphrag_embeddings_vetoriais.qmd): what semantic search adds to retrieval, measured rather than estimated.
+  - [How the benchmark was run](benchmark_rrf_metodologia.qmd)
+
+## I want to see Synesis in my field
+
+- [Law](synesis_para_direito.qmd): legal knowledge as auditable institutional heritage.
+- [Scripture](synesis_escrituras.qmd): systematic annotation of sacred texts.
+- [Participatory socio-environmental diagnosis](dsap.qmd): coding and SWOT analysis in community diagnoses.
+
+## I want to know how the tool works inside
+
+- [Inside the compiler](fluxo_compilacao_interno.qmd): how text becomes structured knowledge, stage by stage.
+- [The LSP interface](interface_lsp.qmd): how the compiler comes alive in the editor.
+- [Roadmap and ideas](ideas.qmd): proposals for extending the language that are not implemented yet.

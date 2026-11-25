@@ -18,263 +18,253 @@ Neste tutorial, **nós vamos** construir juntos seu primeiro projeto Synesis com
 **Pré-requisitos:**
 
 - Python 3.10 ou superior instalado
-- VSCode (recomendado, mas opcional)
+- VS Code (recomendado, mas opcional)
 - 30 minutos de tempo dedicado
 
 :::{.callout-tip}
-## Primeira vez com linha de comando?
-Não se preocupe! Vamos explicar cada comando claramente. Se você ficar travado, veja nossa seção de [Troubleshooting](#troubleshooting) no final.
+## Prefere começar conversando?
+A [Skill do Synesis para o Claude Desktop](synesis_claude_desktop.qmd) instala as ferramentas e monta o projeto com você. Este tutorial faz o mesmo caminho à mão, para você entender cada peça.
 :::
 
 ---
 
-## Passo 1: Instalação do Compilador e ambiente de trabalho
+## Passo 1: Instalar o compilador
 
-Primeiro, vamos instalar o compilador Synesis. Abra seu terminal e execute:
+Abra o terminal e execute:
 
 ```bash
 pip install synesis
 ```
 
-Agora, vamos verificar se a instalação funcionou:
+Verifique:
 
 ```bash
 synesis --version
 ```
 
-**O output deve ser algo como:**
-```
-synesis, version 0.2.6
+**A saída começa assim:**
+
+```text
+synesis 0.16.0
 ```
 
 :::{.callout-note}
 ## Checkpoint ✓
-Se você vê o número da versão, parabéns! O compilador está instalado corretamente. Se não, veja [Troubleshooting](#troubleshooting).
+Se você vê o número da versão, o compilador está instalado. Se não, veja [Troubleshooting](#troubleshooting).
 :::
 
-
-Agora, vamos instalar o *Language Server Protocol* (LSP). Com ele é possível editar códigos em linguagem Synesis com verificação automática em tempo real. 
-
-Para instalar, digite em seu terminal e execute:
+Para ter validação em tempo real no editor, instale também o servidor de linguagem, o VS Code e a extensão **Synesis**:
 
 ```bash
 pip install synesis-lsp
 ```
 
-Por fim, instale o editor de código VSCode e a extensão Synesis. Veja instruções aqui: 
-
-- [Tutorial Synesis Explorer](tutorials/synesis_explorer_tutorial.qmd) — Configurar o ambiente VSCode
+As instruções estão no [Tutorial Synesis Explorer](synesis_explorer_tutorial.qmd).
 
 ---
 
-## Passo 2: Criar a Estrutura do Projeto
+## Passo 2: Criar a estrutura do projeto
 
-Vamos criar uma pasta para nosso projeto. No terminal, execute:
+Crie uma pasta e inicialize o projeto:
 
 ```bash
 mkdir meu-primeiro-projeto
 cd meu-primeiro-projeto
+synesis init
 ```
 
-Agora vamos usar o comando `synesis init` para criar a estrutura inicial:
+**O que aconteceu?** O Synesis criou cinco arquivos:
+
+```text
+meu-primeiro-projeto/
+├── project.synp       # arquivo de projeto (orquestrador)
+├── template.synt      # template (define os campos)
+├── references.bib     # bibliografia
+├── annotations.syn    # anotações
+└── ontology.syno      # ontologia
+```
+
+O projeto criado é um exemplo pequeno, em inglês, que já compila:
 
 ```bash
-synesis init --name "Análise de Adoção Tecnológica"
+synesis compile project.synp
 ```
 
-**O que aconteceu?**
-O Synesis criou os seguintes arquivos:
-
-```
-meu-primeiro-projeto/
-├── analysis.synp          # Arquivo de projeto (orquestrador)
-├── template.synt          # Template (define campos)
-├── references.bib         # Bibliografia (vazia por enquanto)
-├── annotations/           # Pasta para anotações
-│   └── example.syn       # Exemplo de anotação
-└── ontology/             # Pasta para ontologias
-    └── codes.syno        # Ontologia de códigos
-```
-
-:::{.callout-note}
-## Checkpoint ✓
-Liste os arquivos com `ls` (Linux/Mac) ou `dir` (Windows). Você deve ver os arquivos acima.
-:::
+Nos próximos passos, vamos substituir o conteúdo desses arquivos pelo nosso estudo.
 
 ---
 
-## Passo 3: Entender o Template
+## Passo 3: Definir o template
 
-O template é o **contrato** entre você e o compilador. Vamos abrir o arquivo `template.synt` em um editor de texto:
+O template é o **contrato** entre você e o compilador. Abra `template.synt` no editor (`code template.synt`, ou o bloco de notas) e **substitua todo o conteúdo** por:
 
-```bash
-# Windows
-notepad template.synt
-
-# Linux/Mac
-nano template.synt
-# ou
-code template.synt  # se você tem VSCode
-```
-
-**Você verá algo assim:**
-
+<!-- file: template.synt -->
 ```synesis
-TEMPLATE analysis
-version: "1.0"
+TEMPLATE analise version: "1.0"
 
 ITEM FIELDS
-    REQUIRED quote
-    OPTIONAL memo
-    OPTIONAL code
+    REQUIRED quote, memo, code
     OPTIONAL chain
 END ITEM FIELDS
 
 FIELD quote TYPE QUOTATION
     SCOPE ITEM
     DESCRIPTION Citação literal extraída da fonte
+    GUIDELINES
+        Copie de uma a três frases, exatamente como aparecem na fonte.
+        Não corrija nem resuma.
+    END GUIDELINES
 END FIELD
 
 FIELD memo TYPE MEMO
     SCOPE ITEM
-    DESCRIPTION Sua interpretação e análise do trecho
+    DESCRIPTION Sua interpretação do trecho
+    GUIDELINES
+        Explique em uma ou duas frases o que o trecho revela.
+        Não repita a citação.
+    END GUIDELINES
 END FIELD
 
 FIELD code TYPE CODE
     SCOPE ITEM
-    DESCRIPTION Código conceitual da ontologia
+    DESCRIPTION Conceitos da ontologia de que o trecho é evidência
+    GUIDELINES
+        Use apenas conceitos definidos na ontologia.
+    END GUIDELINES
 END FIELD
 
 FIELD chain TYPE CHAIN
     SCOPE ITEM
-    DESCRIPTION Relação causal entre conceitos
+    ARITY >= 2
+    DESCRIPTION Relação causal entre conceitos, quando o trecho a afirma
     RELATIONS
-        INIBE: Um fator reduz ou impede outro
-        FAVORECE: Um fator promove ou facilita outro
+        INIBE: um fator reduz ou impede outro
+        FAVORECE: um fator promove ou facilita outro
     END RELATIONS
+    GUIDELINES
+        Registre a relação somente quando a fonte a afirma.
+    END GUIDELINES
+END FIELD
+
+ONTOLOGY FIELDS
+    REQUIRED descricao, grupo
+END ONTOLOGY FIELDS
+
+FIELD descricao TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definição do conceito e quando aplicá-lo
+    GUIDELINES
+        Defina em uma ou duas frases, com o critério de aplicação.
+    END GUIDELINES
+END FIELD
+
+FIELD grupo TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Tema que agrupa o conceito
+    GUIDELINES
+        Use um único termo, sem espaços.
+    END GUIDELINES
 END FIELD
 ```
 
 **O que isso significa?**
 
-- `ITEM FIELDS`: Declara quais campos o bloco ITEM aceita e se são obrigatórios ou opcionais
-- `FIELD quote TYPE QUOTATION`: Campo obrigatório para citações literais
-- `FIELD memo TYPE MEMO`: Campo para sua interpretação analítica
-- `FIELD code TYPE CODE`: Campo para códigos conceituais (pode aparecer várias vezes no mesmo ITEM)
-- `FIELD chain TYPE CHAIN`: Campo para relações causais, com as relações válidas declaradas
+- `ITEM FIELDS` e `ONTOLOGY FIELDS` dizem quais campos cada bloco aceita e quais são obrigatórios
+- Cada `FIELD` declara o **tipo** e o **escopo** de um campo
+- `ARITY >= 2` exige que uma cadeia ligue ao menos dois conceitos
+- `RELATIONS` fixa as relações permitidas
+- `GUIDELINES` registra como preencher o campo: é o seu protocolo de codificação, para pessoas e para a IA
 
 :::{.callout-important}
 ## Regra de Ouro
-O template é a **única fonte da verdade**. Se você adicionar campos aqui, o compilador vai validá-los. Se você usá-los sem definir, o compilador vai reclamar.
+O template é a **única fonte da verdade**. O que você declarar aqui, o compilador valida. O que você usar sem declarar, ele recusa. Os nomes dos campos são seus.
 :::
+
+Confira o template:
+
+```bash
+synesis validate-template template.synt
+```
 
 ---
 
-## Passo 4: Definir Nossa Ontologia
+## Passo 4: Definir a ontologia
 
-Agora vamos definir os códigos conceituais que vamos usar. Abra `ontology/codes.syno`:
+Substitua o conteúdo de `ontology.syno` por:
 
-```bash
-code ontology/codes.syno  # ou seu editor preferido
-```
-
-**Substitua o conteúdo por:**
-
+<!-- file: ontology.syno -->
 ```synesis
 ONTOLOGY custo
-    descricao: "Fatores econômicos relacionados ao preço e investimento necessário"
+    descricao: Fatores econômicos ligados ao preço e ao investimento necessário
     grupo: fatores_de_adocao
 END ONTOLOGY
 
 ONTOLOGY facilidade_de_uso
-    descricao: "Percepção de complexidade ou simplicidade da tecnologia"
+    descricao: Percepção de simplicidade ou complexidade da tecnologia
     grupo: fatores_de_adocao
 END ONTOLOGY
 
 ONTOLOGY utilidade_percebida
-    descricao: "Crença de que a tecnologia trará benefícios práticos"
+    descricao: Crença de que a tecnologia trará benefícios práticos
     grupo: fatores_de_adocao
 END ONTOLOGY
 
 ONTOLOGY adocao_de_ia
-    descricao: "Decisão de incorporar inteligência artificial nos processos da organização"
+    descricao: Decisão de incorporar inteligência artificial aos processos da organização
     grupo: desfechos
 END ONTOLOGY
 ```
 
-**Salve o arquivo.**
+---
 
-:::{.callout-note}
-## Checkpoint ✓
-Vamos validar a ontologia. No terminal, execute:
+## Passo 5: Registrar as fontes
 
-```bash
-synesis check ontology/codes.syno
+Substitua o conteúdo de `references.bib` por:
+
+<!-- file: references.bib -->
+```bibtex
+@misc{entrevista_joao2026,
+  author = {Silva, João},
+  title = {Entrevista sobre adoção de IA},
+  year = {2026},
+  note = {Gerente de TI, empresa de médio porte (dados fictícios)}
+}
+
+@misc{entrevista_maria2026,
+  author = {Santos, Maria},
+  title = {Entrevista sobre resistência tecnológica},
+  year = {2026},
+  note = {Analista de sistemas, startup (dados fictícios)}
+}
 ```
 
-Se não houver erros, você verá: `✓ Ontology is valid`
+:::{.callout-warning}
+## Entrevistas reais
+Não registre nomes de participantes. Use chaves neutras (`ent01`, `ent02`) e retire dados identificadores dos textos.
 :::
 
 ---
 
-## Passo 5: Criar Nossa Primeira Fonte Bibliográfica
+## Passo 6: Criar as anotações
 
-Vamos adicionar uma referência fictícia à nossa bibliografia. Abra `references.bib`:
+Agora vem a parte principal. Substitua o conteúdo de `annotations.syn` por:
 
-```bash
-code references.bib
-```
-
-**Adicione:**
-
-```bibtex
-@interview{entrevista_joao2026,
-  author = {João Silva},
-  title = {Entrevista sobre adoção de IA},
-  year = {2026},
-  type = {Entrevista semiestruturada},
-  note = {Gerente de TI, empresa de médio porte}
-}
-
-@interview{entrevista_maria2026,
-  author = {Maria Santos},
-  title = {Entrevista sobre resistência tecnológica},
-  year = {2026},
-  type = {Entrevista em profundidade},
-  note = {Analista de sistemas, startup}
-}
-```
-
-**Salve o arquivo.**
-
----
-
-## Passo 6: Criar Nossas Anotações
-
-Agora vem a parte emocionante! Vamos criar anotações interpretativas. Crie um novo arquivo `annotations/entrevistas.syn`:
-
-```bash
-code annotations/entrevistas.syn
-```
-
-**Digite o seguinte:**
-
+<!-- file: annotations.syn -->
 ```synesis
 SOURCE @entrevista_joao2026
 END SOURCE
 
 ITEM @entrevista_joao2026
     quote: "O custo inicial é proibitivo para nossa escala de operação"
-    memo: Entrevistado expressa barreira econômica clara à adoção de IA
-    code: custo
+    memo: O entrevistado apresenta uma barreira econômica à adoção de IA
+    code: custo, adocao_de_ia
     chain: custo -> INIBE -> adocao_de_ia
 END ITEM
 
 ITEM @entrevista_joao2026
-    quote: "Parece muito complexo, não temos expertise interna"
-    memo: Falta de capacitação técnica percebida como obstáculo
+    quote: "Parece muito complexo, não temos gente que saiba fazer"
+    memo: A falta de capacitação técnica aparece como obstáculo
     code: facilidade_de_uso
-    chain: facilidade_de_uso -> INIBE -> adocao_de_ia
 END ITEM
 
 SOURCE @entrevista_maria2026
@@ -282,221 +272,215 @@ END SOURCE
 
 ITEM @entrevista_maria2026
     quote: "Se fosse mais barato, a gente testaria. A tecnologia parece boa"
-    memo: Reconhecimento de utilidade, mas custo como fator limitante
-    code: custo
-    code: utilidade_percebida
-    chain: utilidade_percebida -> FAVORECE -> adocao_de_ia
+    memo: Reconhece a utilidade, mas o custo limita a decisão
+    code: custo, utilidade_percebida
     chain: custo -> INIBE -> adocao_de_ia
+    chain: utilidade_percebida -> FAVORECE -> adocao_de_ia
 END ITEM
 ```
 
-**Salve o arquivo.**
-
 :::{.callout-tip}
 ## Observe o padrão
-Cada `ITEM` conecta:
-1. Uma citação literal (`quote`)
-2. Sua interpretação (`memo`)
-3. Códigos conceituais (`code`)
-4. Relações causais (`chain`)
+Cada `ITEM` liga:
+
+1. uma citação literal (`quote`)
+2. a sua interpretação (`memo`)
+3. conceitos (`code`)
+4. quando a fonte afirma, uma relação (`chain`)
 
 Isso é **rastreabilidade bidirecional**: da evidência à interpretação e vice-versa.
 :::
 
 ---
 
-## Passo 7: Validar Tudo
+## Passo 7: Validar
 
-Antes de compilar, vamos validar que tudo está consistente. Execute:
+Para conferir só a escrita de um arquivo:
 
 ```bash
-synesis check analysis.synp
+synesis check annotations.syn
 ```
 
-**O output deve mostrar:**
+Para validar o projeto inteiro (template, bibliografia, anotações e ontologia):
 
+```bash
+synesis compile project.synp --stats
 ```
-✓ Template is valid
-✓ Bibliography loaded: 2 entries
-✓ Ontology is valid
-✓ All annotations are valid
-✓ All codes are defined in ontology
-✓ All bibrefs exist in bibliography
-✓ No validation errors found
+
+**A saída termina assim:**
+
+```text
+Compilation Summary:
+  Sources        2
+  Items          3
+  Model entries  4  (4 concepts)
+  Active codes   4
+  Chains         3
 ```
 
 :::{.callout-note}
 ## Checkpoint ✓
-Se você vê todas as marcas de verificação (✓), excelente! Se houver erros, leia as mensagens cuidadosamente — o compilador indica exatamente o que precisa ser corrigido.
+Nenhuma linha com `[ERROR]` ou `[WARNING]`: o projeto está consistente.
 :::
 
----
+### Veja o compilador trabalhar
 
-## Passo 8: Compilar o Projeto
+Acrescente ao final de `annotations.syn` um item com um código que não existe e uma relação não declarada:
 
-Agora vem o momento mágico. Vamos compilar nosso projeto e gerar as saídas estruturadas:
-
-```bash
-synesis compile analysis.synp --output output/
-```
-
-**O que aconteceu?**
-O compilador gerou vários arquivos:
-
-```
-output/
-├── analysis.json          # Estrutura hierárquica completa
-├── sources.csv           # Tabela de fontes
-├── items.csv             # Tabela de anotações
-├── codes.csv             # Tabela de códigos
-├── chains.csv            # Tabela de relações
-└── analysis.xlsx         # Excel com múltiplas abas
-```
-
-:::{.callout-tip}
-## Explore os resultados
-Abra o arquivo `analysis.xlsx` no Excel ou LibreOffice. Você verá:
-
-- **Aba "Sources"**: Lista de fontes bibliográficas
-- **Aba "Items"**: Todas as anotações com seus campos
-- **Aba "Codes"**: Frequência de códigos
-- **Aba "Chains"**: Mapa de relações causais
-
-Agora você pode fazer análises quantitativas sobre dados qualitativos!
-:::
-
----
-
-## Passo 9: Adicionar Mais Uma Anotação
-
-Vamos praticar! Abra novamente `annotations/entrevistas.syn` e adicione:
-
+<!-- demo-error -->
 ```synesis
 ITEM @entrevista_maria2026
-    quote: "A interface é intuitiva, mas precisaríamos de treinamento"
-    memo: Reconhece facilidade de uso, mas identifica necessidade de capacitação
-    code: facilidade_de_uso
+    quote: "Precisaríamos de treinamento"
+    memo: Aponta a necessidade de capacitação
+    code: treinamento
+    chain: treinamento -> EXIGE -> adocao_de_ia
 END ITEM
 ```
 
-Salve, valide e compile novamente:
-
 ```bash
-synesis check analysis.synp
-synesis compile analysis.synp --output output/
+synesis compile project.synp --check-codes
 ```
 
-**Observe:** O arquivo `output/analysis.xlsx` agora tem 4 anotações em vez de 3!
-
-:::{.callout-note}
-## Checkpoint ✓
-Você acaba de fazer o ciclo completo: anotar → validar → compilar → analisar. Este é o workflow Synesis.
-:::
+O compilador aponta o arquivo, a linha e o problema: a relação `EXIGE` é um **erro**, e o código `treinamento`, sem conceito na ontologia, um **aviso**. Remova o item antes de continuar.
 
 ---
 
-## Passo 10 (Opcional): Instalar a Extensão VSCode
+## Passo 8: Exportar
 
-Se você usa VSCode, instale a extensão **Synesis Explorer** para ter:
+```bash
+synesis compile project.synp --json saida/analise.json --csv saida/csv --xls saida/analise.xlsx
+```
 
-- Syntax highlighting automático
-- Validação em tempo real
-- Autocomplete de códigos
-- Tree views de fontes, códigos e relações
+**O que foi gerado:**
 
-**Instalação:**
+```text
+saida/
+├── analise.json        # estrutura completa do projeto
+├── analise.xlsx        # planilha com várias abas
+└── csv/
+    ├── items.csv       # uma linha por unidade analítica
+    ├── ontologies.csv  # conceitos
+    └── chains.csv      # relações (origem, relação, destino)
+```
 
-1. Abra VSCode
-2. Pressione `Ctrl+Shift+X` (abre Extensions)
-3. Busque por "Synesis Explorer"
-4. Clique em "Install"
+Há `sources.csv` quando o template declara campos de `SOURCE`.
 
-**Agora, abra sua pasta do projeto no VSCode:**
+:::{.callout-tip}
+## Explore os resultados
+Abra `analise.xlsx` no Excel ou no LibreOffice: você já pode contar, filtrar e cruzar os seus dados qualitativos, e cada linha aponta o arquivo e a linha de origem.
+:::
+
+### Declare as exportações no projeto
+
+Para não repetir as opções, declare os artefatos em `project.synp`:
+
+<!-- file: project.synp -->
+```synesis
+PROJECT adocao_tecnologica
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+
+    QUESTIONS
+        Q1: Que fatores os entrevistados apontam para adotar ou não IA?
+    END QUESTIONS
+
+    EXPORT JSON
+        OUTPUT "saida/analise.json"
+    END EXPORT
+
+    EXPORT XLS
+        OUTPUT "saida/analise.xlsx"
+    END EXPORT
+END PROJECT
+```
+
+E execute:
+
+```bash
+synesis export project.synp
+```
+
+---
+
+## Passo 9 (opcional): VS Code
+
+Com a extensão **Synesis** instalada, abra a pasta do projeto:
 
 ```bash
 code .
 ```
 
-Abra o arquivo `annotations/entrevistas.syn`. Você verá syntax highlighting colorido e, se houver erros, linhas onduladas vermelhas com mensagens de diagnóstico.
+Você terá realce de sintaxe, validação em tempo real, autocompletar de códigos e relações e as visões de referências, códigos, relações e ontologia. Veja o [Tutorial Synesis Explorer](synesis_explorer_tutorial.qmd).
 
 ---
 
 ## 🎉 Parabéns!
 
-Você acabou de criar seu primeiro projeto Synesis completo! Você aprendeu a:
+Você criou seu primeiro projeto Synesis completo. Você aprendeu a:
 
-- ✅ Instalar o compilador Synesis
-- ✅ Criar a estrutura de um projeto
-- ✅ Definir um template personalizado
-- ✅ Criar uma ontologia de códigos
-- ✅ Adicionar referências bibliográficas
-- ✅ Escrever anotações interpretativas estruturadas
-- ✅ Validar consistência semântica
-- ✅ Compilar para formatos universais (JSON/CSV/Excel)
-- ✅ Configurar o ambiente VSCode (opcional)
+- ✅ Instalar o compilador e criar um projeto
+- ✅ Definir um template próprio
+- ✅ Criar uma ontologia
+- ✅ Registrar fontes e escrever anotações estruturadas
+- ✅ Validar e ler os diagnósticos
+- ✅ Exportar para JSON, CSV e Excel
 
 ---
 
 ## Próximos Passos
 
-Agora que você domina o básico, explore:
+### Aprofundar
+- [Guia para Pesquisadores](guia_pesquisadores.qmd)
+- [Referência da Linguagem](../reference/guia_referencia.qmd)
 
-### Aprofundar Conhecimento
-- [Guia para Pesquisadores](guia_pesquisadores.qmd) — Aplicar Synesis em pesquisa qualitativa
-- [Referência da Linguagem](../reference/guia_referencia.qmd) — Sintaxe completa
-
-### Resolver Problemas Específicos
-- [Como definir uma ontologia complexa](../howto/definir_ontologia.qmd)
-- [Como criar chains qualificadas](../howto/criar_chains.qmd)
+### Resolver problemas específicos
+- [Como definir uma ontologia](../howto/definir_ontologia.qmd)
+- [Como criar chains](../howto/criar_chains.qmd)
+- [Codificação com IA (synesis-coder)](../howto/synesis_coder.qmd)
 - [Como exportar para Neo4j](../howto/exportar_neo4j.qmd)
 
-### Entender Conceitos
+### Entender conceitos
 - [Por que não Excel?](../explanation/guia_sincero.qmd)
-- [Template como Fonte da Verdade](../reference/guia_referencia.qmd)
+- [Por que anotações estruturadas importam](../explanation/por_que_estrutura_importa.qmd)
 
 ---
 
 ## Troubleshooting {#troubleshooting}
 
-### Erro: `command not found: synesis`
+### `command not found: synesis` (ou "não é reconhecido como um comando")
 
-**Causa:** Python não está no PATH ou pip instalou em local não reconhecido.
+A pasta de scripts do Python não está no `PATH`.
 
-**Solução:**
 ```bash
 python -m pip install --user synesis
-python -m synesis --version
 ```
 
-### Erro: `Template file not found`
+Abra um terminal novo depois da instalação. Como alternativa, instale com `uv tool install synesis`.
 
-**Causa:** Você está rodando comandos no diretório errado.
+### `Template 'template.synt' not found`
 
-**Solução:**
+Ou o caminho está errado (rode os comandos na pasta do projeto), ou o template tem um **erro de sintaxe**: nos dois casos a mensagem pode ser essa. Confira com:
+
 ```bash
-# Certifique-se de estar na pasta do projeto
-cd meu-primeiro-projeto
-pwd  # Deve mostrar o caminho do projeto
+synesis validate-template template.synt
 ```
 
-### Erro: `Code 'XYZ' not defined in ontology`
+As causas mais comuns são `version:` em linha própria, um índice de `ORDERED` sem colchetes e um `END` faltando.
 
-**Causa:** Você usou um código em `annotations/entrevistas.syn` que não existe em `ontology/codes.syno`.
+### `Code 'XYZ' is not defined in the organizing model`
 
-**Solução:**
-1. Abra `ontology/codes.syno`
-2. Adicione um bloco `ONTOLOGY conceito_novo ... END ONTOLOGY` com `descricao:` e `grupo:`
-3. Salve e valide novamente
+Você usou um código que não tem bloco em `ontology.syno`. Acrescente o `ONTOLOGY` correspondente ou corrija a grafia.
 
-### Erro: `Bibref '@abc' not found in bibliography`
+### `Reference '@abc' not found in the .bib`
 
-**Causa:** Você referenciou uma fonte que não existe em `references.bib`.
+A chave não existe em `references.bib`, ou está escrita de outra forma.
 
-**Solução:**
-1. Abra `references.bib`
-2. Adicione a entrada BibTeX com a chave `abc`
-3. Salve e valide novamente
+### Quero entender um erro
+
+Todos estão no [Guia de Erros](../reference/guia_erros.qmd). No terminal: `pip install synesis-help` e `synesis-help lookup E010`.
 
 ---
 
-**Ficou com dúvidas?** Abra uma discussão em [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou consulte a [documentação completa](https://synesis-lang.org).
+**Ficou com dúvidas?** Abra uma discussão no [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) ou consulte a [documentação](https://synesis-lang.org).

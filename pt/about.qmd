@@ -34,7 +34,7 @@ Essa etapa consolidou uma experiência que reapareceria no Synesis: conceber, de
 
 ### 1999 — Mudança de rumo
 
-A atividade comercial da ImageWare foi encerrada em 1999, e o foco se voltou para uma caminhada Cristã, envolvendo estudos e práticas teológicas. O encontro com Jesus Cristo! Uma conversão. Esse realinhamento espiritual, intelectual e profissional alimentou uma sensibilidade hermenêutica, epistemológica e filosófica que, mais tarde, encontraria expressão na aplicação das filosofias de Herman Dooyeweerd e Dirk Vollenhoven, filósofos cristãos holandêses, ao método de pesquisa. Ao mesmo tempo, um sistema de controle financeiro em **Delphi 5**, desenvolvido sem fins comerciais, manteve vivo o vínculo com a prática de programação.
+A atividade comercial da ImageWare foi encerrada em 1999, e o foco se voltou para uma caminhada Cristã, envolvendo estudos e práticas teológicas. O encontro com Jesus Cristo! Uma conversão. Esse realinhamento espiritual, intelectual e profissional alimentou uma sensibilidade hermenêutica, epistemológica e filosófica que, mais tarde, encontraria expressão na aplicação das filosofias de Herman Dooyeweerd e Dirk Vollenhoven, filósofos cristãos holandeses, ao método de pesquisa. Ao mesmo tempo, um sistema de controle financeiro em **Delphi 5**, desenvolvido sem fins comerciais, manteve vivo o vínculo com a prática de programação.
 
 Essa fase aproximou duas dimensões que se tornariam inseparáveis no Synesis: a interpretação rigorosa de textos e conceitos e a construção de instrumentos computacionais capazes de organizá-los.
 
@@ -160,7 +160,7 @@ ITEM @burke2018
 END ITEM
 ```
 
-O arquivo permanece legível para uma pessoa. Ao mesmo tempo, se o pesquisador escrever `Governance` sem defini-lo na ontologia, armazenada em arquivo de formato específico, o compilador emitirá um aviso imediato. Não há ambiguidade silenciosa: ou o conceito existe na ontologia declarada, ou o compilador rejeita a anotação na origem.
+O arquivo permanece legível para uma pessoa. Ao mesmo tempo, se o pesquisador escrever `Governance` sem defini-lo na ontologia, armazenada em arquivo de formato específico, o compilador emitirá um aviso imediato. Não há ambiguidade silenciosa: ou o conceito existe na ontologia declarada, ou o compilador aponta sua ausência na origem (e, com a opção `--strict`, recusa a compilação).
 
 Ao se tornar uma linguagem formal com gramática LALR(1), o Synesis passou a oferecer o que nenhum dos scripts anteriores poderia assegurar isoladamente: validação em tempo real no editor, preenchimento automático de campos, exportação para JSON, CSV e Excel e portabilidade para diferentes tipos de pesquisa qualitativa.
 
@@ -176,7 +176,7 @@ Cada etapa deixou uma contribuição identificável. A linguagem em blocos do CO
 
 O uso de IA entrou nessa trajetória como parceria de implementação, não como substituição do conhecimento de domínio. Os requisitos metodológicos, o vocabulário conceitual e as decisões fundamentais de arquitetura nasceram da experiência acumulada nas implementações anteriores. A IA tornou possível traduzir esse repertório em um ecossistema de software com escala e ritmo excepcionais — pelo caminho tradicional de desenvolvimento individual, o mesmo resultado teria demandado anos.
 
-As etapas predecessoras ocorreram em diferentes contextos — pesquisa acadêmica, atividade empresarial própria, consultoria profissional —, cada uma com seus vínculos e regimes institucionais específicos. O ecossistema Synesis em sua forma atual — compilador, servidor LSP, extensão para VS Code, pipeline Neo4j, plugin Zotero e documentação — foi desenvolvido de forma independente dessas etapas: integralmente com codificação assistida por IA, utilizando exclusivamente recursos próprios do autor, sem vinculação a projetos, laboratórios ou financiamentos institucionais. A experiência acumulada nas etapas anteriores definiu *o que* construir e *por que* construir; a IA acelerou a execução técnica.
+As etapas predecessoras ocorreram em diferentes contextos — pesquisa acadêmica, atividade empresarial própria, consultoria profissional —, cada uma com seus vínculos e regimes institucionais específicos. O ecossistema Synesis em sua forma atual — compilador, servidor LSP, extensão para VS Code, pipeline de grafos, plugin Zotero e documentação — foi desenvolvido de forma independente dessas etapas: integralmente com codificação assistida por IA, utilizando exclusivamente recursos próprios do autor, sem vinculação a projetos, laboratórios ou financiamentos institucionais. A experiência acumulada nas etapas anteriores definiu *o que* construir e *por que* construir; a IA acelerou a execução técnica.
 
 
 [Currículo completo do autor](https://lattes.cnpq.br/2334832147379385) está disponível na plataforma Lattes.

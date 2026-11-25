@@ -1,1868 +1,3996 @@
 ---
 title: "Guia de Erros"
-subtitle: "Todas as mensagens do compilador — com exemplos reproduzíveis"
+subtitle: "Todos os diagnósticos do compilador Synesis, com exemplo, mensagem e correção"
+toc-depth: 2
 ---
 
-::: {.callout-tip}
-## Como usar este guia
-Cada erro mostra: o que aconteceu, por que é problema, e como corrigir — com um trecho de código que você pode copiar para reproduzir o erro. Os projetos de teste completos estão na pasta do repositório de ![estudos de caso](https://github.com/synesis-lang/case-studies/tree/main/Tests).
+::: {.callout-note}
+## A que versão esta página se refere
+Os códigos, exemplos e mensagens abaixo foram verificados com o **synesis 0.16.0**. Cada exemplo foi compilado, e a mensagem mostrada é a que o compilador produziu. Versões anteriores desta página usavam outra numeração.
 :::
 
-## Convenções
+# Como usar este guia {#sec-como-usar}
 
-- **(ERRO)** — impede a compilação e bloqueia a exportação
-- **(AVISO)** — algo incompleto ou incomum; não bloqueia, mas deve ser investigado
-- **(INFO)** — informação de contexto; não indica defeito algum. Usado quando o compilador precisa registrar uma condição esperada, como uma referência entre projetos que só se resolve na linkagem (@sec-erro-80)
-- Erros marcados com **[implementado]** já são detectados pelo compilador; **[pendente]** ainda não
-- Erros de template (39–60, 69) são problemas na definição das regras do projeto, não nas anotações
-- Erros de caminho (73–76) tratam da resolução de arquivos declarados no `.synp`; erros de ligação (77–84) tratam da conexão entre projetos independentes
+Cada diagnóstico tem um código estável, no formato `SYNESIS_E047`. A letra indica a família: **E** (erro), **W** (aviso) e **I** (informativo). Alguns códigos `E` aparecem como aviso; a severidade de cada um está na sua seção.
 
+| Severidade | Efeito |
+|---|---|
+| erro | interrompe a exportação: nenhum JSON, CSV ou planilha é gravado (salvo com `--force`) |
+| erro local ao bloco `EXPORT` | impede só o artefato daquele bloco |
+| aviso | a compilação prossegue; com `--strict`, avisos contam como erros |
+| informativo | apenas registra um fato |
 
-## Formato das mensagens
+## Formato das mensagens {#sec-formato}
 
-Toda mensagem segue esta estrutura:
+As mensagens saem em **inglês**, em uma linha, com arquivo, linha e coluna. Os caminhos são relativos à pasta do `.synp`:
 
+```text
+annotations.syn:15:1  [ERROR]  Unknown field `extra` in ITEM block
 ```
-ERRO  arquivo.syn  linha 42, coluna 7
-  O código `Acietacao_Social` não está definido na ontologia.
-  Você quis dizer `Aceitacao_Social`?
+
+A linha de comando não imprime o código. Para vê-lo, há três caminhos:
+
+```bash
+synesis compile project.synp --diagnostics-json diagnostics.json   # relatório em JSON
+synesis-help lookup E047                                            # a ficha de um código
+synesis-help search "bundle"                                        # busca por assunto
 ```
 
-- **Nível** — ERRO ou AVISO
-- **Localização** — arquivo, linha e coluna
-- **Descrição** — o que aconteceu
-- **Sugestão** — quando aplicável, o compilador sugere correções usando similaridade de texto
+No VS Code, o código acompanha o diagnóstico, com a explicação completa.
+
+## Opções que mudam o que aparece {#sec-opcoes}
+
+| Opção | Efeito |
+|---|---|
+| `--check-codes` | lista cada código sem conceito ([E004](#sec-e004)) em vez do resumo ([E090](#sec-e090)) |
+| `--strict` | trata avisos como erros; liga `--check-codes` |
+| `--force` | gera os artefatos mesmo com erros |
 
 
-# Vínculos Bibliográficos {#sec-bibliografia}
+# Fontes e bibliografia {#sec-bibliografia}
 
-Erros de ligação entre SOURCEs, ITEMs e o arquivo `.bib`. Projeto de teste: `T01`.
+## E001 — Referência não encontrada no `.bib` {#sec-e001}
 
-## Erro 1 — Fonte não encontrada na bibliografia (AVISO) {#sec-erro-1}
+**Severidade:** erro · **Classe:** `UnregisteredSource`
 
-O `@bibref` de um SOURCE não existe no arquivo `.bib`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O `@bibref` de um bloco não corresponde a nenhuma chave do arquivo de bibliografia.
 
 ```synesis
-SOURCE @garcia2022
-    summary: Estudo sobre aceitação social.
+# annotations.syn
+SOURCE @silvva2024
+END SOURCE
+
+ITEM @silvva2024
+    quote: "text"
+END ITEM
+```
+
+```text
+annotations.syn:1:1  [ERROR]  Reference `@silvva2024` not found in the .bib. Suggestions: `@silva2024`
+```
+
+**Como corrigir:** Confira a grafia da chave ou acrescente a entrada ao `.bib`. A mensagem sugere chaves parecidas quando existem.
+
+## E002 — ITEM sem SOURCE {#sec-e002}
+
+**Severidade:** erro · **Classe:** `OrphanItem`
+
+Há um `ITEM` cujo `@bibref` não tem um bloco `SOURCE` no mesmo arquivo.
+
+```synesis
+# annotations.syn
+ITEM @silva2024
+    quote: "text"
+END ITEM
+```
+
+```text
+annotations.syn:1:1  [ERROR]  ITEM `@silva2024` has no matching SOURCE in this file
+```
+
+**Como corrigir:** Crie o bloco `SOURCE @chave` no mesmo `.syn`, antes dos itens, ou corrija o `@bibref` do ITEM.
+
+## E003 — SOURCE sem ITEMs {#sec-e003}
+
+**Severidade:** aviso · **Classe:** `SourceWithoutItems`
+
+Uma fonte foi registrada, mas nenhum trecho dela foi analisado.
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
 END SOURCE
 ```
 
-Mas o arquivo `.bib` não contém a entrada `garcia2022`:
+```text
+annotations.syn:1:1  [WARNING]  SOURCE `@silva2024` has no associated ITEM
+```
+
+**Como corrigir:** Acrescente ao menos um `ITEM` ou remova o `SOURCE`. É um aviso: a compilação prossegue.
+
+## E070 — SOURCE duplicada {#sec-e070}
+
+**Severidade:** erro · **Classe:** `DuplicateSourceBibref`
+
+O mesmo `@bibref` abre dois blocos `SOURCE` no mesmo arquivo.
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "Cost limits adoption."
+END ITEM
+
+SOURCE @silva2024
+END SOURCE
+```
+
+```text
+annotations.syn:8:1  [ERROR]  SOURCE `@silva2024` duplicated in this file
+```
+
+**Como corrigir:** Mantenha um único bloco `SOURCE` por referência; os `ITEM` podem ser quantos forem necessários.
+
+## E072 — Entrada BibTeX inválida {#sec-e072}
+
+**Severidade:** erro · **Classe:** `MalformedBibliographyEntry`
+
+Uma entrada do `.bib` não está em formato BibTeX válido.
 
 ```bibtex
-@article{smith2024,
-    author = {Smith, Jane},
-    title  = {Community Resilience},
-    year   = {2024}
+% references.bib
+@article{silva2024,
+    author = {Silva, Ana},
+    title = {Study},
+    year = {2024}
 }
-# garcia2022 não existe aqui
+
+@article{souza2023,
+    author = {Souza, Bia},
+    title = {Open brace
 ```
 
-### Como corrigir
+```text
+references.bib:1:1  [ERROR]  Entry `@article` in `references.bib` is not valid BibTeX
+```
 
-Adicione a entrada ao `.bib` ou corrija a grafia do `@bibref`. O compilador sugere alternativas similares quando encontra.
-:::
+**Como corrigir:** Corrija a entrada indicada (chaves de abertura e fechamento, vírgulas entre campos).
 
+## E089 — Chave repetida entre arquivos {#sec-e089}
 
-## Erro 2 — ITEM sem SOURCE correspondente (ERRO) {#sec-erro-2}
+**Severidade:** erro · **Classe:** `DuplicateKeyAcrossFiles`
 
-Um ITEM referencia um `@bibref` que não tem bloco SOURCE no mesmo arquivo.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+A mesma chave aparece em dois arquivos da bibliografia (ou do dataset). Vale a primeira ocorrência.
 
 ```synesis
-# Nenhum bloco SOURCE @orphan_ref existe neste arquivo
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE BIBLIOGRAPHY "extra.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+END PROJECT
+```
 
-ITEM @orphan_ref
-    citation: Trecho sem fonte declarada.
-    memo: Este item não tem SOURCE.
-    tag: Aceitacao_Social
+```bibtex
+% extra.bib
+@article{silva2024,
+    author = {Silva, Ana},
+    title = {Study},
+    year = {2024}
+}
+```
+
+```text
+extra.bib:1:1  [ERROR]  Duplicate key `silva2024`: already defined in `references.bib:1`
+```
+
+**Como corrigir:** Decida qual registro é o correto e remova o outro.
+
+# Conceitos e modelo organizador {#sec-ontologia}
+
+## E004 — Código sem conceito {#sec-e004}
+
+**Severidade:** aviso · **Classe:** `UndefinedCode`
+
+Um código usado em um campo `CODE` ou em uma cadeia não tem bloco `ONTOLOGY`. A verificação por ocorrência é opcional: aparece com `--check-codes` ou `--strict` (veja E090).
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    code: Costs
 END ITEM
 ```
 
-### Como corrigir
-
-Crie um bloco `SOURCE @orphan_ref` antes do ITEM, ou corrija o `@bibref`.
-:::
-
-
-## Erro 24 — SOURCE sem ITEMs (AVISO) {#sec-erro-24}
-
-Uma SOURCE foi declarada mas nenhum ITEM a referencia.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-SOURCE @jones2023
-    summary: Estudo urbano sem unidades de análise extraídas.
-END SOURCE
-
-# Nenhum ITEM @jones2023 existe no projeto
+# ontology.syno
+ONTOLOGY Cost
+    definition: Cost.
+END ONTOLOGY
 ```
 
-### Como corrigir
-
-Adicione pelo menos um ITEM que referencie `@jones2023`, ou remova o SOURCE se não for mais necessário.
-:::
-
-
-## Erro 70 — SOURCE duplicada (ERRO) {#sec-erro-70}
-
-O mesmo `@bibref` aparece em dois blocos SOURCE no mesmo arquivo.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-SOURCE @smith2024
-    summary: Primeira declaração.
-END SOURCE
-
-# ...outros blocos...
-
-SOURCE @smith2024
-    summary: Declaração duplicada.
-END SOURCE
+```text
+annotations.syn:4:1  [WARNING]  Code `Costs` is not defined in the organizing model. Suggested fix -> `Cost`
 ```
 
-### Como corrigir
+**Como corrigir:** Defina o conceito em um arquivo `.syno` ou corrija a grafia do código. A mensagem sugere o conceito mais parecido.
 
-Unifique os dois blocos num único SOURCE, ou distribua as anotações em arquivos `.syn` separados.
-:::
+## E090 — Resumo dos códigos sem conceito {#sec-e090}
 
+**Severidade:** aviso · **Classe:** `UndefinedCodesSummary`
 
-# Vínculos Ontológicos {#sec-ontologia}
-
-Erros de ligação entre códigos usados em ITEMs e definições na ontologia. Projeto de teste: `T01`.
-
-## Erro 3 — Código não definido na ontologia (AVISO) {#sec-erro-3}
-
-Um código usado no campo `code` de um ITEM não tem entrada ONTOLOGY correspondente.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Com a verificação por ocorrência desligada (o padrão), o compilador emite uma única linha com o total de códigos sem conceito.
 
 ```synesis
-ITEM @smith2024
-    citation: Os custos foram citados como principal barreira.
-    memo: Custo como fator determinante.
-    tag: Custo_Inexistente, Aceitacao_Social
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    code: Costs, Trust
 END ITEM
 ```
 
-`Custo_Inexistente` não tem bloco ONTOLOGY no `.syno`.
+```text
+project.synp:1:1  [WARNING]  2 code(s) without a concept in the organizing model (2 occurrence(s)); use --check-codes to list them
+```
 
-### Como corrigir
+**Como corrigir:** Use `synesis compile --check-codes` para listar cada ocorrência. Antes de a ontologia existir, este aviso é esperado.
 
-Crie o conceito na ontologia:
+## E005 — ONTOLOGY sem `ONTOLOGY FIELDS` {#sec-e005}
+
+**Severidade:** erro · **Classe:** `OntologyWithoutTemplateFields`
+
+O projeto tem blocos `ONTOLOGY`, mas o template não declara quais campos eles aceitam.
 
 ```synesis
-ONTOLOGY Custo_Inexistente
-    definition: ...
-    group: ...
+# template.synt
+TEMPLATE demo
+
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+END FIELD
+```
+
+```synesis
+# ontology.syno
+ONTOLOGY Cost
+    definition: Cost.
 END ONTOLOGY
 ```
 
-Ou corrija a grafia — o compilador sugere alternativas similares.
-:::
+```text
+project.synp:1:1  [ERROR]  Project has ONTOLOGY blocks but the template does not declare ONTOLOGY FIELDS
+```
 
+**Como corrigir:** Acrescente o bloco `ONTOLOGY FIELDS` ao template, com os respectivos `FIELD`.
 
-## Erro 4 — Conceito de CHAIN não definido (AVISO) {#sec-erro-4}
+## E068 — Conceito duplicado {#sec-e068}
 
-Um nó conceitual usado numa CHAIN não existe na ontologia.
+**Severidade:** erro · **Classe:** `DuplicateOntologyConcept`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Dois blocos `ONTOLOGY` definem o mesmo conceito (a comparação ignora maiúsculas e minúsculas), no mesmo arquivo ou em arquivos diferentes.
 
 ```synesis
-ITEM @smith2024
-    citation: A percepção de risco influencia a aceitação.
-    tag: Aceitacao_Social
-    chain: Percepcao_Risco -> INFLUENCES -> Conceito_Fantasma
+# ontology.syno
+ONTOLOGY Cost
+    definition: Cost.
+END ONTOLOGY
+
+ONTOLOGY cost
+    definition: cost.
+END ONTOLOGY
+```
+
+```text
+ontology.syno:5:1  [ERROR]  Concept `cost` duplicated in ontology.syno and ontology.syno
+```
+
+**Como corrigir:** Una as duas definições em um só bloco. Se forem conceitos distintos, renomeie um deles.
+
+## E103 — Nomes que colidem após normalização Unicode {#sec-e103}
+
+**Severidade:** erro · **Classe:** `IdentityCollision`
+
+Dois nomes parecem diferentes no arquivo (caracteres compostos e decompostos), mas têm a mesma identidade depois da normalização NFC.
+
+```text
+ontology.syno:5:1  [ERROR]  Concepts `Café_Culture` and `Café_Culture` collide (same identity after Unicode normalization)
+```
+
+**Como corrigir:** Escreva o nome sempre da mesma forma; apague um dos blocos.
+
+## W071 — Definições idênticas {#sec-w071}
+
+**Severidade:** aviso · **Classe:** `DuplicateOntologyDescription`
+
+Dois conceitos têm a mesma descrição, sinal frequente de duplicata conceitual.
+
+```synesis
+# ontology.syno
+ONTOLOGY Cost
+    description: Financial barrier.
+END ONTOLOGY
+
+ONTOLOGY Price
+    description: Financial barrier.
+END ONTOLOGY
+```
+
+```text
+ontology.syno:5:1  [WARNING]  Concepts `Cost` and `Price` have identical descriptions
+```
+
+**Como corrigir:** Diferencie as definições ou consolide os conceitos (veja `ROLE USE`).
+
+# Cadeias (CHAIN) e relações {#sec-chains}
+
+Uma cadeia **qualificada** alterna conceitos e relações (`A -> RELACAO -> B`) e exige o bloco `RELATIONS` no template. Uma cadeia **simples** só tem conceitos (`A -> B`).
+
+## E007 — Aridade não atendida {#sec-e007}
+
+**Severidade:** erro · **Classe:** `ChainArityViolation`
+
+A cadeia tem menos conceitos do que o `ARITY` do campo exige.
+
+```synesis
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 3
+    RELATIONS
+        ENABLES: makes possible
+        INHIBITS: limits
+    END RELATIONS
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: Cost -> INHIBITS -> Adoption
 END ITEM
 ```
 
-`Conceito_Fantasma` não tem entrada ONTOLOGY.
-
-### Como corrigir
-
-Crie o conceito na ontologia ou corrija a grafia.
-:::
-
-
-## Erro 68 — Conceito duplicado na ontologia (ERRO) {#sec-erro-68}
-
-O mesmo nome de conceito aparece em dois blocos ONTOLOGY.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ONTOLOGY Aceitacao_Social
-    definition: Grau de aprovação de uma tecnologia.
-    group: Fatores_Sociais
-END ONTOLOGY
-
-ONTOLOGY Aceitacao_Social
-    definition: Definição duplicada.
-    group: Duplicatas
-END ONTOLOGY
+```text
+annotations.syn:6:5  [ERROR]  Chain with 2 element(s), the template requires >= 3
 ```
 
-### Como corrigir
+**Como corrigir:** Complete a cadeia ou revise o `ARITY` no template.
 
-Unifique os dois blocos num único ONTOLOGY, ou renomeie um deles.
-:::
+## E008 — Cadeia com relações em um campo sem `RELATIONS` {#sec-e008}
 
+**Severidade:** erro · **Classe:** `QualifiedChainWithoutRelations`
 
-## Erro 71 — Descrições idênticas em conceitos diferentes (AVISO) {#sec-erro-71}
-
-Dois blocos ONTOLOGY distintos têm exatamente a mesma `definition`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+A cadeia usa nomes de relação, mas o campo não declara `RELATIONS`. O compilador reconhece como relação um elemento intermediário escrito em maiúsculas.
 
 ```synesis
-ONTOLOGY Conceito_A
-    definition: Fator que influencia positivamente a adoção de tecnologias limpas.
-    group: Fatores_Gerais
-END ONTOLOGY
-
-ONTOLOGY Conceito_B
-    definition: Fator que influencia positivamente a adoção de tecnologias limpas.
-    group: Fatores_Gerais
-END ONTOLOGY
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+END FIELD
 ```
 
-### Como corrigir
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
 
-Diferencie as definições, ou verifique se os conceitos deveriam ser um único.
-:::
+ITEM @silva2024
+    quote: "text"
+    chain: Cost -> INHIBITS -> Adoption
+END ITEM
+```
 
+```text
+annotations.syn:6:5  [ERROR]  Chain with named relations in `chain`, but the template defines no RELATIONS
+```
 
-# Cadeias (CHAINs) e Relações {#sec-chains}
+**Como corrigir:** Declare `RELATIONS` no campo ou escreva a cadeia simples (`A -> B`).
 
-Erros de estrutura e vínculo em campos CHAIN. Projeto de teste: `T02`.
+## E009 — Cadeia simples onde há relações obrigatórias {#sec-e009}
 
-Estes exemplos usam o seguinte template:
+**Severidade:** erro · **Classe:** `SimpleChainWithRelationsRequired`
+
+O campo declara `RELATIONS`, mas a cadeia não nomeia a relação.
 
 ```synesis
+# template.synt
 FIELD chain TYPE CHAIN
     SCOPE ITEM
     ARITY >= 2
     RELATIONS
-        INFLUENCES: Efeito causal direto
-        CONSTRAINS: Um conceito limita outro
-        ENABLES:    Condição necessária
+        ENABLES: makes possible
+        INHIBITS: limits
     END RELATIONS
 END FIELD
 ```
 
-
-## Erro 7 — Relação não declarada no template (ERRO) {#sec-erro-7}
-
-Uma CHAIN usa um nome de relação que não está no bloco RELATIONS.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-ITEM @autor2024
-    citation: Correlação não declarada.
-    chain: Custo -> CORRELATES -> Aceitacao
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: Cost -> Adoption
 END ITEM
 ```
 
-`CORRELATES` não está nas RELATIONS do template (que define `INFLUENCES`, `CONSTRAINS`, `ENABLES`).
+```text
+annotations.syn:6:5  [ERROR]  Simple chain in `chain` but the template requires named relations
+```
 
-### Como corrigir
+**Como corrigir:** Intercale uma relação declarada entre os conceitos.
 
-Use uma das relações disponíveis ou peça ao coordenador do projeto para incluir a nova relação no template.
-:::
+## E010 — Relação não declarada {#sec-e010}
 
+**Severidade:** erro · **Classe:** `InvalidChainRelation`
 
-## Erro 9 — CHAIN simples onde relações são obrigatórias (ERRO) {#sec-erro-9}
-
-A CHAIN foi escrita sem relações (`A -> B`), mas o template define RELATIONS e exige o formato qualificado (`A -> RELAÇÃO -> B`).
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+A cadeia usa uma relação que não está no `RELATIONS` do campo.
 
 ```synesis
-ITEM @autor2024
-    citation: Cadeia simples em campo que exige relações.
-    chain: Custo -> Aceitacao
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        ENABLES: makes possible
+        INHIBITS: limits
+    END RELATIONS
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: Cost -> BLOCKS -> Adoption
 END ITEM
 ```
 
-### Como corrigir
-
-Reescreva com relações:
-
-```synesis
-    chain: Custo -> INFLUENCES -> Aceitacao
+```text
+annotations.syn:6:5  [ERROR]  Relation `BLOCKS` not declared in the template
 ```
-:::
 
+**Como corrigir:** Use uma relação declarada ou acrescente a nova ao template, com sua descrição.
 
-## Erro 10 — Estrutura mal formada em CHAIN qualificada (ERRO) {#sec-erro-10}
+## E011 — Cadeia qualificada malformada {#sec-e011}
 
-Uma CHAIN qualificada deve alternar conceitos e relações: `Conceito -> RELAÇÃO -> Conceito`. Um número par de elementos indica estrutura incorreta.
+**Severidade:** erro · **Classe:** `MalformedQualifiedChain`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+A alternância conceito → relação → conceito foi quebrada; por exemplo, a cadeia termina em uma relação.
 
 ```synesis
-ITEM @autor2024
-    citation: Estrutura mal formada.
-    chain: Custo -> Aceitacao -> Percepcao_Risco -> Beneficio
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        ENABLES: makes possible
+        INHIBITS: limits
+    END RELATIONS
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: Cost -> INHIBITS -> Adoption -> ENABLES
 END ITEM
 ```
 
-4 elementos sem relações — o parser não sabe quais são conceitos e quais são relações.
-
-### Como corrigir
-
-Intercale com relações:
-
-```synesis
-    chain: Custo -> INFLUENCES -> Aceitacao -> CONSTRAINS -> Percepcao_Risco
+```text
+annotations.syn:6:5  [ERROR]  Qualified chain with incorrect structure: Cost -> INHIBITS -> Adoption -> ENABLES
 ```
-:::
 
+**Como corrigir:** Garanta número ímpar de elementos: conceito, relação, conceito.
 
-## Erro 12 — CHAIN com poucos elementos (ERRO) {#sec-erro-12}
+## E013 — Cadeia sem o operador `->` {#sec-e013}
 
-A CHAIN tem menos conceitos que o mínimo exigido pelo ARITY do template.
+**Severidade:** erro · **Classe:** `ChainWithoutArrowOperator`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O valor de um campo `CHAIN` tem um único elemento, sem `->`. Uma linha com vários elementos sem seta costuma aparecer como E028.
 
-Com `ARITY >= 3` no template, esta CHAIN tem apenas 2 conceitos efetivos:
+**Como corrigir:** Ligue ao menos dois conceitos com `->`.
+
+## E014 — Conceito com nome de relação {#sec-e014}
+
+**Severidade:** erro · **Classe:** `ConceptNameMatchesRelation`
+
+Um conceito em posição de código tem o mesmo nome de uma relação declarada.
 
 ```synesis
-ITEM @autor2024
-    citation: Cadeia com elemento único.
-    chain: Custo -> INFLUENCES -> Aceitacao
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        ENABLES: makes possible
+        INHIBITS: limits
+    END RELATIONS
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: ENABLES -> INHIBITS -> Adoption
 END ITEM
 ```
 
-### Como corrigir
+```text
+annotations.syn:6:5  [ERROR]  `ENABLES` is ambiguous: both concept and relation in `chain`
+```
 
-Adicione conceitos até atingir o mínimo exigido.
-:::
+**Como corrigir:** Renomeie o conceito ou a relação.
 
+## E015 — Conceito com espaços {#sec-e015}
 
-## Erro 14 — Conceito com mesmo nome de uma relação (ERRO) {#sec-erro-14}
+**Severidade:** erro · **Classe:** `ConceptWithSpaces`
 
-Um elemento aparece na posição de conceito, mas também está declarado como relação no template. O compilador não consegue determinar o papel do elemento.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um conceito de cadeia contém espaços.
 
 ```synesis
-ITEM @autor2024
-    citation: Conceito com mesmo nome de relação.
-    chain: INFLUENCES -> CONSTRAINS -> Aceitacao
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    chain: Public Acceptance -> ENABLES -> Adoption
 END ITEM
 ```
 
-`INFLUENCES` é relação no template E está na posição de conceito.
-
-### Como corrigir
-
-Renomeie o conceito na ontologia para ser diferente dos nomes de relação.
-:::
-
-
-## Erro 15 — Conceito com espaços (ERRO) {#sec-erro-15}
-
-Nomes de conceito em CHAINs não podem conter espaços — use underscore.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
-    citation: Conceito com espaço no nome.
-    chain: Custo -> INFLUENCES -> Aceitacao Social
-END ITEM
+```text
+annotations.syn:6:5  [ERROR]  Concept `Public Acceptance` contains spaces. Suggested fix -> `Public_Acceptance`
 ```
 
-### Como corrigir
-
-```synesis
-    chain: Custo -> INFLUENCES -> Aceitacao_Social
-```
-:::
-
+**Como corrigir:** Use sublinhado ou CamelCase: `Public_Acceptance`.
 
 # Bundles {#sec-bundles}
 
-Erros de campos que devem aparecer juntos. Projeto de teste: `T03`.
+Um `BUNDLE` reúne campos que só fazem sentido juntos e os emparelha pela posição dentro do ITEM.
 
-Estes exemplos usam o seguinte template:
+## E016 — Membro de bundle ausente {#sec-e016}
+
+**Severidade:** erro · **Classe:** `MissingBundleField`
+
+Um campo do bundle aparece sem o parceiro, ou um bundle obrigatório está ausente.
 
 ```synesis
+# template.synt
 ITEM FIELDS
-    REQUIRED citation
+    REQUIRED quote
     REQUIRED BUNDLE note, chain
-    REQUIRED BUNDLE lone_field
 END ITEM FIELDS
 ```
 
-
-## Erro 16 — Campo de bundle sem parceiro (ERRO) {#sec-erro-16}
-
-Apenas um dos campos do bundle está presente.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-ITEM @autor2024
-    citation: Bundle parcial.
-    note: Este memo não tem cadeia correspondente.
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    note: Cost is a barrier
 END ITEM
 ```
 
-O campo `note` pertence ao bundle `(note, chain)`, mas `chain` está ausente.
+```text
+annotations.syn:4:1  [ERROR]  Bundle (note, chain): missing fields `chain`
+```
 
-### Como corrigir
+**Como corrigir:** Escreva todos os campos do bundle.
 
-Adicione o campo `chain` ou remova `note`. Campos de bundle devem aparecer sempre juntos.
-:::
+## E017 — Contagens diferentes no bundle {#sec-e017}
 
-
-## Erro 17 — Contagem desigual no bundle (ERRO) {#sec-erro-17}
+**Severidade:** erro · **Classe:** `BundleCountMismatch`
 
 Os campos do bundle aparecem em quantidades diferentes.
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-ITEM @autor2024
-    citation: Bundle com contagens desiguais.
-    note: Primeiro memo.
-    chain: Custo -> INFLUENCES -> Aceitacao_Social
-    note: Segundo memo sem cadeia correspondente.
-END ITEM
-```
-
-`note` aparece 2 vezes, `chain` apenas 1.
-
-### Como corrigir
-
-Cada ocorrência de `note` precisa de uma ocorrência correspondente de `chain`.
-:::
-
-
-## Erro 18 — Bundle com campo único (ERRO) {#sec-erro-18}
-
-Um bundle foi declarado no template com apenas um campo. Bundles existem para garantir co-ocorrência — com um campo só, não faz sentido.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-No template:
-
-```synesis
+# template.synt
 ITEM FIELDS
-    REQUIRED BUNDLE lone_field
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
 END ITEM FIELDS
 ```
 
-### Como corrigir
-
-Adicione pelo menos um campo parceiro ao bundle ou remova a declaração BUNDLE.
-:::
-
-
-## Erro 19 — Bundle obrigatório ausente (ERRO) {#sec-erro-19}
-
-O ITEM não contém nenhuma ocorrência de um bundle declarado como REQUIRED.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-ITEM @autor2024
-    citation: Sem nenhuma ocorrência do bundle note+chain.
-    lone_field: Apenas este campo presente.
-END ITEM
-```
-
-### Como corrigir
-
-Adicione ao menos uma ocorrência completa do bundle (`note` + `chain`).
-:::
-
-
-# Campos Obrigatórios {#sec-campos-obrigatorios}
-
-Erros de campos REQUIRED ausentes. Projeto de teste: `T04`.
-
-
-## Erro 20 — Campo obrigatório ausente no ITEM (ERRO) {#sec-erro-20}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com `REQUIRED citation` no template:
-
-```synesis
-ITEM @autor2024
-    memo: Item sem citation obrigatório.
-    rating: 3
-END ITEM
-```
-
-### Como corrigir
-
-Adicione `citation: <valor>` ao bloco.
-:::
-
-
-## Erro 21 — Campo obrigatório ausente no SOURCE (ERRO) {#sec-erro-21}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com `REQUIRED source_date` no template:
-
-```synesis
-SOURCE @autor2024
-    summary: Fonte sem a data obrigatória.
+# annotations.syn
+SOURCE @silva2024
 END SOURCE
-```
 
-### Como corrigir
-
-Adicione `source_date: 2024-03-15` ao bloco.
-:::
-
-
-## Erro 22 — Campo obrigatório ausente no ONTOLOGY (ERRO) {#sec-erro-22}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com `REQUIRED definition, group` no template:
-
-```synesis
-ONTOLOGY Custo_Energia
-    definition: Custo total de instalação.
-    # "group" ausente
-END ONTOLOGY
-```
-
-### Como corrigir
-
-Adicione `group: <valor>` ao bloco.
-:::
-
-
-## Erro 23 — ITEM vazio (ERRO) {#sec-erro-23}
-
-Bloco ITEM sem nenhum campo.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
+ITEM @silva2024
+    quote: "text"
+    note: Cost is a barrier
+    chain: Cost -> INHIBITS -> Adoption
+    note: Trust helps
 END ITEM
 ```
 
-### Como corrigir
-
-Adicione os campos exigidos pelo template ou remova o bloco.
-:::
-
-
-# Tipos de Campo {#sec-tipos}
-
-Erros de validação de tipo — quando o valor não corresponde ao tipo declarado. Projeto de teste: `T04`.
-
-
-## Erro 25 — Valor fora do intervalo SCALE (ERRO) {#sec-erro-25}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com `FORMAT [1..5]` no template:
-
-```synesis
-ITEM @autor2024
-    citation: Valor fora do intervalo.
-    rating: 8
-END ITEM
+```text
+annotations.syn:4:1  [ERROR]  Bundle (note, chain) with unequal counts: note=2, chain=1
 ```
 
-### Como corrigir
+**Como corrigir:** Cada ocorrência de um campo precisa do par correspondente, na mesma ordem.
 
-Use um valor entre 1 e 5.
-:::
+## E018 — Bundle com um único campo {#sec-e018}
 
+**Severidade:** erro · **Classe:** `SingleFieldBundle`
 
-## Erro 26 — Decimal em SCALE inteira (ERRO) {#sec-erro-26}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O template declara um bundle de um só campo.
 
 ```synesis
-ITEM @autor2024
-    citation: Valor decimal em escala inteira.
-    rating: 3.5
-END ITEM
+# template.synt
+ITEM FIELDS
+    REQUIRED BUNDLE quote
+END ITEM FIELDS
 ```
 
-### Como corrigir
-
-Use um valor inteiro, ou peça ao coordenador para ajustar o FORMAT (ex: `[1.0..5.0]`).
-:::
-
-
-## Erro 27 — Valor inválido em ENUMERATED (ERRO) {#sec-erro-27}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com VALUES `Ativo`, `Inativo`, `Pendente`:
-
-```synesis
-ITEM @autor2024
-    citation: Valor inválido em campo ENUMERATED.
-    status: Cancelado
-END ITEM
+```text
+template.synt:7:1  [ERROR]  Bundle `quote` declared with only one field in the template
 ```
 
-### Como corrigir
+**Como corrigir:** Declare ao menos dois campos, ou use `REQUIRED`/`OPTIONAL` simples.
 
-Use um dos valores definidos: `Ativo`, `Inativo` ou `Pendente`.
-:::
+# Presença de campos {#sec-presenca}
 
+## E020 — Campo obrigatório ausente {#sec-e020}
 
-## Erro 28 — Valor inválido em ORDERED (ERRO) {#sec-erro-28}
+**Severidade:** erro · **Classe:** `MissingRequiredField`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Com VALUES `[1] Baixa`, `[2] Media`, `[3] Alta`:
+Falta um campo listado como `REQUIRED` para aquele tipo de bloco (SOURCE, ITEM ou ONTOLOGY).
 
 ```synesis
-ITEM @autor2024
-    citation: Valor inválido em campo ORDERED.
-    importance: Critica
-END ITEM
+# template.synt
+ITEM FIELDS
+    REQUIRED quote, code
+END ITEM FIELDS
 ```
 
-### Como corrigir
-
-Use o rótulo (`Baixa`, `Media`, `Alta`) ou o índice numérico (`1`, `2`, `3`).
-:::
-
-
-## Erro 29 — Data em formato inválido (ERRO) {#sec-erro-29}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-SOURCE @autor2024
-    source_date: 15/03/2024
+# annotations.syn
+SOURCE @silva2024
 END SOURCE
-```
 
-### Como corrigir
-
-Use o formato `AAAA-MM-DD`: `source_date: 2024-03-15`.
-:::
-
-
-## Erro 30 — Número em campo de texto (ERRO) {#sec-erro-30}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
-    citation: 42
+ITEM @silva2024
+    quote: "text"
 END ITEM
 ```
 
-### Como corrigir
-
-Campos QUOTATION e TEXT esperam texto, não números isolados. Escreva o conteúdo como frase.
-:::
-
-
-## Erro 31 — Código duplicado no mesmo campo (AVISO) {#sec-erro-31}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
-    citation: Código duplicado.
-    tag: Aceitacao_Social, Aceitacao_Social
-END ITEM
+```text
+annotations.syn:4:1  [ERROR]  Required field `code` missing in ITEM block
 ```
 
-### Como corrigir
+**Como corrigir:** Preencha o campo, ou torne-o `OPTIONAL` no template.
 
-Remova a ocorrência duplicada.
-:::
+## E021 — Campo proibido presente {#sec-e021}
 
+**Severidade:** erro · **Classe:** `ForbiddenFieldPresent`
 
-## Erro 32 — TOPIC com espaços (ERRO) {#sec-erro-32}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O bloco preenche um campo listado como `FORBIDDEN`.
 
 ```synesis
-ONTOLOGY Barreira_Economica
-    definition: Fator econômico que dificulta a adoção.
-    group: Economia Energia
-END ONTOLOGY
+# template.synt
+ITEM FIELDS
+    REQUIRED quote
+    FORBIDDEN note
+END ITEM FIELDS
 ```
 
-### Como corrigir
-
-Use underscore: `group: Economia_Energia`.
-:::
-
-
-## Erro 33 — Caractere inválido em identificador (ERRO) {#sec-erro-33}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
 ```synesis
-ONTOLOGY Custo-Alto
-    definition: Custo elevado que representa barreira.
-    group: Economia
-END ONTOLOGY
-```
-
-O hífen (`-`) não é permitido em nomes de conceito.
-
-### Como corrigir
-
-Use underscore: `Custo_Alto`.
-:::
-
-
-# Escopo {#sec-escopo}
-
-Erros de campo usado fora do seu escopo declarado. Projeto de teste: `T04`.
-
-
-## Erro 34 — Campo ITEM usado em SOURCE (ERRO) {#sec-erro-34}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-SOURCE @autor2024
-    source_date: 2024-01-01
-    citation: Campo de ITEM usado indevidamente em SOURCE.
+# annotations.syn
+SOURCE @silva2024
 END SOURCE
-```
 
-`citation` tem `SCOPE ITEM` no template.
-
-### Como corrigir
-
-Mova o campo para o ITEM correspondente.
-:::
-
-
-## Erro 35 — Campo SOURCE usado em ITEM (ERRO) {#sec-erro-35}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
-    citation: Campo de SOURCE usado em ITEM.
-    source_date: 2024-06-01
+ITEM @silva2024
+    quote: "text"
+    note: x
 END ITEM
 ```
 
-`source_date` tem `SCOPE SOURCE` no template.
-
-### Como corrigir
-
-Mova `source_date` para o bloco SOURCE correspondente.
-:::
-
-
-## Erro 36 — Campo ONTOLOGY usado em ITEM/SOURCE (ERRO) {#sec-erro-36}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ITEM @autor2024
-    citation: Campo de ONTOLOGY em ITEM.
-    group: Economia
-END ITEM
+```text
+annotations.syn:4:1  [ERROR]  Forbidden field `note` in ITEM block — remove this line
 ```
 
-`group` tem `SCOPE ONTOLOGY` no template.
+**Como corrigir:** Remova a linha.
 
-### Como corrigir
+## E022 — Campo desconhecido {#sec-e022}
 
-Campos com SCOPE ONTOLOGY pertencem ao arquivo `.syno`, não às anotações.
-:::
+**Severidade:** erro · **Classe:** `UnknownFieldName`
 
-
-## Erro 37 — TOPIC fora de ONTOLOGY (ERRO) {#sec-erro-37}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O arquivo usa um campo que o template não define para aquele escopo.
 
 ```synesis
-SOURCE @autor2024
-    source_date: 2024-02-01
-    category: Economia_Energia
+# template.synt
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
 END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    citation: x
+END ITEM
 ```
 
-`category` é `TYPE TOPIC` com `SCOPE ONTOLOGY`.
-
-### Como corrigir
-
-Campos TOPIC organizam a ontologia — não pertencem a blocos SOURCE ou ITEM.
-:::
-
-
-## Erro 38 — CHAIN fora de ITEM (ERRO) {#sec-erro-38}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ONTOLOGY Fator_Completo
-    definition: Conceito com campo de escopo ITEM.
-    group: Teste_Escopo
-    citation: Trecho indevido em ONTOLOGY.
-END ONTOLOGY
+```text
+annotations.syn:4:1  [ERROR]  Unknown field `citation` in ITEM block
 ```
 
-`citation` tem `SCOPE ITEM` — não pode ser usado em ONTOLOGY.
+**Como corrigir:** Corrija o nome ou declare o `FIELD` e liste-o no bloco `FIELDS` do escopo.
 
-### Como corrigir
+## E023 — ITEM vazio {#sec-e023}
 
-Campos com SCOPE ITEM pertencem a blocos ITEM, não à ontologia.
-:::
+**Severidade:** erro · **Classe:** `EmptyItemBlock`
 
-
-# Declaração de Template {#sec-template}
-
-Erros na definição das regras do projeto (arquivo `.synt`). Projeto de teste: `T05`.
-
-::: {.callout-note}
-## Nota para pesquisadores
-Estes erros estão no template — a definição das regras do projeto. Se você não é o autor do template, avise o coordenador do projeto.
-:::
-
-
-## Erro 39, 40, 41 — Campo listado mas não definido (ERRO) {#sec-erro-39}
-
-Um campo aparece em `SOURCE/ITEM/ONTOLOGY FIELDS` mas não tem bloco `FIELD` correspondente.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um bloco `ITEM` não tem nenhum campo.
 
 ```synesis
-SOURCE FIELDS
-    OPTIONAL resumo, country
-END SOURCE FIELDS
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
 
-FIELD resumo TYPE TEXT
-    SCOPE SOURCE
-END FIELD
-
-# FIELD country não existe — provoca erro 39
+ITEM @silva2024
+END ITEM
 ```
 
-### Como corrigir
+```text
+annotations.syn:4:1  [ERROR]  Empty ITEM block — no fields
+```
 
-Adicione a definição:
+**Como corrigir:** Preencha o bloco ou remova-o.
+
+# Valores e tipos de campo {#sec-valores}
+
+## E026 — Decimal em `SCALE` inteira {#sec-e026}
+
+**Severidade:** erro · **Classe:** `DecimalInIntegerScale`
+
+O `FORMAT` do campo usa limites inteiros e o valor tem casas decimais.
 
 ```synesis
-FIELD country TYPE TEXT
-    SCOPE SOURCE
+# template.synt
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    FORMAT [1..5]
 END FIELD
 ```
-:::
-
-
-## Erro 42 — Campo definido mas não listado (AVISO) {#sec-erro-42}
-
-Um `FIELD` está definido mas não aparece em nenhum bloco `FIELDS`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
 
 ```synesis
-SOURCE FIELDS
-    OPTIONAL resumo
-END SOURCE FIELDS
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
 
-FIELD resumo TYPE TEXT
-    SCOPE SOURCE
+ITEM @silva2024
+    quote: "text"
+    confidence: 3.5
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Decimal value `3.5` in `confidence` — the field only accepts integers [1..5]
+```
+
+**Como corrigir:** Use um inteiro ou reescale o campo (por exemplo, `[0..2]` no lugar de 0, 0,5 e 1). Decimais só são aceitos quando ao menos um limite do `FORMAT` não é um número inteiro, como em `[0..5.5]`; escrever `[1.0..5.0]` não basta, apesar do que sugere a mensagem de diagnóstico.
+
+## E027 — Valor fora da lista `ENUMERATED` {#sec-e027}
+
+**Severidade:** erro · **Classe:** `InvalidEnumeratedValue`
+
+O valor não está no bloco `VALUES`.
+
+```synesis
+# template.synt
+FIELD status TYPE ENUMERATED
+    SCOPE ITEM
+    VALUES
+        Asserted: stated as fact
+        Negated: stated as not holding
+    END VALUES
 END FIELD
+```
 
-FIELD campo_orfao TYPE TEXT
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    status: Maybe
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Invalid value `Maybe` for `status`
+```
+
+**Como corrigir:** Use um dos valores declarados.
+
+## E028 — Tipo de valor incompatível {#sec-e028}
+
+**Severidade:** erro · **Classe:** `InvalidFieldType`
+
+O valor não tem a forma que o tipo do campo exige (por exemplo, texto onde se espera um número).
+
+```synesis
+# template.synt
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    FORMAT [1..5]
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    confidence: high
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Invalid type in `confidence`: expected number, found str
+```
+
+**Como corrigir:** Escreva o valor na forma do tipo declarado.
+
+## E029 — Índice ou rótulo inexistente em `ORDERED` {#sec-e029}
+
+**Severidade:** erro · **Classe:** `InvalidOrderedValue`
+
+O valor não corresponde a nenhuma posição declarada.
+
+```synesis
+# template.synt
+FIELD level TYPE ORDERED
+    SCOPE ITEM
+    VALUES
+        [1] Low: marginal
+        [2] Medium: relevant
+        [3] High: central
+    END VALUES
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    level: 7
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Invalid value `7` for `level` (ordered)
+```
+
+**Como corrigir:** Escreva um dos índices declarados.
+
+## E088 — `ORDERED` escrito com o rótulo {#sec-e088}
+
+**Severidade:** erro · **Classe:** `OrderedValueAsLabel`
+
+Em um campo `ORDERED` o dado gravado é o **índice**; o rótulo é só exibição.
+
+```synesis
+# template.synt
+FIELD level TYPE ORDERED
+    SCOPE ITEM
+    VALUES
+        [1] Low: marginal
+        [2] Medium: relevant
+        [3] High: central
+    END VALUES
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    level: High
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  `level: High` — in ORDERED write the index (3); the label is display only
+```
+
+**Como corrigir:** Troque o rótulo pelo índice que a mensagem indica.
+
+## E030 — Valor fora do intervalo `SCALE` {#sec-e030}
+
+**Severidade:** erro · **Classe:** `ScaleOutOfRange`
+
+O número está fora de `[mín..máx]`.
+
+```synesis
+# template.synt
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    FORMAT [1..5]
+END FIELD
+```
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    confidence: 9
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Value `9.0` outside the range [1.0..5.0] in the field `confidence`
+```
+
+**Como corrigir:** Corrija o valor ou o `FORMAT`.
+
+## W031 — Código repetido na mesma ocorrência {#sec-w031}
+
+**Severidade:** aviso · **Classe:** `DuplicateCodeInField`
+
+O mesmo código aparece duas vezes na mesma linha de um campo `CODE`.
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    code: Cost, Cost
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [WARNING]  Code `Cost` duplicated in the field `code`
+```
+
+**Como corrigir:** Remova a repetição.
+
+## E032 — `TOPIC` com espaços {#sec-e032}
+
+**Severidade:** erro · **Classe:** `TopicWithSpaces`
+
+Um valor `TOPIC` é um único termo.
+
+```synesis
+# ontology.syno
+ONTOLOGY Cost
+    topic: Social Factors
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  Value `Social Factors` in `topic` contains spaces. Suggested fix -> `Social_Factors`
+```
+
+**Como corrigir:** Use sublinhado: `Social_Factors`.
+
+## E033 — Caractere inválido em identificador {#sec-e033}
+
+**Severidade:** erro · **Classe:** `InvalidIdentifierCharacter`
+
+O nome de um código ou conceito contém um caractere não permitido.
+
+```synesis
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
+ITEM @silva2024
+    quote: "text"
+    code: Cost?
+END ITEM
+```
+
+```text
+annotations.syn:4:1  [ERROR]  Identifier `Cost?` contains the invalid character `?`
+```
+
+**Como corrigir:** Use letras, números, `_` e `-`.
+
+# Declaração do template {#sec-template}
+
+## E039 — Campo listado sem definição {#sec-e039}
+
+**Severidade:** erro · **Classe:** `UndefinedFieldInScopeFields`
+
+Um nome aparece em um bloco `FIELDS`, mas não há `FIELD` com esse nome. (Agrupa os antigos códigos 39 a 41.)
+
+```synesis
+# template.synt
+ITEM FIELDS
+    REQUIRED quote, country
+END ITEM FIELDS
+```
+
+```text
+template.synt:1:1  [ERROR]  Field `country` listed in `ITEM FIELDS` without a FIELD definition
+```
+
+**Como corrigir:** Defina o `FIELD` ou retire o nome da lista.
+
+## E042 — Campo definido e não listado {#sec-e042}
+
+**Severidade:** aviso · **Classe:** `OrphanFieldDefinition`
+
+Há um `FIELD` que nenhum bloco `FIELDS` usa.
+
+```synesis
+# template.synt
+FIELD note TYPE MEMO
     SCOPE ITEM
 END FIELD
-# campo_orfao não está em ITEM FIELDS
 ```
 
-### Como corrigir
+```text
+template.synt:7:1  [WARNING]  Field `note` defined but missing from `ITEM FIELDS`
+```
 
-Adicione `campo_orfao` ao bloco `ITEM FIELDS`, ou remova a definição.
-:::
+**Como corrigir:** Liste o campo no bloco do seu escopo ou apague a definição.
 
+## E006 — Escopo divergente {#sec-e006}
 
-## Erro 47 — CHAIN sem ARITY (ERRO) {#sec-erro-47}
+**Severidade:** erro · **Classe:** `FieldScopeListMismatch`
 
-Campo CHAIN sem declaração de quantos elementos mínimos.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O campo está listado em um bloco de um escopo, mas seu `SCOPE` é outro.
 
 ```synesis
-FIELD cadeia_sem_aridade TYPE CHAIN
-    SCOPE ITEM
-    RELATIONS
-        INFLUENCES: Efeito causal direto
-    END RELATIONS
+# template.synt
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL note
+END ITEM FIELDS
+```
+
+```synesis
+# template.synt
+FIELD note TYPE MEMO
+    SCOPE SOURCE
 END FIELD
 ```
 
-### Como corrigir
+```text
+template.synt:8:1  [ERROR]  Field `note` listed in `ITEM FIELDS` but its declared SCOPE is SOURCE
+```
 
-Adicione: `ARITY >= 2`.
-:::
+**Como corrigir:** Faça o `SCOPE` e o bloco `FIELDS` concordarem.
 
+## E047 — `CHAIN` sem `ARITY` {#sec-e047}
 
-## Erro 48 — ARITY incompatível com RELATIONS (ERRO) {#sec-erro-48}
+**Severidade:** erro · **Classe:** `ChainWithoutArity`
 
-O número de relações declaradas é insuficiente para o ARITY exigido.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Todo campo `CHAIN` declara o número mínimo de conceitos.
 
 ```synesis
-FIELD cadeia_aridade_errada TYPE CHAIN
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+END FIELD
+```
+
+```text
+template.synt:8:1  [ERROR]  Field `chain` (CHAIN) without an ARITY declaration in the template
+```
+
+**Como corrigir:** Acrescente, por exemplo, `ARITY >= 2`.
+
+## E048 — `ARITY` incompatível com `RELATIONS` {#sec-e048}
+
+**Severidade:** erro · **Classe:** `ArityRelationsMismatch`
+
+A aridade pede mais ligações do que as relações declaradas conseguem formar.
+
+```synesis
+# template.synt
+FIELD chain TYPE CHAIN
     SCOPE ITEM
     ARITY >= 4
     RELATIONS
-        INFLUENCES: Efeito causal direto
+        ENABLES: makes possible
     END RELATIONS
 END FIELD
 ```
 
-4 conceitos precisam de pelo menos 3 relações (4−1=3), mas só 1 está declarada.
+```text
+template.synt:8:1  [ERROR]  Field `chain`: ARITY >= 4 requires more relations than the 1 declared
+```
 
-### Como corrigir
+**Como corrigir:** Declare mais relações ou reduza a aridade.
 
-Adicione mais relações ou reduza o ARITY.
-:::
+## E049 — `ORDERED` sem `VALUES` {#sec-e049}
 
+**Severidade:** erro · **Classe:** `OrderedWithoutValues`
 
-## Erro 49 — ORDERED sem VALUES (ERRO) {#sec-erro-49}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um campo `ORDERED` precisa das opções, em ordem.
 
 ```synesis
-FIELD avaliacao_sem_valores TYPE ORDERED
+# template.synt
+FIELD level TYPE ORDERED
     SCOPE ITEM
 END FIELD
 ```
 
-### Como corrigir
-
-Adicione um bloco VALUES com as opções ordenadas:
-
-```synesis
-    VALUES
-        [1] Baixa: Importância menor
-        [2] Media: Importância moderada
-        [3] Alta:  Importância central
-    END VALUES
+```text
+template.synt:7:1  [ERROR]  Field `level` (ORDERED) without a VALUES block in the template
 ```
-:::
 
+**Como corrigir:** Acrescente o bloco `VALUES` com os índices `[N]`.
 
-## Erro 50 — ENUMERATED sem VALUES (ERRO) {#sec-erro-50}
+## E050 — `ENUMERATED` sem `VALUES` {#sec-e050}
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+**Severidade:** erro · **Classe:** `EnumeratedWithoutValues`
+
+Um campo `ENUMERATED` precisa da lista fechada de valores.
 
 ```synesis
-FIELD categoria_sem_valores TYPE ENUMERATED
+# template.synt
+FIELD status TYPE ENUMERATED
     SCOPE ITEM
 END FIELD
 ```
 
-### Como corrigir
+```text
+template.synt:7:1  [ERROR]  Field `status` (ENUMERATED) without a VALUES block in the template
+```
 
-Adicione um bloco VALUES com todas as opções aceitas.
-:::
+**Como corrigir:** Acrescente o bloco `VALUES`.
 
+## E051 — `SCALE` sem `FORMAT` {#sec-e051}
 
-## Erro 51 — SCALE sem FORMAT (ERRO) {#sec-erro-51}
+**Severidade:** erro · **Classe:** `ScaleWithoutFormat`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um campo `SCALE` precisa do intervalo numérico.
 
 ```synesis
-FIELD intensidade_sem_formato TYPE SCALE
+# template.synt
+FIELD confidence TYPE SCALE
     SCOPE ITEM
 END FIELD
 ```
 
-### Como corrigir
+```text
+template.synt:7:1  [ERROR]  Field `confidence` (SCALE) without a FORMAT declaration in the template
+```
 
-Adicione: `FORMAT [0..10]` (ou o intervalo desejado).
-:::
+**Como corrigir:** Acrescente, por exemplo, `FORMAT [1..5]`.
 
+## E052 — Sintaxe de `FORMAT` inválida {#sec-e052}
 
-## Erro 54 — FORMAT em campo não-SCALE (ERRO) {#sec-erro-54}
+**Severidade:** erro · **Classe:** `InvalidFormatSyntax`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O `FORMAT` de um campo `SCALE` não tem a forma `[mín..máx]`.
 
 ```synesis
-FIELD nota_com_formato TYPE TEXT
+# template.synt
+FIELD confidence TYPE SCALE
     SCOPE ITEM
-    FORMAT [1..10]
+    FORMAT percent
 END FIELD
 ```
 
-FORMAT só faz sentido em campos SCALE.
+```text
+template.synt:7:1  [ERROR]  Invalid FORMAT in `confidence`: `percent` — use `[min..max]`
+```
 
-### Como corrigir
+**Como corrigir:** Escreva `FORMAT [mín..máx]`.
 
-Remova o FORMAT ou mude o tipo para SCALE.
-:::
+## E053 — Operador de `ARITY` inválido {#sec-e053}
 
+**Severidade:** erro · **Classe:** `InvalidArityOperator`
 
-## Erro 55 — ARITY em campo não-CHAIN (ERRO) {#sec-erro-55}
+Os operadores aceitos são `>=`, `>`, `<=`, `<` e `=`. Outras grafias costumam produzir antes um erro de sintaxe.
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+**Como corrigir:** Use um dos operadores aceitos.
+
+## E054 — `FORMAT` fora de `SCALE` {#sec-e054}
+
+**Severidade:** erro · **Classe:** `FormatOnNonScale`
+
+`FORMAT` só vale para campos `SCALE`.
 
 ```synesis
-FIELD nota_com_aridade TYPE MEMO
+# template.synt
+FIELD note TYPE TEXT
+    SCOPE ITEM
+    FORMAT [1..5]
+END FIELD
+```
+
+```text
+template.synt:7:1  [ERROR]  FORMAT declared in `note` (type TEXT) — FORMAT is exclusive to SCALE
+```
+
+**Como corrigir:** Remova a linha ou troque o tipo.
+
+## E055 — `ARITY` fora de `CHAIN` {#sec-e055}
+
+**Severidade:** erro · **Classe:** `ArityOnNonChain`
+
+`ARITY` só vale para campos `CHAIN`.
+
+```synesis
+# template.synt
+FIELD note TYPE MEMO
     SCOPE ITEM
     ARITY >= 2
 END FIELD
 ```
 
-### Como corrigir
+```text
+template.synt:7:1  [ERROR]  ARITY declared in `note` (type MEMO) — ARITY is exclusive to CHAIN
+```
 
-Remova o ARITY ou mude o tipo para CHAIN.
-:::
+**Como corrigir:** Remova a linha ou troque o tipo.
 
+## E056 — `RELATIONS` fora de `CHAIN` {#sec-e056}
 
-## Erro 56 — RELATIONS em campo não-CHAIN (ERRO) {#sec-erro-56}
+**Severidade:** erro · **Classe:** `RelationsOnNonChain`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+`RELATIONS` só vale para campos `CHAIN`.
 
 ```synesis
-FIELD nota_com_relacoes TYPE TEXT
+# template.synt
+FIELD note TYPE TEXT
     SCOPE ITEM
     RELATIONS
-        INFLUENCES: Efeito causal direto
+        ENABLES: makes possible
     END RELATIONS
 END FIELD
 ```
 
-### Como corrigir
-
-Remova o bloco RELATIONS ou mude o tipo para CHAIN.
-:::
-
-
-## Erro 57 — Bloco FIELDS duplicado (ERRO) {#sec-erro-57}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-```synesis
-ONTOLOGY FIELDS
-    REQUIRED definicao, grupo
-    OPTIONAL categoria
-END ONTOLOGY FIELDS
-
-ONTOLOGY FIELDS
-    OPTIONAL campo_extra
-END ONTOLOGY FIELDS
+```text
+template.synt:7:1  [ERROR]  RELATIONS declared in `note` (type TEXT) — RELATIONS is exclusive to CHAIN
 ```
 
-### Como corrigir
+**Como corrigir:** Remova o bloco ou troque o tipo.
 
-Unifique tudo num único bloco ONTOLOGY FIELDS.
-:::
+## E086 — `VALUES` fora de `ORDERED`/`ENUMERATED` {#sec-e086}
 
+**Severidade:** erro · **Classe:** `ValuesOnNonEnumerable`
 
-## Erro 58 — Valor com espaços em VALUES (ERRO) {#sec-erro-58}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Em qualquer outro tipo a lista seria ignorada, por isso é recusada.
 
 ```synesis
-FIELD status_espaco TYPE ENUMERATED
+# template.synt
+FIELD note TYPE TEXT
     SCOPE ITEM
     VALUES
-        Ativo : Valor com espaço antes dos dois pontos
-        Inativo: Válido
+        High: high
     END VALUES
 END FIELD
 ```
 
-O espaço antes de `:` em `Ativo ` faz com que o valor registrado seja `"Ativo "` (com espaço), que nunca será reconhecido ao ser usado nas anotações.
+```text
+template.synt:7:1  [ERROR]  VALUES declared in `note` (type TEXT) — VALUES is exclusive to ORDERED/ENUMERATED
+```
 
-### Como corrigir
+**Como corrigir:** Remova o bloco `VALUES` ou troque o tipo.
 
-Remova espaços extras ao redor do nome do valor.
-:::
+## E087 — Índice `[N]` em `ENUMERATED` {#sec-e087}
 
+**Severidade:** erro · **Classe:** `IndexOnEnumeratedValue`
 
-## Erro 59 — Valor duplicado em VALUES (ERRO) {#sec-erro-59}
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O índice estabelece ordem, e `ENUMERATED` não tem ordem.
 
 ```synesis
-FIELD status_duplicado TYPE ENUMERATED
+# template.synt
+FIELD status TYPE ENUMERATED
     SCOPE ITEM
     VALUES
-        Ativo:   Atualmente em uso
-        Inativo: Não mais relevante
-        Ativo:   Declaração duplicada
+        [1] Asserted: stated as fact
+        [2] Negated: stated as not holding
     END VALUES
 END FIELD
 ```
 
-### Como corrigir
+```text
+template.synt:7:1  [ERROR]  `[N]` prefix in the VALUES of `status` (ENUMERATED type) — the index is exclusive to ORDERED
+```
 
-Remova a entrada duplicada.
-:::
+**Como corrigir:** Retire o prefixo, ou use `ORDERED` se a ordem for intencional.
 
+## E057 — Bloco `FIELDS` duplicado {#sec-e057}
 
-## Erro 69 — Campo definido duas vezes (ERRO) {#sec-erro-69}
+**Severidade:** erro · **Classe:** `DuplicateScopeBlock`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Há dois blocos `FIELDS` para o mesmo escopo. Na versão 0.16.0 o compilador não emite este diagnóstico: blocos repetidos são aceitos sem aviso.
+
+**Como corrigir:** Una as listas em um só bloco.
+
+## E058 — Valor com espaço nas pontas {#sec-e058}
+
+**Severidade:** erro · **Classe:** `ValueWithWhitespace`
+
+Um valor do bloco `VALUES` tem espaço no início ou no fim. Na sintaxe atual de template o espaço costuma ser descartado na leitura, de modo que o aviso é raro.
+
+**Como corrigir:** Remova o espaço excedente.
+
+## E059 — Valor duplicado em `VALUES` {#sec-e059}
+
+**Severidade:** erro · **Classe:** `DuplicateValue`
+
+O mesmo valor aparece duas vezes na lista.
 
 ```synesis
-FIELD nota TYPE MEMO
+# template.synt
+FIELD status TYPE ENUMERATED
+    SCOPE ITEM
+    VALUES
+        Active: in use
+        Active: repeated
+    END VALUES
+END FIELD
+```
+
+```text
+template.synt:11:9  [ERROR]  Duplicate value `Active` in the VALUES block of `status`
+```
+
+**Como corrigir:** Mantenha uma só entrada.
+
+## E060 — `ARITY` com valor não inteiro {#sec-e060}
+
+**Severidade:** erro · **Classe:** `NonIntegerArityValue`
+
+O número de `ARITY` precisa ser inteiro.
+
+```synesis
+# template.synt
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2.0
+END FIELD
+```
+
+```text
+template.synt:8:1  [ERROR]  ARITY of field `chain` uses non-integer value `2.0` — use an integer (e.g. 2)
+```
+
+**Como corrigir:** Escreva `2`, não `2.0`.
+
+## E069 — Campo definido duas vezes {#sec-e069}
+
+**Severidade:** erro · **Classe:** `DuplicateFieldName`
+
+Dois `FIELD` têm o mesmo nome.
+
+```synesis
+# template.synt
+FIELD note TYPE MEMO
     SCOPE ITEM
 END FIELD
 
-# ...outros campos...
-
-FIELD nota TYPE MEMO
-    SCOPE ITEM
-    DESCRIPTION Segunda definição duplicada.
-END FIELD
-```
-
-### Como corrigir
-
-Remova a definição duplicada ou renomeie um dos campos.
-:::
-
-
-# Estrutura do Projeto {#sec-estrutura}
-
-Erros no arquivo `.synp` e na relação entre arquivos do projeto. Projeto de teste: `T06`.
-
-
-## Erro 5 — Ontologia sem ONTOLOGY FIELDS (ERRO) {#sec-erro-5}
-
-O projeto inclui arquivos `.syno`, mas o template não declara `ONTOLOGY FIELDS`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Template sem seção de ontologia:
-
-```synesis
-TEMPLATE t06_no_ontology_fields
-
-SOURCE FIELDS
-    OPTIONAL summary
-END SOURCE FIELDS
-
-ITEM FIELDS
-    REQUIRED citation
-END ITEM FIELDS
-
-# ONTOLOGY FIELDS ausente
-
-FIELD summary TYPE TEXT
-    SCOPE SOURCE
-END FIELD
-
-FIELD citation TYPE QUOTATION
+FIELD note TYPE MEMO
     SCOPE ITEM
 END FIELD
 ```
 
-Usado com um projeto que inclui `.syno`.
-
-### Como corrigir
-
-Adicione ao template:
-
-```synesis
-ONTOLOGY FIELDS
-    REQUIRED definition, group
-END ONTOLOGY FIELDS
+```text
+template.synt:11:1  [ERROR]  Field `note` defined more than once in the template
 ```
-:::
 
+**Como corrigir:** Remova ou renomeie um deles.
 
-## Erro 61 — Anotações não incluídas (ERRO) {#sec-erro-61}
+# Estrutura do projeto {#sec-projeto}
 
-Existem arquivos `.syn` mas o projeto não tem `INCLUDE ANNOTATIONS`.
+## E061 — Arquivo `.syn` não incluído {#sec-e061}
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+**Severidade:** erro · **Classe:** `MissingAnnotationsInclude`
+
+Há um `.syn` na pasta do projeto que nenhum `INCLUDE ANNOTATIONS` alcança.
 
 ```synesis
-PROJECT T06_No_Include_Annotations
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ONTOLOGY "t06.syno"
-    # INCLUDE ANNOTATIONS ausente
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:1:1  [ERROR]  File `forgotten.syn` not included by INCLUDE ANNOTATIONS in the .synp
+```
 
-Adicione: `INCLUDE ANNOTATIONS "arquivo.syn"`.
-:::
+**Como corrigir:** Declare o arquivo (ou a pasta) no `.synp`, ou mova-o para fora do projeto.
 
+## E062 — Arquivo `.syno` não incluído {#sec-e062}
 
-## Erro 62 — Ontologia não incluída (ERRO) {#sec-erro-62}
+**Severidade:** erro · **Classe:** `MissingOntologyInclude`
 
-Existem arquivos `.syno` mas o projeto não tem `INCLUDE ONTOLOGY`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Há um `.syno` na pasta do projeto que nenhum `INCLUDE ONTOLOGY` alcança.
 
 ```synesis
-PROJECT T06_No_Include_Ontology
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
-    # INCLUDE ONTOLOGY ausente
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:1:1  [ERROR]  File `forgotten.syno` not included by INCLUDE ONTOLOGY in the .synp
+```
 
-Adicione: `INCLUDE ONTOLOGY "arquivo.syno"`.
-:::
+**Como corrigir:** Declare o arquivo no `.synp` ou mova-o.
 
+## E063 — Bibliografia não encontrada {#sec-e063}
 
-## Erro 63 — Arquivo `.bib` não encontrado (ERRO) {#sec-erro-63}
+**Severidade:** erro · **Classe:** `MissingBibliographyFile`
 
-O caminho declarado em `INCLUDE BIBLIOGRAPHY` não existe.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O arquivo, a pasta ou o padrão de `INCLUDE BIBLIOGRAPHY` não encontra nenhum `.bib`.
 
 ```synesis
-PROJECT T06_Missing_Bib
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "nao_existe.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "missing.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:3:5  [ERROR]  References file `missing.bib` declared in the project was not found
+```
 
-Verifique se o arquivo existe e se o caminho está correto (relativo à pasta do `.synp`).
-:::
+**Como corrigir:** Confira o caminho, que é relativo à pasta do `.synp`.
 
+## E064 — Template ou projeto não encontrado {#sec-e064}
 
-## Erro 65 — Projeto sem TEMPLATE (ERRO) {#sec-erro-65}
+**Severidade:** erro (aviso no editor, se não houver `.synp`) · **Classe:** `InvalidProjectFile`, `MissingProjectFile`, `MissingTemplateFile`
 
-O bloco PROJECT não declara nenhum template.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O código `E064` reúne três situações: template declarado que não existe, nenhum `.synp` no workspace (no editor) e `.synp` com erro de sintaxe.
 
 ```synesis
-PROJECT T06_No_Template
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
-    INCLUDE ONTOLOGY "t06.syno"
+# project.synp
+PROJECT demo
+    TEMPLATE "missing.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:1:1  [ERROR]  Template `missing.synt` not found
+```
 
-Adicione: `TEMPLATE "nome_do_arquivo.synt"`.
-:::
+**Como corrigir:** Confira o caminho de `TEMPLATE` e a sintaxe do `.synp`.
 
+## E065 — Projeto sem `TEMPLATE` {#sec-e065}
 
-## Erro 66 — Dois blocos PROJECT (ERRO) {#sec-erro-66}
+**Severidade:** erro · **Classe:** `MissingTemplateDeclaration`
 
-O arquivo `.synp` contém dois blocos PROJECT.
+O bloco `PROJECT` não declara o template. Na linha de comando, a versão 0.16.0 costuma relatar este caso como E064.
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
+**Como corrigir:** Acrescente `TEMPLATE "arquivo.synt"`.
+
+## E066 — Dois blocos `PROJECT` {#sec-e066}
+
+**Severidade:** erro · **Classe:** `DuplicateProjectBlock`
+
+Um `.synp` aceita um único bloco `PROJECT`.
 
 ```synesis
-PROJECT T06_Projeto_Um
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 
-PROJECT T06_Projeto_Dois
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
+PROJECT other
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:8:1  [ERROR]  Two PROJECT blocks in the same .synp — remove the duplicate
+```
 
-Mantenha apenas um bloco PROJECT, ou separe em arquivos `.synp` distintos.
-:::
+**Como corrigir:** Remova o bloco excedente.
 
+## W067 — `modified` anterior a `created` {#sec-w067}
 
-## Erro 67 — Data MODIFIED anterior a CREATED (AVISO) {#sec-erro-67}
+**Severidade:** aviso · **Classe:** `ModifiedBeforeCreated`
 
-No bloco METADATA, a data de modificação é anterior à data de criação.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+As datas do bloco `METADATA` estão invertidas.
 
 ```synesis
-PROJECT T06_Metadata_Dates
-    TEMPLATE "t06.synt"
-    INCLUDE BIBLIOGRAPHY "t06.bib"
-    INCLUDE ANNOTATIONS "t06.syn"
-    INCLUDE ONTOLOGY "t06.syno"
-
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
     METADATA
-        author: Pesquisador Teste
-        created: 2024-06-01
-        modified: 2023-01-10
+        version: 1.0
+        author: Team
+        created: 2026-03-01
+        modified: 2026-01-01
     END METADATA
 END PROJECT
 ```
 
-### Como corrigir
+```text
+project.synp:1:1  [WARNING]  MODIFIED `2026-01-01` e anterior a CREATED `2026-03-01` no METADATA
+```
 
-Corrija a data incorreta. O formato esperado é `AAAA-MM-DD`.
-:::
+**Como corrigir:** Corrija as datas.
 
+# Arquivos e caminhos {#sec-caminhos}
 
-# Arquivos e Caminhos {#sec-caminhos}
+Os caminhos do `.synp` são relativos à pasta dele. Por segurança, o compilador só lê arquivos dessa pasta e de suas subpastas; a única exceção é `INCLUDE SHARED ONTOLOGY`.
 
-Erros na resolução dos caminhos declarados em `TEMPLATE` e `INCLUDE`. Todos os caminhos são resolvidos **relativos à pasta onde está o arquivo `.synp`**.
+## E073 — Arquivo de anotações não encontrado {#sec-e073}
 
-::: {.callout-note}
-## Por que o compilador restringe caminhos
-Arquivos `.synp` e `.syn` circulam entre pesquisadores e são gerados automaticamente pelo `synesis-coder`. Um caminho como `"../../documentos/pessoais.txt"` faria o compilador ler e incorporar ao projeto um arquivo que o pesquisador nunca pretendeu publicar — e qualquer exportador o levaria adiante. Por isso o compilador só lê arquivos contidos na pasta do projeto, com uma única exceção declarada explicitamente: `INCLUDE SHARED ONTOLOGY` (ver @sec-erro-84).
-:::
+**Severidade:** erro · **Classe:** `MissingAnnotationsFile`
 
-
-## Erro 73 — Arquivo de anotações não encontrado (ERRO) {#sec-erro-73}
-
-O caminho declarado em `INCLUDE ANNOTATIONS` não existe no disco.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O `INCLUDE ANNOTATIONS` aponta para algo que não existe.
 
 ```synesis
-PROJECT Estudo_Aceitacao
-    TEMPLATE "modelo.synt"
-    INCLUDE BIBLIOGRAPHY "referencias.bib"
-    INCLUDE ANNOTATIONS "entrevistas/entrevista_07.syn"
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ANNOTATIONS "missing.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-Mas o arquivo `entrevistas/entrevista_07.syn` não existe.
+```text
+project.synp:5:5  [ERROR]  Annotations file `missing.syn` declared in the project was not found
+```
 
-### Como corrigir
+**Como corrigir:** Confira o nome e o caminho.
 
-Verifique o nome e o caminho, que deve ser relativo à pasta do `.synp`. Um `INCLUDE` quebrado não impede mais o parsing dos demais arquivos: o compilador reporta o arquivo ausente e segue processando o resto do projeto.
-:::
+## E074 — Arquivo de ontologia não encontrado {#sec-e074}
 
+**Severidade:** erro · **Classe:** `MissingOntologyFile`
 
-## Erro 74 — Arquivo de ontologia não encontrado (ERRO) {#sec-erro-74}
-
-O caminho declarado em `INCLUDE ONTOLOGY` não existe no disco.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+O `INCLUDE ONTOLOGY` aponta para algo que não existe.
 
 ```synesis
-PROJECT Estudo_Aceitacao
-    TEMPLATE "modelo.synt"
-    INCLUDE BIBLIOGRAPHY "referencias.bib"
-    INCLUDE ANNOTATIONS "anotacoes.syn"
-    INCLUDE ONTOLOGY "ontologia/conceitos.syno"
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "missing.syno"
+    INCLUDE ONTOLOGY "ontology.syno"
 END PROJECT
 ```
 
-Mas `ontologia/conceitos.syno` não existe.
+```text
+project.synp:5:5  [ERROR]  Organizing model file `missing.syno` declared in the project was not found
+```
 
-### Como corrigir
+**Como corrigir:** Confira o caminho. Um `.syno` vazio é válido, mas precisa existir.
 
-Verifique o nome e o caminho. Sem o arquivo de ontologia, os códigos usados nas anotações não podem ser validados — as anotações continuam sendo lidas, mas sem validação conceitual.
-:::
+## E075 — Caminho fora do projeto {#sec-e075}
 
+**Severidade:** erro · **Classe:** `IncludePathEscapesProject`
 
-## Erro 75 — Caminho aponta para fora do projeto (ERRO) {#sec-erro-75}
-
-Um caminho em `TEMPLATE` ou `INCLUDE` escapa da pasta do projeto.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um caminho (literal ou curinga) sai da pasta do projeto.
 
 ```synesis
-PROJECT Estudo_Aceitacao
-    TEMPLATE "modelo.synt"
-    INCLUDE BIBLIOGRAPHY "referencias.bib"
-    INCLUDE ANNOTATIONS "../outro_projeto/anotacoes.syn"
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE ONTOLOGY "../shared.syno"
 END PROJECT
 ```
 
-O mesmo vale para padrões glob que escapem — `INCLUDE ANNOTATIONS "../../*.syn"` é recusado com o mesmo erro.
+```text
+project.synp:6:5  [ERROR]  Path `../shared.syno` points outside the project folder
+```
 
-### Como corrigir
+**Como corrigir:** Mova o arquivo para dentro do projeto. Para um vocabulário comum a vários projetos, use `INCLUDE SHARED ONTOLOGY`.
 
-Mova o arquivo para dentro da pasta do projeto (ou de uma subpasta) e ajuste o caminho. Subpastas são sempre válidas: `INCLUDE ANNOTATIONS "entrevistas/*.syn"`.
+## E076 — Arquivo incluído ilegível {#sec-e076}
 
-Se o objetivo é **compartilhar uma ontologia entre vários projetos**, use `INCLUDE SHARED ONTOLOGY` — a única forma autorizada de apontar para fora da pasta do projeto. Ver @sec-ligacao.
-:::
+**Severidade:** erro · **Classe:** `UnreadableIncludedFile`
 
-
-## Erro 76 — Arquivo incluído não pode ser lido (ERRO) {#sec-erro-76}
-
-O arquivo existe, mas o compilador não conseguiu lê-lo ou interpretá-lo.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Três situações produzem este erro:
-
-1. **Codificação inválida** — o arquivo não está em UTF-8 (por exemplo, salvo em ANSI/Latin-1 com acentos)
-2. **Erro de sintaxe** — o arquivo `.syn` ou `.syno` incluído tem sintaxe inválida
-3. **Arquivo grande demais** — acima de 32 MB, recusado para não travar o editor
+O arquivo existe, mas não pode ser lido: erro de sintaxe, codificação inválida ou tamanho acima de 32 MB.
 
 ```synesis
-# anotacoes.syn com bloco malformado
+# annotations.syn
+SOURCE @silva2024
+END SOURCE
+
 ITEM @silva2024
-    citation: Trecho da entrevista.
-# falta o END ITEM
+    quote: "text"
 ```
 
-### Como corrigir
+```text
+annotations.syn:1:1  [ERROR]  File `annotations.syn` could not be read: error: annotations.syn:1:1: Unexpected token <EOF> END SOURCE Expected: END
+```
 
-A mensagem indica qual arquivo e qual foi a causa. Salve o arquivo em UTF-8, corrija a sintaxe apontada, ou divida um arquivo excessivamente grande em vários menores.
+**Como corrigir:** Abra o arquivo indicado e corrija o problema descrito na mensagem.
 
-::: {.callout-tip}
-## Por que o limite de 32 MB
-O servidor LSP é um processo de longa duração dentro do editor. Um arquivo de vários gigabytes — por engano ou gerado automaticamente — travaria o VS Code inteiro. O limite protege a sessão de edição.
-:::
-:::
+## E084 — `SHARED` fora de `ONTOLOGY` {#sec-e084}
 
+**Severidade:** erro · **Classe:** `SharedOnlyForOntology`
 
-# Ligação entre Projetos {#sec-ligacao}
-
-Erros dos modificadores `IDENTIFIES` / `REFERS TO` e do passo de linkagem multiprojeto. Ver o guia [Ligar Projetos Independentes](../howto/ligar_projetos.qmd) para o fluxo completo.
-
-::: {.callout-important}
-## Dois momentos distintos
-Os erros **77, 78, 79 e 84** e o informativo **80** aparecem na compilação **isolada** de um projeto (`synesis compile projeto.synp`). Os erros **81, 82** e o aviso **83** só aparecem no **passo de linkagem**, quando dois ou mais projetos são compilados juntos (`synesis compile p1.synp p2.synp`).
-:::
-
-
-## Erro 77 — Valor de identidade duplicado (ERRO) {#sec-erro-77}
-
-Dois SOURCEs do mesmo projeto têm o mesmo valor num campo `IDENTIFIES`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Template declarando a chave primária da entidade:
+`INCLUDE SHARED` só é aceito para ontologias.
 
 ```synesis
-FIELD lattes_id TYPE TEXT
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE SHARED BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+END PROJECT
+```
+
+```text
+project.synp:3:5  [ERROR]  `INCLUDE SHARED` invalid for BIBLIOGRAPHY — only ONTOLOGY accepts SHARED
+```
+
+**Como corrigir:** Copie o arquivo para dentro do projeto e use `INCLUDE` simples.
+
+# Ligação entre projetos e datasets {#sec-ligacao}
+
+Os diagnósticos E081, E082 e W083 só aparecem no passo de ligação, quando dois ou mais projetos são compilados juntos. Veja [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd).
+
+## E077 — Valor de identidade repetido {#sec-e077}
+
+**Severidade:** erro · **Classe:** `DuplicateIdentityValue`
+
+Dois `SOURCE` têm o mesmo valor em um campo `IDENTIFIES`, que funciona como chave primária.
+
+```synesis
+# template.synt
+FIELD researcher_id TYPE TEXT
     SCOPE SOURCE
     IDENTIFIES researcher
 END FIELD
 ```
 
-Anotação com o mesmo valor em dois SOURCEs:
-
 ```synesis
-SOURCE @curriculo_maria
-    lattes_id: 3474000000000167
+# annotations.syn
+SOURCE @silva2024
+    researcher_id: 001
 END SOURCE
 
-SOURCE @curriculo_maria_2020
-    lattes_id: 3474000000000167
+ITEM @silva2024
+    quote: "a"
+END ITEM
+
+SOURCE @souza2023
+    researcher_id: 001
 END SOURCE
+
+ITEM @souza2023
+    quote: "b"
+END ITEM
 ```
 
-### Como corrigir
+```text
+annotations.syn:9:1  [ERROR]  Value `1` of `researcher_id` (IDENTIFIES researcher) duplicated in `@silva2024` and `@souza2023`
+```
 
-`IDENTIFIES` declara uma **chave primária**: cada valor deve identificar um único SOURCE. Se os dois blocos são a mesma entidade, unifique-os num só SOURCE. Se são entidades distintas, corrija o valor duplicado.
+**Como corrigir:** Cada valor identifica um único `SOURCE`: corrija o dado.
 
-A comparação é por igualdade exata após remover espaços nas pontas — sem normalização de maiúsculas/minúsculas.
-:::
+## E078 — Modificador de ligação fora de `SOURCE` {#sec-e078}
 
+**Severidade:** erro · **Classe:** `LinkageModifierOutsideSource`
 
-## Erro 78 — Modificador de ligação fora de SOURCE (ERRO) {#sec-erro-78}
-
-`IDENTIFIES` ou `REFERS TO` usado em campo que não é `SCOPE SOURCE`.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+`IDENTIFIES` e `REFERS TO` só valem em campos `SCOPE SOURCE`.
 
 ```synesis
-FIELD autor_citado TYPE TEXT
+# template.synt
+FIELD author_id TYPE TEXT
     SCOPE ITEM
     REFERS TO researcher
 END FIELD
 ```
 
-### Como corrigir
-
-A ligação entre projetos opera sobre **SOURCEs** — as unidades de coleta —, não sobre ITEMs ou conceitos da ontologia. Mova o modificador para um campo `SCOPE SOURCE`, ou remova-o:
-
-```synesis
-FIELD autor_citado TYPE TEXT
-    SCOPE SOURCE
-    REFERS TO researcher
-END FIELD
+```text
+template.synt:7:1  [ERROR]  `REFERS TO` in `author_id` (SCOPE ITEM) — only valid in SCOPE SOURCE
 ```
-:::
 
+**Como corrigir:** Mova o campo para o escopo `SOURCE`.
 
-## Erro 79 — Valor obrigatório ausente na bibliografia (ERRO) {#sec-erro-79}
+## E079 — Valor ausente no `.bib` {#sec-e079}
 
-Um campo declarado `REQUIRED ... ON BIBLIOGRAPHY` não tem valor correspondente na entrada `.bib` do SOURCE.
+**Severidade:** erro · **Classe:** `MissingBibliographyValue`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-Template exigindo que o valor venha do `.bib`, não do texto:
+Um campo `REQUIRED ... ON BIBLIOGRAPHY` não tem valor na entrada do `SOURCE`.
 
 ```synesis
+# template.synt
 SOURCE FIELDS
-    REQUIRED lattes_id ON BIBLIOGRAPHY
+    REQUIRED orcid ON BIBLIOGRAPHY
 END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
 ```
 
-Entrada `.bib` sem o campo:
-
 ```bibtex
-@misc{curriculo_maria,
-    author = {Silva, Maria},
-    title  = {Currículo Lattes},
-    year   = {2026}
-    % lattes_id ausente
+% references.bib
+@article{silva2024,
+    author = {Silva, Ana},
+    title = {Study},
+    year = {2024}
 }
 ```
 
-### Como corrigir
-
-Adicione o campo à entrada `.bib`:
-
-```bibtex
-@misc{curriculo_maria,
-    author   = {Silva, Maria},
-    title    = {Currículo Lattes},
-    year     = {2026},
-    lattes_id = {3474000000000167}
-}
+```text
+annotations.syn:1:1  [ERROR]  Field `orcid` (ON BIBLIOGRAPHY) missing in the .bib entry of `@silva2024`
 ```
 
-Ou remova a exigência `ON BIBLIOGRAPHY` do template.
+**Como corrigir:** Acrescente o campo à entrada BibTeX.
 
-::: {.callout-note}
-## Por que `ON BIBLIOGRAPHY`
-Alguns identificadores (ID Lattes, ORCID, CNPJ) são metadados da fonte, não conteúdo extraível do texto do documento. Declarar `ON BIBLIOGRAPHY` diz ao compilador que o valor vive na entrada `.bib` — exigi-lo no bloco SOURCE mentiria sobre a natureza do dado. Campos assim são excluídos da verificação do erro 21 (campo obrigatório ausente no SOURCE).
-:::
-:::
+## I080 — Referência externa declarada {#sec-i080}
 
+**Severidade:** informativo · **Classe:** `ExternalReferenceDeclared`
 
-## Informativo 80 — Referência externa declarada (INFO) {#sec-erro-80}
-
-O projeto declara `REFERS TO` para uma entidade que não existe nele. **Não é erro nem aviso.**
-
-::: {.panel-tabset}
-### Quando aparece
+O projeto declara `REFERS TO` e foi compilado sozinho. É informativo: não é erro nem aviso.
 
 ```synesis
-FIELD autor_id TYPE TEXT
+# template.synt
+FIELD author_id TYPE TEXT
     SCOPE SOURCE
     REFERS TO researcher
 END FIELD
 ```
 
-Ao compilar este projeto sozinho:
-
-```
-INFO  abstracts.synp
-  Este projeto referencia a entidade externa `researcher` (`REFERS TO` em `autor_id`).
-  As ligacoes nao estao materializadas neste artefato. Para resolve-las,
-  compile este projeto junto com o projeto que declara `IDENTIFIES researcher`.
+```text
+template.synt:11:1  [INFO]  External reference `researcher` (REFERS TO in author_id) — not materialized in isolation
 ```
 
-### O que fazer
+**Como corrigir:** Nada a fazer. Para materializar as ligações, compile junto com o projeto que declara `IDENTIFIES`.
 
-Nada — é o comportamento esperado. Uma referência externa só se resolve no passo de linkagem:
+## E081 — Entidade com dois donos {#sec-e081}
 
-```bash
-synesis compile lattes.synp abstracts.synp
-```
+**Severidade:** erro · **Classe:** `DuplicateEntityOwner`
 
-A mensagem é emitida **uma vez por entidade**, em nível INFO, justamente para documentar que há ligações a materializar sem poluir o painel de problemas com um aviso recorrente.
-:::
-
-
-## Erro 81 — Entidade com dono duplicado (ERRO) {#sec-erro-81}
-
-Dois projetos declaram `IDENTIFIES` do mesmo rótulo de entidade. Aparece apenas no passo de linkagem.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-`lattes.synt`:
+Dois projetos declaram `IDENTIFIES` para o mesmo rótulo de entidade.
 
 ```synesis
-FIELD lattes_id TYPE TEXT
+# lattes.synt
+FIELD rid TYPE TEXT
     SCOPE SOURCE
     IDENTIFIES researcher
 END FIELD
 ```
 
-`orcid.synt`:
-
 ```synesis
-FIELD orcid TYPE TEXT
+# orcid.synt
+FIELD rid TYPE TEXT
     SCOPE SOURCE
     IDENTIFIES researcher
 END FIELD
 ```
 
-### Como corrigir
-
-Cada rótulo de entidade tem **um único corpus proprietário** — é a chave primária. Se são esquemas de identificação distintos da mesma pessoa (Lattes e ORCID), o corpus proprietário mantém o `IDENTIFIES` e o outro passa a apontar para ele:
-
-```synesis
-# orcid.synt — passa a referenciar, não a identificar
-FIELD lattes_id TYPE TEXT
-    SCOPE SOURCE
-    REFERS TO researcher
-END FIELD
+```text
+<link>:0:0  [ERROR]  Entity `researcher` with a duplicate owner: `lattes` and `orcid`
 ```
-:::
 
+**Como corrigir:** Escolha o projeto dono; nos demais use `REFERS TO`.
 
-## Erro 82 — Tipos divergentes na ligação (ERRO) {#sec-erro-82}
+## E082 — Tipos divergentes na ligação {#sec-e082}
 
-Campos que participam da mesma entidade têm `TYPE` diferente. Aparece apenas no passo de linkagem.
+**Severidade:** erro · **Classe:** `TypeMismatchInLinkage`
 
-::: {.panel-tabset}
-### Exemplo que causa o erro
-
-`lattes.synt`:
+Os campos ligados à mesma entidade têm `TYPE` diferentes.
 
 ```synesis
-FIELD lattes_id TYPE TEXT
+# lattes.synt
+FIELD rid TYPE TEXT
     SCOPE SOURCE
     IDENTIFIES researcher
 END FIELD
 ```
 
-`abstracts.synt`:
-
 ```synesis
-FIELD autor_id TYPE NUMBER
+# papers.synt
+FIELD author_id TYPE SCALE
+    FORMAT [0..999]
     SCOPE SOURCE
     REFERS TO researcher
 END FIELD
 ```
 
-### Como corrigir
-
-Todos os campos da mesma entidade — o `IDENTIFIES` e todos os `REFERS TO` — devem declarar o mesmo `TYPE`. A divergência indica que os dois lados não modelam a mesma coisa. Alinhe os tipos nos templates.
-
-Este é um **erro duro**: a linkagem não prossegue, porque comparar valores de tipos distintos produziria casamentos arbitrários.
-:::
-
-
-## Aviso 83 — Referência órfã (AVISO) {#sec-erro-83}
-
-Um valor de `REFERS TO` não casa com nenhum `IDENTIFIES`. Aparece apenas no passo de linkagem.
-
-::: {.panel-tabset}
-### Quando aparece
-
-```
-AVISO  abstracts.synp
-  O valor `3474000000000999` (`REFERS TO researcher` em `abstracts`) nao tem
-  `IDENTIFIES researcher` correspondente — e uma referencia orfa.
-  Pode ser esperado (ex. autor externo sem curriculo no corpus). Nenhum no e criado.
+```text
+<link>:0:0  [ERROR]  Tipos divergentes na entidade `researcher`: `lattes` TYPE TEXT vs `papers` TYPE SCALE
 ```
 
-Órfãos são frequentemente **legítimos**: um artigo citando um autor que não tem currículo no corpus é exatamente isso. Por isso é aviso, não erro.
+**Como corrigir:** Use o mesmo `TYPE` dos dois lados.
 
-### Quase-casamento
+## W083 — Referência órfã {#sec-w083}
 
-Quando o valor casaria apenas sob normalização de maiúsculas/minúsculas, o aviso é enriquecido:
+**Severidade:** aviso · **Classe:** `OrphanReference`
 
-```
-AVISO  abstracts.synp
-  O valor `orcid-0000-1234` (`REFERS TO researcher` em `abstracts`) nao tem
-  `IDENTIFIES researcher` correspondente — e uma referencia orfa.
-  Casamento proximo: `ORCID-0000-1234` difere apenas em caixa/invisiveis.
-  Se sao a mesma entidade, canonize o valor na origem (.bib/SOURCE) — o
-  compilador nao normaliza automaticamente (evita fundir entidades distintas).
-```
-
-### Como corrigir
-
-Se o órfão é esperado, nada a fazer. Se o quase-casamento indica a mesma entidade, **corrija o valor na origem** (no `.bib` ou no bloco SOURCE).
-
-::: {.callout-important}
-## Por que o compilador não normaliza sozinho
-Normalizar caixa automaticamente fundiria entidades que a fonte considera distintas — dois códigos de projeto `AB-100` e `ab-100` podem ser deliberadamente diferentes. O compilador detecta e sugere, mas **nunca funde**. A decisão é do pesquisador, registrada na fonte.
-:::
-:::
-
-
-## Erro 84 — `SHARED` usado fora de ONTOLOGY (ERRO) {#sec-erro-84}
-
-A palavra `SHARED` foi aplicada a um `INCLUDE` que não é de ontologia.
-
-::: {.panel-tabset}
-### Exemplo que causa o erro
+Um valor de `REFERS TO` não casa com nenhum `IDENTIFIES`. Se o valor casaria ignorando maiúsculas e minúsculas, a mensagem avisa do quase-casamento. O compilador nunca funde entidades.
 
 ```synesis
-PROJECT Estudo_Aceitacao
-    TEMPLATE "modelo.synt"
-    INCLUDE SHARED BIBLIOGRAPHY "../compartilhado/referencias.bib"
+# lattes.syn
+SOURCE @lattes1
+    rid: A01
+END SOURCE
+
+ITEM @lattes1
+    quote: "x"
+END ITEM
+```
+
+```synesis
+# papers.syn
+SOURCE @papers1
+    author_id: a01
+END SOURCE
+
+ITEM @papers1
+    quote: "x"
+END ITEM
+```
+
+```text
+<link>:0:0  [WARNING]  Orphan REFERS TO `a01` (researcher) — near match `A01` (differs only in case)
+```
+
+**Como corrigir:** Corrija a grafia na origem. Órfãos podem ser normais em corpora reais.
+
+## E085 — Valor ausente no dataset {#sec-e085}
+
+**Severidade:** erro · **Classe:** `MissingDatasetValue`
+
+Um campo `REQUIRED ... ON DATASET` não tem valor no registro TOML do `SOURCE`.
+
+```synesis
+# template.synt
+SOURCE FIELDS
+    REQUIRED interview ON DATASET "interview.id"
+    REQUIRED region ON DATASET "interview.region"
+END SOURCE FIELDS
+
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
+```
+
+```toml
+# records/s1.toml
+[interview]
+id = "silva2024"
+```
+
+```text
+annotations.syn:1:1  [ERROR]  Field `region` (ON DATASET "interview.region") missing in the record `@silva2024`
+```
+
+**Como corrigir:** Complete o registro, ou torne o campo `OPTIONAL`.
+
+# Blocos `QUESTIONS` e `EXPORT` {#sec-blocos-projeto}
+
+Um erro dentro de um bloco `EXPORT` aparece como **aviso** na compilação e impede apenas aquele artefato no `synesis export`.
+
+## E091 — Questão sem identificador {#sec-e091}
+
+**Severidade:** erro · **Classe:** `QuestionWithoutId`
+
+Uma linha de `QUESTIONS` não tem a forma `<id>: <texto>`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    QUESTIONS
+        Which barriers are reported?
+    END QUESTIONS
 END PROJECT
 ```
 
-### Como corrigir
-
-`INCLUDE SHARED` só é válido para `ONTOLOGY`:
-
-```synesis
-INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
+```text
+project.synp:7:9  [ERROR]  Question without identifier in QUESTIONS: `Which barriers are reported?` (use `Q1: text`)
 ```
 
-A palavra `SHARED` autoriza um alvo **fora** da pasta do projeto. Essa exceção existe para compartilhar o **vocabulário conceitual** entre projetos do mesmo estudo — deixá-la valer para bibliografia ou anotações abriria a contenção para casos que a motivação não pediu. Remova o `SHARED` e mova o arquivo para dentro da pasta do projeto.
-:::
+**Como corrigir:** Escreva `Q1: texto`.
 
+## E092 — Questão sem texto {#sec-e092}
 
-# Índice Rápido {#sec-indice}
+**Severidade:** erro · **Classe:** `QuestionWithoutText`
 
-| Erro | Nome | Nível | Seção |
-|---|---|---|---|
-| 1 | UnregisteredSource | AVISO | [Bibliografia](#sec-erro-1) |
-| 2 | OrphanItem | ERRO | [Bibliografia](#sec-erro-2) |
-| 3 | UndefinedCode | AVISO | [Ontologia](#sec-erro-3) |
-| 4 | UndefinedCode (chain) | AVISO | [Ontologia](#sec-erro-4) |
-| 5 | OntologyWithoutTemplateFields | ERRO | [Estrutura](#sec-erro-5) |
-| 7 | InvalidChainRelation | ERRO | [Chains](#sec-erro-7) |
-| 9 | SimpleChainWithRelationsRequired | ERRO | [Chains](#sec-erro-9) |
-| 10 | MalformedQualifiedChain | ERRO | [Chains](#sec-erro-10) |
-| 12 | ChainArityViolation | ERRO | [Chains](#sec-erro-12) |
-| 14 | ConceptNameMatchesRelation | ERRO | [Chains](#sec-erro-14) |
-| 15 | ConceptWithSpaces | ERRO | [Chains](#sec-erro-15) |
-| 16 | MissingBundleField | ERRO | [Bundles](#sec-erro-16) |
-| 17 | BundleCountMismatch | ERRO | [Bundles](#sec-erro-17) |
-| 18 | SingleFieldBundle | ERRO | [Bundles](#sec-erro-18) |
-| 19 | MissingRequiredField (bundle) | ERRO | [Bundles](#sec-erro-19) |
-| 20 | MissingRequiredField (ITEM) | ERRO | [Obrigatórios](#sec-erro-20) |
-| 21 | MissingRequiredField (SOURCE) | ERRO | [Obrigatórios](#sec-erro-21) |
-| 22 | MissingRequiredField (ONTOLOGY) | ERRO | [Obrigatórios](#sec-erro-22) |
-| 23 | EmptyItemBlock | ERRO | [Obrigatórios](#sec-erro-23) |
-| 24 | SourceWithoutItems | AVISO | [Bibliografia](#sec-erro-24) |
-| 25 | ScaleOutOfRange | ERRO | [Tipos](#sec-erro-25) |
-| 26 | DecimalInIntegerScale | ERRO | [Tipos](#sec-erro-26) |
-| 27 | InvalidEnumeratedValue | ERRO | [Tipos](#sec-erro-27) |
-| 28 | InvalidOrderedValue | ERRO | [Tipos](#sec-erro-28) |
-| 29 | InvalidDateFormat | ERRO | [Tipos](#sec-erro-29) |
-| 30 | NumericOnlyInTextField | ERRO | [Tipos](#sec-erro-30) |
-| 31 | DuplicateCodeInField | AVISO | [Tipos](#sec-erro-31) |
-| 32 | TopicWithSpaces | ERRO | [Tipos](#sec-erro-32) |
-| 33 | InvalidIdentifierChar | ERRO | [Tipos](#sec-erro-33) |
-| 34 | ForbiddenFieldPresent (ITEM→SOURCE) | ERRO | [Escopo](#sec-erro-34) |
-| 35 | ForbiddenFieldPresent (SOURCE→ITEM) | ERRO | [Escopo](#sec-erro-35) |
-| 36 | ForbiddenFieldPresent (ONTOLOGY→ITEM) | ERRO | [Escopo](#sec-erro-36) |
-| 37 | ForbiddenFieldPresent (TOPIC fora) | ERRO | [Escopo](#sec-erro-37) |
-| 38 | ForbiddenFieldPresent (CHAIN fora) | ERRO | [Escopo](#sec-erro-38) |
-| 39–41 | UndefinedFieldInScopeFields | ERRO | [Template](#sec-erro-39) |
-| 42 | OrphanFieldDefinition | AVISO | [Template](#sec-erro-42) |
-| 47 | ChainWithoutArity | ERRO | [Template](#sec-erro-47) |
-| 48 | ArityRelationsMismatch | ERRO | [Template](#sec-erro-48) |
-| 49 | OrderedWithoutValues | ERRO | [Template](#sec-erro-49) |
-| 50 | EnumeratedWithoutValues | ERRO | [Template](#sec-erro-50) |
-| 51 | ScaleWithoutFormat | ERRO | [Template](#sec-erro-51) |
-| 54 | FormatOnNonScale | ERRO | [Template](#sec-erro-54) |
-| 55 | ArityOnNonChain | ERRO | [Template](#sec-erro-55) |
-| 56 | RelationsOnNonChain | ERRO | [Template](#sec-erro-56) |
-| 57 | DuplicateScopeBlock | ERRO | [Template](#sec-erro-57) |
-| 58 | ValueWithWhitespace | ERRO | [Template](#sec-erro-58) |
-| 59 | DuplicateValue | ERRO | [Template](#sec-erro-59) |
-| 61 | MissingIncludeAnnotations | ERRO | [Estrutura](#sec-erro-61) |
-| 62 | MissingIncludeOntology | ERRO | [Estrutura](#sec-erro-62) |
-| 63 | MissingBibFile | ERRO | [Estrutura](#sec-erro-63) |
-| 65 | MissingTemplate | ERRO | [Estrutura](#sec-erro-65) |
-| 66 | DuplicateProjectBlock | ERRO | [Estrutura](#sec-erro-66) |
-| 67 | InvalidMetadataDates | AVISO | [Estrutura](#sec-erro-67) |
-| 68 | DuplicateOntologyConcept | ERRO | [Ontologia](#sec-erro-68) |
-| 69 | DuplicateFieldName | ERRO | [Template](#sec-erro-69) |
-| 70 | DuplicateSourceBibref | ERRO | [Bibliografia](#sec-erro-70) |
-| 71 | DuplicateOntologyDescription | AVISO | [Ontologia](#sec-erro-71) |
-| 73 | MissingAnnotationsFile | ERRO | [Caminhos](#sec-erro-73) |
-| 74 | MissingOntologyFile | ERRO | [Caminhos](#sec-erro-74) |
-| 75 | IncludePathEscapesProject | ERRO | [Caminhos](#sec-erro-75) |
-| 76 | UnreadableIncludedFile | ERRO | [Caminhos](#sec-erro-76) |
-| 77 | DuplicateIdentityValue | ERRO | [Ligação](#sec-erro-77) |
-| 78 | LinkageModifierOutsideSource | ERRO | [Ligação](#sec-erro-78) |
-| 79 | MissingBibliographyValue | ERRO | [Ligação](#sec-erro-79) |
-| 80 | ExternalReferenceDeclared | INFO | [Ligação](#sec-erro-80) |
-| 81 | DuplicateEntityOwner | ERRO | [Ligação](#sec-erro-81) |
-| 82 | TypeMismatchInLinkage | ERRO | [Ligação](#sec-erro-82) |
-| 83 | OrphanReference | AVISO | [Ligação](#sec-erro-83) |
-| 84 | SharedOnlyForOntology | ERRO | [Ligação](#sec-erro-84) |
+Há um identificador sem a pergunta.
 
-::: {.callout-note}
-## Erros de sintaxe (43–46, 52–53, 60)
-Os erros 43, 44, 45, 46, 52, 53 e 60 são capturados diretamente pelo parser Lark antes de chegar à validação semântica. Eles geram uma `SynesisSyntaxError` com mensagem pedagógica, indicando a linha/coluna exata e os tokens esperados. Não é possível reproduzi-los com arquivos sintaticamente válidos — eles são, por definição, erros de gramática.
-:::
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    QUESTIONS
+        Q1:
+    END QUESTIONS
+END PROJECT
+```
+
+```text
+project.synp:7:9  [ERROR]  Question `Q1` without text in QUESTIONS
+```
+
+**Como corrigir:** Escreva o texto depois dos dois-pontos.
+
+## E093 — Identificador de questão repetido {#sec-e093}
+
+**Severidade:** erro · **Classe:** `DuplicateQuestionId`
+
+Duas questões usam o mesmo identificador (sem distinguir maiúsculas).
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    QUESTIONS
+        Q1: Which barriers are reported?
+        q1: Which benefits are reported?
+    END QUESTIONS
+END PROJECT
+```
+
+```text
+project.synp:8:9  [ERROR]  Repeated question `q1` (first on line 7)
+```
+
+**Como corrigir:** Numere de forma única.
+
+## E094 — Formato de `EXPORT` desconhecido {#sec-e094}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `UnknownExportFormat`
+
+Os formatos aceitos são `JSON`, `CSV`, `XLS`, `ALPACA`, `OKF` e `SKOS`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT PDF
+        OUTPUT "out/report.pdf"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT PDF: unknown format `PDF`
+```
+
+**Como corrigir:** Corrija o nome do formato.
+
+## E095 — Propriedade desconhecida no `EXPORT` {#sec-e095}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `UnknownExportProperty`
+
+A propriedade não é aceita por aquele formato.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT CSV
+        OUTPUT "out/csv"
+        LANGUAGE en
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:8:9  [WARNING]  EXPORT CSV: unknown property `LANGUAGE` (accepted: OUTPUT, DESCRIPTION)
+```
+
+**Como corrigir:** Consulte as propriedades do formato na referência.
+
+## E096 — Propriedade obrigatória ausente {#sec-e096}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `MissingExportProperty`
+
+Falta, por exemplo, `OUTPUT` (todos os formatos) ou `NAMESPACE`/`LANGUAGE` (SKOS).
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT SKOS vocabulary: required property `NAMESPACE` is missing
+project.synp:6:5  [WARNING]  EXPORT SKOS vocabulary: required property `LANGUAGE` is missing
+```
+
+**Como corrigir:** Acrescente a propriedade.
+
+## E097 — Propriedade repetida {#sec-e097}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `DuplicateExportProperty`
+
+A mesma propriedade aparece duas vezes no bloco.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT JSON
+        OUTPUT "out/a.json"
+        OUTPUT "out/b.json"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:8:9  [WARNING]  EXPORT JSON: repeated property `OUTPUT`
+```
+
+**Como corrigir:** Mantenha uma.
+
+## E098 — Blocos `EXPORT` ambíguos {#sec-e098}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AmbiguousExportName`
+
+Dois blocos do mesmo formato sem nome, nomes repetidos ou um nome igual a um formato.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT JSON
+        OUTPUT "out/a.json"
+    END EXPORT
+    EXPORT JSON
+        OUTPUT "out/b.json"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT JSON: there are 2 JSON blocks and this one has no name
+project.synp:9:5  [WARNING]  EXPORT JSON: there are 2 JSON blocks and this one has no name
+```
+
+**Como corrigir:** Dê um nome distinto a cada bloco.
+
+## E099 — `MAP` em formato que não o usa {#sec-e099}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `MapNotSupported`
+
+`MAP RELATIONS` existe só no SKOS; `MAP <campos> TO`, só no ALPACA.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT CSV
+        OUTPUT "out/csv"
+        MAP RELATIONS ENABLES TO RELATED
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:8:9  [WARNING]  EXPORT CSV: `MAP` is not accepted in this format
+```
+
+**Como corrigir:** Remova a linha.
+
+## E100 — `GENERATED_AT` inválido {#sec-e100}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `InvalidGeneratedAt`
+
+A data precisa estar em ISO 8601 **com fuso**.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT JSON
+        OUTPUT "out/a.json"
+        GENERATED_AT 2026-11-25
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT JSON: invalid GENERATED_AT `2026-11-25` (ISO 8601 with time zone)
+```
+
+**Como corrigir:** Por exemplo, `2026-11-25T00:00:00Z`.
+
+# Papéis (`ROLE`) e modelo organizador {#sec-roles}
+
+Estes diagnósticos aparecem quando o template atribui funções aos campos de ONTOLOGY com `ROLE`. Veja [O Modelo Organizador](modelo_organizador.qmd).
+
+## E101 — Conceito citado sem bloco {#sec-e101}
+
+**Severidade:** erro · **Classe:** `UndeclaredConcept`
+
+Um campo `CODE` de ONTOLOGY cita um conceito que não tem bloco `ONTOLOGY`.
+
+```synesis
+# template.synt
+FIELD kind_of TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+END FIELD
+```
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    kind_of: phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:2:5  [ERROR]  `kind_of`: concept `phishing` without an ONTOLOGY block (parecido: `smishing`)
+```
+
+**Como corrigir:** Crie o bloco do conceito citado.
+
+## E102 — Item vazio em lista {#sec-e102}
+
+**Severidade:** erro · **Classe:** `InvalidValueForm`
+
+Uma lista de um campo `CODE` de ONTOLOGY tem um elemento vazio.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    kind_of: phishing, , fraud
+END ONTOLOGY
+
+ONTOLOGY phishing
+END ONTOLOGY
+
+ONTOLOGY fraud
+END ONTOLOGY
+```
+
+```text
+ontology.syno:2:5  [ERROR]  `kind_of`: empty item in the list
+```
+
+**Como corrigir:** Remova a vírgula excedente.
+
+## E104 — Papel desconhecido {#sec-e104}
+
+**Severidade:** erro · **Classe:** `UnknownRole`
+
+O texto depois de `ROLE` não está no catálogo.
+
+```synesis
+# template.synt
+FIELD x TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE SYNONYM
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  Unknown role `SYNONYM` in the field `x`
+```
+
+**Como corrigir:** Use um papel do catálogo (`LABEL`, `NOTE`, `HIERARCHY`, `USE`).
+
+## E105 — Papel ainda indisponível {#sec-e105}
+
+**Severidade:** erro · **Classe:** `RoleNotAvailable`
+
+O papel está previsto (`DIVISION EXCLUSIVE` ou `COMPLETE`), mas ainda não foi implementado.
+
+```synesis
+# template.synt
+FIELD x TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE DIVISION EXCLUSIVE
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  Role `DIVISION EXCLUSIVE` not yet available (field `x`)
+```
+
+**Como corrigir:** Remova a linha `ROLE`.
+
+## E106 — Papel sem espécie {#sec-e106}
+
+**Severidade:** erro · **Classe:** `RoleRequiresSpecies`
+
+`LABEL`, `NOTE` e `HIERARCHY` exigem a espécie.
+
+```synesis
+# template.synt
+FIELD x TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  Role `HIERARCHY` without a species in the field `x`
+```
+
+**Como corrigir:** Escreva, por exemplo, `ROLE HIERARCHY KIND`.
+
+## E107 — Tipo incompatível com o papel {#sec-e107}
+
+**Severidade:** erro · **Classe:** `RoleTypeMismatch`
+
+`LABEL` e `NOTE` exigem `TEXT`; `HIERARCHY` e `USE` exigem `CODE`.
+
+```synesis
+# template.synt
+FIELD x TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  `x`: `HIERARCHY KIND` exige TYPE CODE (e TEXT)
+```
+
+**Como corrigir:** Troque o `TYPE` do campo.
+
+## E108 — `ROLE` fora de `ONTOLOGY` {#sec-e108}
+
+**Severidade:** erro · **Classe:** `RoleOutsideOntology`
+
+Papéis só existem em campos `SCOPE ONTOLOGY`.
+
+```synesis
+# template.synt
+FIELD x TYPE TEXT
+    SCOPE ITEM
+    ROLE NOTE DEFINITION
+END FIELD
+```
+
+```text
+template.synt:8:1  [ERROR]  ROLE NOTE DEFINITION in `x` (SCOPE ITEM): only valid in SCOPE ONTOLOGY
+```
+
+**Como corrigir:** Remova a linha `ROLE` ou mude o escopo.
+
+## E109 — `ROLE` repetido {#sec-e109}
+
+**Severidade:** erro · **Classe:** `DuplicateRole`
+
+O mesmo `FIELD` declara dois `ROLE`.
+
+```synesis
+# template.synt
+FIELD x TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+    ROLE NOTE USAGE
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  Repeated ROLE in the field `x`
+```
+
+**Como corrigir:** Mantenha um.
+
+## E110 — Papel único em dois campos {#sec-e110}
+
+**Severidade:** erro · **Classe:** `DuplicateUniqueRole`
+
+Só pode haver um campo `NOTE DEFINITION`, um `LABEL PREFERRED` e um `USE`.
+
+```synesis
+# template.synt
+FIELD a TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+END FIELD
+```
+
+```synesis
+# template.synt
+FIELD b TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+END FIELD
+```
+
+```text
+template.synt:16:1  [ERROR]  `NOTE DEFINITION` in two fields: `a` and `b`
+```
+
+**Como corrigir:** Mantenha o papel em um único campo.
+
+## E111 — Hierarquia obrigatória {#sec-e111}
+
+**Severidade:** erro · **Classe:** `RequiredHierarchy`
+
+Um campo `HIERARCHY` não pode ser `REQUIRED`: os conceitos de topo não têm pai.
+
+```synesis
+# template.synt
+ITEM FIELDS
+    REQUIRED quote
+END ITEM FIELDS
+
+ONTOLOGY FIELDS
+    REQUIRED kind_of
+END ONTOLOGY FIELDS
+```
+
+```synesis
+# template.synt
+FIELD kind_of TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  `kind_of` (HIERARCHY KIND) cannot be REQUIRED: the top concepts would be invalid
+```
+
+**Como corrigir:** Liste o campo como `OPTIONAL`.
+
+## E112 — Nome de campo reservado {#sec-e112}
+
+**Severidade:** erro · **Classe:** `ReservedOntologyFieldName`
+
+Um campo de ONTOLOGY usa um nome que é chave canônica do JSON.
+
+```synesis
+# template.synt
+FIELD frequency TYPE TEXT
+    SCOPE ONTOLOGY
+END FIELD
+```
+
+```text
+template.synt:11:1  [ERROR]  ONTOLOGY field `frequency` uses a name reserved in the JSON
+```
+
+**Como corrigir:** Renomeie o campo.
+
+## E113 — Mais de um rótulo preferido {#sec-e113}
+
+**Severidade:** erro · **Classe:** `MultiplePreferredLabels`
+
+Um conceito tem dois termos em `LABEL PREFERRED`.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    label: Smishing, SMS phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `smishing`: more than one preferred label
+```
+
+**Como corrigir:** Mantenha um; mova os outros para um campo `LABEL ALTERNATIVE`.
+
+## E114 — Termo em duas espécies de rótulo {#sec-e114}
+
+**Severidade:** erro · **Classe:** `LabelSpeciesOverlap`
+
+O mesmo termo está em dois campos `LABEL` do mesmo conceito.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    used_for: SMS phishing
+    old_name: SMS phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `smishing`: `SMS phishing` in two LABEL species
+```
+
+**Como corrigir:** Deixe o termo em um só.
+
+## E115 — Rótulo ambíguo {#sec-e115}
+
+**Severidade:** erro · **Classe:** `AmbiguousLabel`
+
+O mesmo termo é rótulo de dois conceitos.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    used_for: text scam
+END ONTOLOGY
+
+ONTOLOGY vishing
+    used_for: text scam
+END ONTOLOGY
+```
+
+```text
+ontology.syno:5:1  [ERROR]  Label `text scam` on two concepts: `smishing` and `vishing`
+```
+
+**Como corrigir:** Um rótulo pertence a um só conceito.
+
+## E116 — Rótulo igual a outro conceito {#sec-e116}
+
+**Severidade:** erro · **Classe:** `LabelConflictsWithConcept`
+
+Um rótulo coincide com o nome de outro conceito.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    used_for: vishing
+END ONTOLOGY
+
+ONTOLOGY vishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `smishing`: label `vishing` is the name of the concept `vishing`
+```
+
+**Como corrigir:** Remova o rótulo ou consolide os conceitos com `USE`.
+
+## E117 — Autorreferência na hierarquia {#sec-e117}
+
+**Severidade:** erro · **Classe:** `SelfReference`
+
+Um conceito é indicado como pai de si mesmo.
+
+```synesis
+# ontology.syno
+ONTOLOGY phishing
+    kind_of: phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `phishing` points to itself in `kind_of`
+```
+
+**Como corrigir:** Indique o conceito mais amplo.
+
+## E118 — Ciclo na hierarquia {#sec-e118}
+
+**Severidade:** erro · **Classe:** `CyclicHierarchy`
+
+Seguindo os pais, volta-se ao conceito inicial.
+
+```synesis
+# ontology.syno
+ONTOLOGY phishing
+    kind_of: smishing
+END ONTOLOGY
+
+ONTOLOGY smishing
+    kind_of: phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  Hierarchy cycle: phishing -> smishing -> phishing
+```
+
+**Como corrigir:** Quebre o ciclo. A proibição é uma regra do Synesis.
+
+## E119 — Par em duas espécies de hierarquia {#sec-e119}
+
+**Severidade:** erro · **Classe:** `DuplicateHierarchySpecies`
+
+O mesmo par filho-pai aparece em dois campos `HIERARCHY`.
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    kind_of: phishing
+    part_of: phishing
+END ONTOLOGY
+
+ONTOLOGY phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `smishing` -> `phishing` in two species (KIND, PART)
+```
+
+**Como corrigir:** Escolha uma espécie.
+
+## E120 — Conceito sem fundamentação {#sec-e120}
+
+**Severidade:** aviso · **Classe:** `UngroundedConcept`
+
+O bloco não é mencionado em nenhum ITEM, nem tem descendente mencionado.
+
+```synesis
+# ontology.syno
+ONTOLOGY phishing
+END ONTOLOGY
+
+ONTOLOGY smishing
+    kind_of: phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [WARNING]  `phishing` has no mention and no mentioned descendant
+ontology.syno:4:1  [WARNING]  `smishing` has no mention and no mentioned descendant
+```
+
+**Como corrigir:** Codifique evidência para o conceito ou remova o bloco.
+
+## E121 — Hierarquia pelo nome do campo (rota antiga) {#sec-e121}
+
+**Severidade:** aviso · **Classe:** `DeprecatedNameBasedHierarchy`
+
+A hierarquia foi lida pelo nome `parent`/`is_a`, uma rota em desuso.
+
+```synesis
+# template.synt
+FIELD parent TYPE CHAIN
+    SCOPE ONTOLOGY
+    ARITY >= 2
+END FIELD
+```
+
+```synesis
+# ontology.syno
+ONTOLOGY smishing
+    parent: smishing -> phishing
+END ONTOLOGY
+
+ONTOLOGY phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [WARNING]  `smishing`: hierarchy by the name `parent` (deprecated route)
+```
+
+**Como corrigir:** Declare `ROLE HIERARCHY` no campo.
+
+# Consolidação de nomes (`ROLE USE`) {#sec-use}
+
+## E145 — `USE` para si mesmo {#sec-e145}
+
+**Severidade:** erro · **Classe:** `UseSelf`
+
+O bloco preterido aponta para ele próprio.
+
+```synesis
+# ontology.syno
+ONTOLOGY vishing
+    use: vishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `vishing` uses itself in `use`
+```
+
+**Como corrigir:** Aponte para o conceito que vale.
+
+## E146 — `USE` em cadeia {#sec-e146}
+
+**Severidade:** erro · **Classe:** `UseChain`
+
+O alvo também é preterido.
+
+```synesis
+# ontology.syno
+ONTOLOGY voice_scam
+    use: voice_phishing
+END ONTOLOGY
+
+ONTOLOGY voice_phishing
+    use: vishing
+END ONTOLOGY
+
+ONTOLOGY vishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `voice_scam` uses `voice_phishing`, which uses `vishing`
+```
+
+**Como corrigir:** Aponte diretamente para o conceito que vale.
+
+## E147 — `USE` com vários alvos {#sec-e147}
+
+**Severidade:** erro · **Classe:** `UseMultipleTargets`
+
+Um nome preterido vale por um só conceito.
+
+```synesis
+# ontology.syno
+ONTOLOGY voice_phishing
+    use: vishing, phishing
+END ONTOLOGY
+
+ONTOLOGY vishing
+END ONTOLOGY
+
+ONTOLOGY phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `voice_phishing`: USE with several targets (vishing, phishing)
+```
+
+**Como corrigir:** Indique um único alvo.
+
+## E148 — Bloco preterido com outros campos {#sec-e148}
+
+**Severidade:** erro · **Classe:** `AliasWithContent`
+
+Um bloco com `USE` não tem outros campos.
+
+```synesis
+# ontology.syno
+ONTOLOGY voice_phishing
+    use: vishing
+    used_for: voice scam
+END ONTOLOGY
+
+ONTOLOGY vishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:1:1  [ERROR]  `voice_phishing` is an alias and has other fields (used_for)
+```
+
+**Como corrigir:** Deixe apenas o `USE`; `synesis-coder consolidate` faz a transferência.
+
+## E149 — Hierarquia que colapsa após `USE` {#sec-e149}
+
+**Severidade:** erro · **Classe:** `HierarchyCollapsedByUse`
+
+Resolvidos os nomes preteridos, um conceito seria pai de si mesmo.
+
+```synesis
+# ontology.syno
+ONTOLOGY voice_phishing
+    use: vishing
+END ONTOLOGY
+
+ONTOLOGY vishing
+    kind_of: voice_phishing
+END ONTOLOGY
+```
+
+```text
+ontology.syno:5:1  [ERROR]  `vishing` -> `voice_phishing` collapses after USE (parent of itself)
+```
+
+**Como corrigir:** Remova a ligação hierárquica entre os dois nomes.
+
+# Plano de produção (`PHASE`) {#sec-phase}
+
+O compilador só valida o plano; quem executa as fases é o `synesis-coder`.
+
+## E133 — Propriedade desconhecida na fase {#sec-e133}
+
+**Severidade:** erro · **Classe:** `UnknownPhaseProperty`
+
+As propriedades são `FIELDS`, `INPUT`, `RULES` e `OUTPUT` (esta só em `ONTOLOGY`).
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY defs
+        FIELDS definition
+        MODEL claude
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:8:9  [ERROR]  PHASE ONTOLOGY defs: unknown property `MODEL`
+```
+
+**Como corrigir:** Corrija a propriedade.
+
+## E134 — Propriedade repetida na fase {#sec-e134}
+
+**Severidade:** erro · **Classe:** `DuplicatePhaseProperty`
+
+A mesma propriedade aparece duas vezes.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY defs
+        FIELDS definition
+        FIELDS topic
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:8:9  [ERROR]  PHASE ONTOLOGY defs: repeated property `FIELDS`
+```
+
+**Como corrigir:** Mantenha uma.
+
+## E135 — Fase sem campos {#sec-e135}
+
+**Severidade:** erro · **Classe:** `EmptyPhaseList`
+
+Falta `FIELDS`, ou uma lista está vazia.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY defs
+        INPUT quote
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  PHASE ONTOLOGY defs: `FIELDS` without fields
+```
+
+**Como corrigir:** Liste os campos que a fase produz.
+
+## E136 — Campo da fase fora do template {#sec-e136}
+
+**Severidade:** erro · **Classe:** `UnknownPhaseField`
+
+A fase cita um campo que o template não define.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY defs
+        FIELDS meaning
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  PHASE ONTOLOGY defs: field `meaning` (FIELDS) outside the template
+```
+
+**Como corrigir:** Corrija o nome.
+
+## E137 — Campo em duas fases {#sec-e137}
+
+**Severidade:** erro · **Classe:** `FieldInTwoPhases`
+
+Cada campo é produzido por uma única fase.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+    END PHASE
+    PHASE ONTOLOGY b
+        FIELDS definition
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:9:5  [ERROR]  PHASE ONTOLOGY b: `definition` is already produced by `PHASE ONTOLOGY a`
+```
+
+**Como corrigir:** Retire o campo de uma delas.
+
+## E138 — Campo de outro escopo {#sec-e138}
+
+**Severidade:** erro · **Classe:** `PhaseScopeMismatch`
+
+Uma `PHASE ONTOLOGY` só produz campos de ONTOLOGY.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY defs
+        FIELDS quote
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  PHASE ONTOLOGY defs: `quote` (ITEM) outside the phase scope
+```
+
+**Como corrigir:** Mova o campo ou troque o escopo da fase.
+
+## E139 — Entrada produzida só depois {#sec-e139}
+
+**Severidade:** aviso · **Classe:** `InputNotAvailable`
+
+O `INPUT` depende de um campo que apenas uma fase posterior produz.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+        INPUT topic
+    END PHASE
+    PHASE ONTOLOGY b
+        FIELDS topic
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  PHASE ONTOLOGY a: INPUT `topic` only produced by a later phase
+```
+
+**Como corrigir:** Reordene as fases.
+
+## E140 — Bundle dividido entre fases {#sec-e140}
+
+**Severidade:** erro · **Classe:** `BundleSplitAcrossPhases`
+
+Campos de um mesmo `BUNDLE` estão em fases diferentes.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+    END PHASE
+    PHASE ONTOLOGY b
+        FIELDS topic
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  BUNDLE (definition, topic) split across phases
+```
+
+**Como corrigir:** Coloque todos na mesma fase.
+
+## E141 — Campo obrigatório sem fase {#sec-e141}
+
+**Severidade:** aviso · **Classe:** `FieldWithoutPhase`
+
+Há blocos `PHASE`, mas nenhum produz um campo `REQUIRED` do escopo coberto.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:1:1  [WARNING]  REQUIRED field `topic` without a phase
+```
+
+**Como corrigir:** Inclua o campo em uma fase.
+
+## E142 — Destino ambíguo {#sec-e142}
+
+**Severidade:** erro · **Classe:** `AmbiguousPhaseOutput`
+
+A fase não declara `OUTPUT` e o projeto não tem exatamente um `.syno` local elegível.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE ONTOLOGY "extra.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:7:5  [ERROR]  PHASE ONTOLOGY a: ambiguous destination (2 eligible .syno files); use OUTPUT
+```
+
+**Como corrigir:** Declare `OUTPUT "arquivo.syno"`.
+
+## E143 — `OUTPUT` que não é um `.syno` local {#sec-e143}
+
+**Severidade:** erro · **Classe:** `PhaseOutputNotLocal`
+
+O destino precisa ser um `.syno` do projeto citado como arquivo.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY a
+        FIELDS definition
+        OUTPUT "out/file.json"
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  PHASE ONTOLOGY a: OUTPUT `out/file.json` is not a local .syno of the project
+```
+
+**Como corrigir:** Aponte para um `.syno` incluído.
+
+## E144 — Nomes de fase que colidem {#sec-e144}
+
+**Severidade:** erro · **Classe:** `PhaseNameCollision`
+
+Duas fases têm o mesmo nome, ou nomes que geram a mesma variável de ambiente.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    PHASE ONTOLOGY syn-a
+        FIELDS definition
+    END PHASE
+    PHASE ONTOLOGY syn_a
+        FIELDS topic
+    END PHASE
+END PROJECT
+```
+
+```text
+project.synp:9:5  [ERROR]  PHASE ONTOLOGY syn_a collides with PHASE ONTOLOGY syn-a (same environment variable)
+```
+
+**Como corrigir:** Renomeie uma fase.
+
+# Exportação SKOS {#sec-skos}
+
+## E122 — Relação desconhecida em `MAP RELATIONS` {#sec-e122}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `UnknownRelation`
+
+A relação não está nas `RELATIONS` de nenhum campo `CHAIN`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        MAP RELATIONS PART_OF TO HIERARCHY PART
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:10:9  [WARNING]  EXPORT SKOS vocabulary: unknown relation `PART_OF`
+```
+
+**Como corrigir:** Use o nome declarado no template.
+
+## E123 — Relação ambígua {#sec-e123}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AmbiguousRelation`
+
+A relação existe em mais de um campo `CHAIN`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        MAP RELATIONS KIND_OF TO HIERARCHY KIND
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:10:9  [WARNING]  EXPORT SKOS vocabulary: `KIND_OF` in several CHAIN fields; use FROM
+```
+
+**Como corrigir:** Indique o campo com `FROM <campo>`.
+
+## E124 — Alvo não aceito em `MAP RELATIONS` {#sec-e124}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `MapTargetNotAllowed`
+
+Os alvos são `HIERARCHY KIND`, `HIERARCHY PART`, `HIERARCHY INSTANCE` e `RELATED`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        MAP RELATIONS KIND_OF TO BROADER
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:10:9  [WARNING]  EXPORT SKOS vocabulary: target `BROADER` not accepted in MAP RELATIONS
+```
+
+**Como corrigir:** Use um desses alvos.
+
+## E125 — Relação mapeada duas vezes {#sec-e125}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `RelationMappedTwice`
+
+A mesma relação aparece em dois `MAP RELATIONS` do bloco.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        MAP RELATIONS KIND_OF TO HIERARCHY KIND
+        MAP RELATIONS KIND_OF TO RELATED
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:11:9  [WARNING]  EXPORT SKOS vocabulary: relation `KIND_OF` mapped twice
+```
+
+**Como corrigir:** Mapeie cada relação uma vez.
+
+## E126 — `MIN_SOURCES` inválido {#sec-e126}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `InvalidMinSources`
+
+O valor deve ser um inteiro maior ou igual a 1.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        MIN_SOURCES 0
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT SKOS vocabulary: invalid MIN_SOURCES `0`
+```
+
+**Como corrigir:** Corrija o número.
+
+## E127 — `NAMESPACE` inválido {#sec-e127}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `InvalidNamespace`
+
+Precisa ser um IRI absoluto terminado em `/` ou `#`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "demo"
+        LANGUAGE en
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT SKOS vocabulary: invalid NAMESPACE `demo`
+```
+
+**Como corrigir:** Use um domínio que a equipe controla.
+
+## E128 — `LANGUAGE` inválido {#sec-e128}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `InvalidLanguageTag`
+
+Precisa ser uma etiqueta BCP 47 bem formada, como `pt-BR` ou `en`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE portugues_br
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT SKOS vocabulary: invalid LANGUAGE `portugues_br`
+```
+
+**Como corrigir:** Corrija a etiqueta.
+
+## E129 — Rótulo derivado em conflito {#sec-e129}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `DerivedLabelConflict`
+
+Sem `LABEL PREFERRED`, o rótulo preferido é o nome do bloco com `_` trocado por espaço; ele coincide com um rótulo de outro conceito.
+
+```synesis
+# ontology.syno
+ONTOLOGY text_scam
+END ONTOLOGY
+
+ONTOLOGY smishing
+    used_for: text scam
+END ONTOLOGY
+```
+
+```text
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: derived label "text scam" of `text_scam` matches `smishing`
+```
+
+**Como corrigir:** Mude o rótulo do outro conceito ou declare um rótulo preferido.
+
+## E130 — Rótulo derivado repetido no mesmo conceito {#sec-e130}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `DerivedLabelOverlap`
+
+O rótulo derivado do nome coincide com um rótulo alternativo ou oculto do próprio conceito (condição S13 do SKOS).
+
+```synesis
+# ontology.syno
+ONTOLOGY text_scam
+    used_for: text scam
+END ONTOLOGY
+```
+
+```text
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: "text scam" is both preferred and alternative in `text_scam`
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: SKOS integrity S13 (1)
+```
+
+**Como corrigir:** Remova o termo redundante.
+
+## E131 — IRI repetido {#sec-e131}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `IriCollision`
+
+Dois recursos receberiam o mesmo IRI. É uma verificação defensiva, que não se espera ver.
+
+**Como corrigir:** Renomeie um dos conceitos.
+
+## E132 — Grafias de `TOPIC` unidas {#sec-e132}
+
+**Severidade:** aviso · **Classe:** `TopicCaseVariant`
+
+Valores de `TOPIC` que diferem só na grafia são reunidos em uma coleção. É um aviso.
+
+```synesis
+# ontology.syno
+ONTOLOGY phishing
+    topic: Fraud
+END ONTOLOGY
+
+ONTOLOGY smishing
+    topic: fraud
+END ONTOLOGY
+```
+
+```text
+  ⚠ Warnings (1):
+    TOPIC spellings merged:
+      • (Fraud, fraud) -> "Fraud"
+```
+
+**Como corrigir:** Padronize a grafia no `.syno`.
+
+## E150 — `ALIAS_LABEL` desconhecido {#sec-e150}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `UnknownAliasLabel`
+
+Os valores aceitos são `HIDDEN` e `ALTERNATIVE`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        ALIAS_LABEL VISIBLE
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: unknown ALIAS_LABEL `VISIBLE`
+```
+
+**Como corrigir:** Corrija o valor.
+
+## E151 — Nome preterido igual a um rótulo {#sec-e151}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AliasLabelCollision`
+
+O nome preterido (`USE`) já é rótulo do conceito alvo.
+
+```synesis
+# ontology.syno
+ONTOLOGY voice_phishing
+    use: vishing
+END ONTOLOGY
+
+ONTOLOGY vishing
+    used_for: voice phishing
+END ONTOLOGY
+```
+
+```text
+  ⚠ Warnings (1):
+    `voice_phishing` is already a label of `vishing`
+```
+
+**Como corrigir:** Remova o rótulo duplicado.
+
+## E152 — `REGISTRY` inutilizável {#sec-e152}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `RegistryNotFound`
+
+O registro não existe ou não é um arquivo de texto legível. Com `--publish`, é erro e nada é gravado.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        REGISTRY "registry"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: REGISTRY `registry` unusable
+```
+
+**Como corrigir:** Aponte para um arquivo de texto (será criado na primeira publicação).
+
+## E153 — IRI publicado sem sucessor {#sec-e153}
+
+**Severidade:** aviso; erro com `--publish` · **Classe:** `PublishedIriWithoutBlock`
+
+Um IRI do `REGISTRY` não corresponde a nenhum bloco nem a um `USE`. Com `--publish`, é erro: um IRI publicado nunca some.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        REGISTRY "iris.txt"
+    END EXPORT
+END PROJECT
+```
+
+```text
+  ⚠ Warnings (1):
+    Published IRI without a block:
+      • `https://example.org/id/demo/concept/voice_scam`
+```
+
+**Como corrigir:** Restaure o bloco ou declare `USE` apontando para o sucessor.
+
+## E154 — Violação de integridade SKOS {#sec-e154}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `SkosIntegrityViolation`
+
+O grafo gerado fere uma condição de integridade do SKOS (S9, S13, S14, S27, S37) ou a regra do Synesis contra ciclos. O arquivo não é gravado.
+
+**Como corrigir:** Revise rótulos e hierarquia apontados na mensagem.
+
+## E155 — Observação de qualidade do SKOS {#sec-e155}
+
+**Severidade:** aviso · **Classe:** `SkosQualityNotice`
+
+Aviso editorial sobre o grafo gerado: recurso sem rótulo preferido, rótulo sem idioma, conceito sem posição na hierarquia ou esquema sem conceito de topo. O arquivo é gravado.
+
+**Como corrigir:** Complete o modelo organizador quando for relevante.
+
+## E156 — IRIs do registro fora do `NAMESPACE` {#sec-e156}
+
+**Severidade:** aviso · **Classe:** `RegistryOutsideNamespace`
+
+O `REGISTRY` contém IRIs de outro namespace, que não são conferidos. Mudar o namespace é decisão do pesquisador.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        REGISTRY "iris.txt"
+    END EXPORT
+END PROJECT
+```
+
+```text
+  ⚠ Warnings (1):
+    REGISTRY IRIs outside the NAMESPACE (not checked):
+      • 1 — e.g. https://old.example.org/concept/vishing
+```
+
+**Como corrigir:** Redirecione os endereços antigos se eles já circulam.
+
+## E157 — `OUTPUT` e `REGISTRY` no mesmo arquivo {#sec-e157}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `RegistryIsOutput`
+
+Um sobrescreveria o outro; a exportação é recusada.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT SKOS vocabulary
+        OUTPUT "out/v.ttl"
+        NAMESPACE "https://example.org/id/demo/"
+        LANGUAGE en
+        REGISTRY "out/v.ttl"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [ERROR]  EXPORT SKOS vocabulary: OUTPUT and REGISTRY are the same file `out\v.ttl`
+```
+
+**Como corrigir:** Use arquivos diferentes.
+
+# Exportação Alpaca {#sec-alpaca}
+
+Estes diagnósticos valem para blocos `EXPORT ALPACA`. Cada um impede só o artefato do bloco; os informativos I166 e I167 não impedem nada.
+
+## E158 — Falta `MAP ... TO OUTPUT` {#sec-e158}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaOutputMapMissing`
+
+No modo declarado, é preciso dizer o que vai na saída.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quote TO INPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT ALPACA training: missing `MAP <fields> TO OUTPUT`
+```
+
+**Como corrigir:** Acrescente `MAP <campos> TO OUTPUT`.
+
+## E159 — Origem da instrução ausente ou dupla {#sec-e159}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaInstructionSource`
+
+Há exatamente uma origem: o texto `INSTRUCTION` ou `MAP <campo> TO INSTRUCTION`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        MAP chain TO OUTPUT
+        MAP quote TO INPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT ALPACA training: no instruction (INSTRUCTION <text> or MAP <field> TO INSTRUCTION)
+```
+
+**Como corrigir:** Declare uma só.
+
+## E160 — Campo inexistente no `MAP` {#sec-e160}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaUnknownField`
+
+O campo não está no template. A mensagem sugere o nome parecido.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quot TO INPUT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:9:9  [WARNING]  EXPORT ALPACA training: unknown field `quot` (did you mean `quote`?)
+```
+
+**Como corrigir:** Corrija o nome.
+
+## E161 — Campo repetido no mesmo alvo {#sec-e161}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaDuplicateField`
+
+O campo foi mapeado duas vezes para o mesmo alvo.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quote, quote TO INPUT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:9:9  [WARNING]  EXPORT ALPACA training: `quote` mapped twice to INPUT
+```
+
+**Como corrigir:** Liste-o uma vez.
+
+## E162 — Vazamento: campo na saída e na entrada {#sec-e162}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaFieldLeak`
+
+Um campo do `OUTPUT` também está em `INPUT` ou `INSTRUCTION`; a resposta apareceria no prompt.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quote, chain TO INPUT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT ALPACA training: `chain` in OUTPUT and in INPUT (answer leaks into the prompt)
+```
+
+**Como corrigir:** Separe os campos.
+
+## E163 — Campos de dois bundles {#sec-e163}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaMultipleBundles`
+
+Cada linha precisa de uma unidade única.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP chain TO INPUT
+        MAP note TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [WARNING]  EXPORT ALPACA training: fields from 2 bundles; use fields of one BUNDLE
+```
+
+**Como corrigir:** Use campos de um só bundle por bloco; crie outro bloco para o segundo.
+
+## E164 — Campo ainda não suportado {#sec-e164}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaFieldNotSupported`
+
+Campos de ONTOLOGY e de SOURCE com `ON BIBLIOGRAPHY`/`ON DATASET` não podem entrar no mapa.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP definition TO INPUT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:9:9  [WARNING]  EXPORT ALPACA training: `definition` not supported yet (ONTOLOGY field)
+```
+
+**Como corrigir:** Retire o campo.
+
+## E165 — Alvo de `MAP` inválido {#sec-e165}
+
+**Severidade:** erro local ao bloco `EXPORT` (aviso na compilação) · **Classe:** `AlpacaMapTarget`
+
+Os alvos são `INSTRUCTION`, `INPUT` e `OUTPUT`, sem `FROM`.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quote TO PROMPT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:9:9  [WARNING]  EXPORT ALPACA training: target `PROMPT` not accepted (INSTRUCTION, INPUT, OUTPUT)
+```
+
+**Como corrigir:** Corrija o alvo.
+
+## I166 — Qualificador fora do mapa {#sec-i166}
+
+**Severidade:** informativo · **Classe:** `AlpacaBundlePartnerOmitted`
+
+Um campo que qualifica o bundle (por exemplo, o estatuto de uma relação) ficou de fora. O arquivo é gerado.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+        INSTRUCTION Identify the relation.
+        MAP quote TO INPUT
+        MAP chain TO OUTPUT
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [INFO]  EXPORT ALPACA training: `status` qualifies `chain` in the BUNDLE and is not in the dataset
+```
+
+**Como corrigir:** Se o qualificador importa para o treino, acrescente-o ao `OUTPUT`.
+
+## I167 — Pares embutidos descartam o qualificador {#sec-i167}
+
+**Severidade:** informativo · **Classe:** `AlpacaLegacyDropsQualifier`
+
+Sem `MAP`, os pares embutidos não levam o qualificador do bundle com CHAIN, e uma hipótese sai como afirmação.
+
+```synesis
+# project.synp
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+    EXPORT ALPACA training
+        OUTPUT "out/t.jsonl"
+    END EXPORT
+END PROJECT
+```
+
+```text
+project.synp:6:5  [INFO]  EXPORT ALPACA training: built-in pairs drop `status` (qualifies `chain`); declare MAP ... TO OUTPUT
+```
+
+**Como corrigir:** Declare `MAP ... TO OUTPUT` com o qualificador.
+
+# Erros de sintaxe {#sec-sintaxe}
+
+Quando o texto não segue a gramática, o compilador não chega à validação e não há código semântico: a mensagem mostra o ponto em que a leitura parou (`Unexpected token`) e o que era esperado. Num arquivo incluído, ela vem embrulhada no [E076](#sec-e076); no `.synp` ou no template, no [E064](#sec-e064).
+
+As causas mais comuns:
+
+| Sintoma | Causa | Correção |
+|---|---|---|
+| erro logo após o nome do template | `version:` ou `author:` em linha própria | escreva-os na mesma linha: `TEMPLATE nome version: "1.0"` |
+| erro dentro de `VALUES` de um `ORDERED` | índice sem colchetes (`1 baixa:`) | escreva `[1] baixa: ...` |
+| `Unexpected token <EOF>` | falta um `END ...` | feche todos os blocos |
+| erro em um valor de várias linhas | continuação sem recuo | recue as linhas seguintes mais que o nome do campo |
+| erro no `.synp` | blocos recuados misturados com blocos na coluna 0 | recue todo o conteúdo do `PROJECT` por igual |
+
+# Índice rápido {#sec-indice}
+
+| Código | Situação | Severidade |
+|---|---|---|
+| [E001](#sec-e001) | Referência não encontrada no `.bib` | erro |
+| [E002](#sec-e002) | ITEM sem SOURCE | erro |
+| [E003](#sec-e003) | SOURCE sem ITEMs | aviso |
+| [E004](#sec-e004) | Código sem conceito | aviso |
+| [E005](#sec-e005) | ONTOLOGY sem `ONTOLOGY FIELDS` | erro |
+| [E006](#sec-e006) | Escopo divergente | erro |
+| [E007](#sec-e007) | Aridade não atendida | erro |
+| [E008](#sec-e008) | Cadeia com relações em um campo sem `RELATIONS` | erro |
+| [E009](#sec-e009) | Cadeia simples onde há relações obrigatórias | erro |
+| [E010](#sec-e010) | Relação não declarada | erro |
+| [E011](#sec-e011) | Cadeia qualificada malformada | erro |
+| [E013](#sec-e013) | Cadeia sem o operador `->` | erro |
+| [E014](#sec-e014) | Conceito com nome de relação | erro |
+| [E015](#sec-e015) | Conceito com espaços | erro |
+| [E016](#sec-e016) | Membro de bundle ausente | erro |
+| [E017](#sec-e017) | Contagens diferentes no bundle | erro |
+| [E018](#sec-e018) | Bundle com um único campo | erro |
+| [E020](#sec-e020) | Campo obrigatório ausente | erro |
+| [E021](#sec-e021) | Campo proibido presente | erro |
+| [E022](#sec-e022) | Campo desconhecido | erro |
+| [E023](#sec-e023) | ITEM vazio | erro |
+| [E026](#sec-e026) | Decimal em `SCALE` inteira | erro |
+| [E027](#sec-e027) | Valor fora da lista `ENUMERATED` | erro |
+| [E028](#sec-e028) | Tipo de valor incompatível | erro |
+| [E029](#sec-e029) | Índice ou rótulo inexistente em `ORDERED` | erro |
+| [E030](#sec-e030) | Valor fora do intervalo `SCALE` | erro |
+| [E032](#sec-e032) | `TOPIC` com espaços | erro |
+| [E033](#sec-e033) | Caractere inválido em identificador | erro |
+| [E039](#sec-e039) | Campo listado sem definição | erro |
+| [E042](#sec-e042) | Campo definido e não listado | aviso |
+| [E047](#sec-e047) | `CHAIN` sem `ARITY` | erro |
+| [E048](#sec-e048) | `ARITY` incompatível com `RELATIONS` | erro |
+| [E049](#sec-e049) | `ORDERED` sem `VALUES` | erro |
+| [E050](#sec-e050) | `ENUMERATED` sem `VALUES` | erro |
+| [E051](#sec-e051) | `SCALE` sem `FORMAT` | erro |
+| [E052](#sec-e052) | Sintaxe de `FORMAT` inválida | erro |
+| [E053](#sec-e053) | Operador de `ARITY` inválido | erro |
+| [E054](#sec-e054) | `FORMAT` fora de `SCALE` | erro |
+| [E055](#sec-e055) | `ARITY` fora de `CHAIN` | erro |
+| [E056](#sec-e056) | `RELATIONS` fora de `CHAIN` | erro |
+| [E057](#sec-e057) | Bloco `FIELDS` duplicado | erro |
+| [E058](#sec-e058) | Valor com espaço nas pontas | erro |
+| [E059](#sec-e059) | Valor duplicado em `VALUES` | erro |
+| [E060](#sec-e060) | `ARITY` com valor não inteiro | erro |
+| [E061](#sec-e061) | Arquivo `.syn` não incluído | erro |
+| [E062](#sec-e062) | Arquivo `.syno` não incluído | erro |
+| [E063](#sec-e063) | Bibliografia não encontrada | erro |
+| [E064](#sec-e064) | Template ou projeto não encontrado | erro (aviso no editor, se não houver `.synp`) |
+| [E065](#sec-e065) | Projeto sem `TEMPLATE` | erro |
+| [E066](#sec-e066) | Dois blocos `PROJECT` | erro |
+| [E068](#sec-e068) | Conceito duplicado | erro |
+| [E069](#sec-e069) | Campo definido duas vezes | erro |
+| [E070](#sec-e070) | SOURCE duplicada | erro |
+| [E072](#sec-e072) | Entrada BibTeX inválida | erro |
+| [E073](#sec-e073) | Arquivo de anotações não encontrado | erro |
+| [E074](#sec-e074) | Arquivo de ontologia não encontrado | erro |
+| [E075](#sec-e075) | Caminho fora do projeto | erro |
+| [E076](#sec-e076) | Arquivo incluído ilegível | erro |
+| [E077](#sec-e077) | Valor de identidade repetido | erro |
+| [E078](#sec-e078) | Modificador de ligação fora de `SOURCE` | erro |
+| [E079](#sec-e079) | Valor ausente no `.bib` | erro |
+| [E081](#sec-e081) | Entidade com dois donos | erro |
+| [E082](#sec-e082) | Tipos divergentes na ligação | erro |
+| [E084](#sec-e084) | `SHARED` fora de `ONTOLOGY` | erro |
+| [E085](#sec-e085) | Valor ausente no dataset | erro |
+| [E086](#sec-e086) | `VALUES` fora de `ORDERED`/`ENUMERATED` | erro |
+| [E087](#sec-e087) | Índice `[N]` em `ENUMERATED` | erro |
+| [E088](#sec-e088) | `ORDERED` escrito com o rótulo | erro |
+| [E089](#sec-e089) | Chave repetida entre arquivos | erro |
+| [E090](#sec-e090) | Resumo dos códigos sem conceito | aviso |
+| [E091](#sec-e091) | Questão sem identificador | erro |
+| [E092](#sec-e092) | Questão sem texto | erro |
+| [E093](#sec-e093) | Identificador de questão repetido | erro |
+| [E094](#sec-e094) | Formato de `EXPORT` desconhecido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E095](#sec-e095) | Propriedade desconhecida no `EXPORT` | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E096](#sec-e096) | Propriedade obrigatória ausente | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E097](#sec-e097) | Propriedade repetida | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E098](#sec-e098) | Blocos `EXPORT` ambíguos | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E099](#sec-e099) | `MAP` em formato que não o usa | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E100](#sec-e100) | `GENERATED_AT` inválido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E101](#sec-e101) | Conceito citado sem bloco | erro |
+| [E102](#sec-e102) | Item vazio em lista | erro |
+| [E103](#sec-e103) | Nomes que colidem após normalização Unicode | erro |
+| [E104](#sec-e104) | Papel desconhecido | erro |
+| [E105](#sec-e105) | Papel ainda indisponível | erro |
+| [E106](#sec-e106) | Papel sem espécie | erro |
+| [E107](#sec-e107) | Tipo incompatível com o papel | erro |
+| [E108](#sec-e108) | `ROLE` fora de `ONTOLOGY` | erro |
+| [E109](#sec-e109) | `ROLE` repetido | erro |
+| [E110](#sec-e110) | Papel único em dois campos | erro |
+| [E111](#sec-e111) | Hierarquia obrigatória | erro |
+| [E112](#sec-e112) | Nome de campo reservado | erro |
+| [E113](#sec-e113) | Mais de um rótulo preferido | erro |
+| [E114](#sec-e114) | Termo em duas espécies de rótulo | erro |
+| [E115](#sec-e115) | Rótulo ambíguo | erro |
+| [E116](#sec-e116) | Rótulo igual a outro conceito | erro |
+| [E117](#sec-e117) | Autorreferência na hierarquia | erro |
+| [E118](#sec-e118) | Ciclo na hierarquia | erro |
+| [E119](#sec-e119) | Par em duas espécies de hierarquia | erro |
+| [E120](#sec-e120) | Conceito sem fundamentação | aviso |
+| [E121](#sec-e121) | Hierarquia pelo nome do campo (rota antiga) | aviso |
+| [E122](#sec-e122) | Relação desconhecida em `MAP RELATIONS` | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E123](#sec-e123) | Relação ambígua | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E124](#sec-e124) | Alvo não aceito em `MAP RELATIONS` | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E125](#sec-e125) | Relação mapeada duas vezes | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E126](#sec-e126) | `MIN_SOURCES` inválido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E127](#sec-e127) | `NAMESPACE` inválido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E128](#sec-e128) | `LANGUAGE` inválido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E129](#sec-e129) | Rótulo derivado em conflito | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E130](#sec-e130) | Rótulo derivado repetido no mesmo conceito | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E131](#sec-e131) | IRI repetido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E132](#sec-e132) | Grafias de `TOPIC` unidas | aviso |
+| [E133](#sec-e133) | Propriedade desconhecida na fase | erro |
+| [E134](#sec-e134) | Propriedade repetida na fase | erro |
+| [E135](#sec-e135) | Fase sem campos | erro |
+| [E136](#sec-e136) | Campo da fase fora do template | erro |
+| [E137](#sec-e137) | Campo em duas fases | erro |
+| [E138](#sec-e138) | Campo de outro escopo | erro |
+| [E139](#sec-e139) | Entrada produzida só depois | aviso |
+| [E140](#sec-e140) | Bundle dividido entre fases | erro |
+| [E141](#sec-e141) | Campo obrigatório sem fase | aviso |
+| [E142](#sec-e142) | Destino ambíguo | erro |
+| [E143](#sec-e143) | `OUTPUT` que não é um `.syno` local | erro |
+| [E144](#sec-e144) | Nomes de fase que colidem | erro |
+| [E145](#sec-e145) | `USE` para si mesmo | erro |
+| [E146](#sec-e146) | `USE` em cadeia | erro |
+| [E147](#sec-e147) | `USE` com vários alvos | erro |
+| [E148](#sec-e148) | Bloco preterido com outros campos | erro |
+| [E149](#sec-e149) | Hierarquia que colapsa após `USE` | erro |
+| [E150](#sec-e150) | `ALIAS_LABEL` desconhecido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E151](#sec-e151) | Nome preterido igual a um rótulo | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E152](#sec-e152) | `REGISTRY` inutilizável | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E153](#sec-e153) | IRI publicado sem sucessor | aviso; erro com `--publish` |
+| [E154](#sec-e154) | Violação de integridade SKOS | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E155](#sec-e155) | Observação de qualidade do SKOS | aviso |
+| [E156](#sec-e156) | IRIs do registro fora do `NAMESPACE` | aviso |
+| [E157](#sec-e157) | `OUTPUT` e `REGISTRY` no mesmo arquivo | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E158](#sec-e158) | Falta `MAP ... TO OUTPUT` | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E159](#sec-e159) | Origem da instrução ausente ou dupla | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E160](#sec-e160) | Campo inexistente no `MAP` | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E161](#sec-e161) | Campo repetido no mesmo alvo | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E162](#sec-e162) | Vazamento: campo na saída e na entrada | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E163](#sec-e163) | Campos de dois bundles | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E164](#sec-e164) | Campo ainda não suportado | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [E165](#sec-e165) | Alvo de `MAP` inválido | erro local ao bloco `EXPORT` (aviso na compilação) |
+| [W031](#sec-w031) | Código repetido na mesma ocorrência | aviso |
+| [W067](#sec-w067) | `modified` anterior a `created` | aviso |
+| [W071](#sec-w071) | Definições idênticas | aviso |
+| [W083](#sec-w083) | Referência órfã | aviso |
+| [I080](#sec-i080) | Referência externa declarada | informativo |
+| [I166](#sec-i166) | Qualificador fora do mapa | informativo |
+| [I167](#sec-i167) | Pares embutidos descartam o qualificador | informativo |

@@ -1,24 +1,24 @@
 # Synesis: Structuring Knowledge for Data-Driven Decisions
 
-**Guide for decision makers and knowledge professionals**
+**A guide for decision makers and knowledge professionals**
 
 ---
 
-## The challenge of the data era
+## The Challenge of the Data Era
 
-We live in an era characterized by the acronym VUCA: Volatility, Uncertainty, Complexity, and Ambiguity. In this context, making efficient decisions requires more than intuition — it demands the ability to integrate and analyze multiple data sources, identifying not just correlations, but cause-and-effect relationships between observed phenomena.
+We live in an era summed up by the acronym VUCA: Volatility, Uncertainty, Complexity and Ambiguity. In this context, making effective decisions takes more than intuition — it requires integrating and analysing multiple data sources, identifying not just correlations but cause-and-effect relations among the observed phenomena.
 
-As highlighted in recent research on Causal Knowledge Graphs, simple correlation between data can lead to wrong conclusions. The classic example: there is statistical correlation between chocolate consumption and number of Nobel Prize winners in different countries — but it would be absurd to conclude that distributing chocolate will increase an organization's scientific output.
+As recent research on Causal Knowledge Graphs highlights, mere correlation between data can lead to wrong conclusions. The classic example: there is a statistical correlation between chocolate consumption and the number of Nobel laureates across countries — but it would be absurd to conclude that handing out chocolate will increase an organization's scientific output.
 
-**The real challenge lies in capturing causal relationships**, not just superficial correlations.
+**The real challenge is capturing causal relations**, not just superficial correlations.
 
 ---
 
-## Where does Synesis language fit in?
+## Where Does the Synesis Language Come In?
 
-Synesis is a structured language for systematic capture of causal knowledge from documentary sources and qualitative observations.
+Synesis is a structured language for the systematic capture of causal knowledge from documentary sources and qualitative observations.
 
-While automated systems like statistical causal discovery work with numerical data, much of organizational knowledge is dispersed in:
+While automated systems such as statistical causal discovery work on numerical data, much organizational knowledge is scattered across:
 
 - Reports and technical documents
 - Interviews and qualitative surveys
@@ -26,95 +26,111 @@ While automated systems like statistical causal discovery work with numerical da
 - Incident records and lessons learned
 - Engagement and organizational climate surveys
 
-Synesis offers a standardized way to **extract, document, and structure causal relationships** from these textual sources, making them processable and integrable with other analysis systems.
+Synesis offers a standard way to **extract, document and structure causal relations** from these textual sources, making them processable and integrable with other analysis systems.
 
 ---
 
-## The problem Synesis solves
+## The Problem Synesis Addresses
 
-### Limitation 1: Qualitative knowledge is not quantifiable
+### Limitation 1: Qualitative knowledge is not quantified
 
-When a causal relationship is extracted from a document (for example: "lack of training causes operational errors"), it is purely qualitative. There's no way to predict the probability or magnitude of the effect.
+When a causal relation is extracted from a document (for instance, "lack of training causes operating errors"), it is purely qualitative. There is no way to predict the probability or magnitude of the effect.
 
-**How Synesis contributes:** By systematically structuring these relationships, they can later be integrated with numerical data to quantify causal effects.
+**How Synesis helps:** by structuring these relations systematically, they can later be integrated with numerical data to quantify causal effects.
 
 ### Limitation 2: Statistical discovery can invert cause and effect
 
-Statistical causal discovery algorithms, when applied to biased or incomplete data, can derive relationships where the direction of causality is inverted.
+Statistical causal discovery algorithms applied to biased or incomplete data may derive relations whose causal direction is inverted.
 
-**How Synesis contributes:** Prior knowledge documented in Synesis serves as "prior knowledge" to validate or correct statistical discoveries.
+**How Synesis helps:** knowledge documented in Synesis works as *prior knowledge* to validate or correct statistical findings.
 
-### Limitation 3: Data from different contexts don't communicate
+### Limitation 3: Data from different contexts do not talk to each other
 
-Traditional causal discovery works with a single dataset. It can't combine observations from different departments, periods, or conditions.
+Traditional causal discovery works on a single dataset. It cannot combine observations from different departments, periods or conditions.
 
-**How Synesis contributes:** The standardized structure allows integrating knowledge from multiple sources in a common vocabulary.
+**How Synesis helps:** the standard structure allows knowledge from several sources to be integrated in a common vocabulary.
 
 ---
 
-## Practical applications
+## Practical Applications
 
-### Human Resources Management
+### Human Resources
 
-**Scenario:** The HR area needs to recommend initiatives to improve engagement, but each department has different characteristics.
+**Scenario:** HR needs to recommend initiatives to improve engagement, but each department has different characteristics.
 
 **With Synesis:**
-- Document causal relationships from organizational behavior literature
-- Record observations from engagement surveys with structured interpretations
-- Identify which factors (career opportunities, vision clarity, teamwork) cause which outcomes (motivation, satisfaction, retention)
+
+- Document causal relations from the organizational behaviour literature
+- Record engagement survey observations with structured interpretations
+- Identify which factors (career opportunities, clarity of vision, teamwork) cause which outcomes (motivation, satisfaction, retention)
 - Recommend initiatives based on documented evidence
 
-```
-Example record:
-- Source: Engagement Survey Q4/2024, Commercial Department
-- Observation: "I feel I don't have growth opportunities here"
-- Interpretation: Employee expresses frustration with career limitations
-- Identified relationship: Lack of Opportunities → REDUCES → Motivation
+```synesis
+SOURCE @engagement_survey_q4_2024_sales
+    access_date: 2024-12-15
+END SOURCE
+
+ITEM @engagement_survey_q4_2024_sales
+    quote: "I feel there are no growth opportunities for me here"
+    memo: The employee expresses frustration with limited career paths and links the lack of progression to lower motivation.
+    chain: lack_of_career_opportunities -> INHIBITS -> motivation
+END ITEM
 ```
 
 ### Failure and Incident Analysis
 
-**Scenario:** Operations team needs to identify root causes of failures in complex systems.
+**Scenario:** an operations team needs to find root causes of failures in complex systems.
 
 **With Synesis:**
-- Extract causal relationships from technical manuals and troubleshooting guides
-- Document each incident with the identified causal chain
-- Build a knowledge base that accelerates future diagnoses
 
-```
-Example record:
-- Source: Incident Report #2024-0892
-- Observation: Intermittent disconnection during file download
-- Interpretation: Pattern consistent with MAC configuration error
-- Identified relationship: Configuration Error → CAUSES → Disconnection
+- Extract causal relations from technical manuals and troubleshooting guides
+- Document each incident with the causal chain identified
+- Build a knowledge base that speeds up future diagnoses
+
+```synesis
+SOURCE @incident_report_2024_0892
+    access_date: 2024-11-10
+END SOURCE
+
+ITEM @incident_report_2024_0892
+    quote: "Intermittent disconnection during file downloads"
+    memo: Pattern consistent with a MAC configuration error; reproducible under the same network conditions.
+    chain: mac_configuration_error -> INHIBITS -> stable_connectivity
+END ITEM
 ```
 
 ### Market Analysis and Negotiations
 
-**Scenario:** Sales team wants to understand why some negotiations succeed and others don't.
+**Scenario:** a sales team wants to understand why some negotiations succeed and others do not.
 
 **With Synesis:**
+
 - Record observations from each negotiation (meetings, objections, decisions)
-- Identify causal patterns between actions and outcomes
+- Identify causal patterns between actions and results
 - Combine with engagement data to understand how internal factors affect external performance
 
-```
-Example record:
-- Source: Negotiation Analysis #2024-156 (Success)
-- Observation: Client mentioned trust in technical team
-- Interpretation: Technical competence demonstration influenced decision
-- Identified relationship: Technical Competence → INFLUENCES → Trust → INFLUENCES → Closure
+```synesis
+SOURCE @negotiation_review_2024_156
+    access_date: 2024-10-22
+END SOURCE
+
+ITEM @negotiation_review_2024_156
+    quote: "The client mentioned trust in the technical team as the deciding factor"
+    memo: Showing technical competence during the proposal shaped perceived trust, which in turn enabled the deal.
+    chain: technical_competence -> FAVORS -> client_trust -> FAVORS -> deal_closing
+END ITEM
 ```
 
 ---
 
-## How it works in practice
+## How It Works in Practice
 
 ### 1. You document the source
 
 ```synesis
 SOURCE @engagement_survey_2024
     access_date: 2024-12-15
+END SOURCE
 ```
 
 All knowledge is traceable to its origin — a document, an interview, a report.
@@ -122,76 +138,85 @@ All knowledge is traceable to its origin — a document, an interview, a report.
 ### 2. You record observations and interpretations
 
 ```synesis
-ITEM
-    quote: "I don't know where the company is going"
-    note: Employee expresses lack of clarity about strategic direction
-    chain: Lack of Clarity → REDUCES → Engagement
-END
+ITEM @engagement_survey_2024
+    quote: "I don't know where the company is heading"
+    memo: The employee expresses a lack of clarity about strategic direction
+    chain: lack_of_strategic_clarity -> INHIBITS -> engagement
+END ITEM
 ```
 
-Each item connects textual evidence to your interpretation and the identified causal relationship.
+Each item connects textual evidence with your interpretation and the causal relation identified.
 
 ### 3. You define your conceptual vocabulary
 
 ```synesis
-ONTOLOGY Engagement
-    topic: Organizational Behavior
-    description: Level of employee commitment and emotional connection
-END
+ONTOLOGY engagement
+    description: The employee's level of commitment and emotional connection with the organization.
+    group: organizational_outcomes
+END ONTOLOGY
+
+ONTOLOGY lack_of_strategic_clarity
+    description: Absence of clear communication about the organization's direction, goals or vision.
+    group: organizational_factors
+END ONTOLOGY
 ```
 
-Concepts are explicitly defined, ensuring consistency throughout the project.
+Concepts are defined explicitly, keeping the project consistent over time.
 
 ### 4. The system validates and structures
 
 The Synesis compiler:
-- Verifies annotation consistency
-- Generates structured formats (JSON, CSV, spreadsheets)
-- Enables integration with analysis systems
+
+- Checks annotations against the defined model (the *template*)
+- Produces structured formats (JSON, CSV, spreadsheets)
+- Enables integration with analysis systems and graph databases
+
+Field names and allowed relations are defined by the organization itself. To get started with an assistant, see the [Synesis Skill for Claude Desktop](../tutorials/synesis_claude_desktop.qmd); to code large volumes with AI and human review, [synesis-coder](synesis_coder.qmd).
 
 ---
 
-## Benefits for the organization
+## Benefits for the Organization
 
-### Complete traceability
+### Full traceability
 
-Every conclusion can be traced back to the original evidence. When someone asks "why do you recommend this?", the answer is documented.
+Every conclusion can be traced to the original evidence. When someone asks "why do you recommend this?", the answer is documented.
 
 ### Preserved institutional knowledge
 
-Expert knowledge, which normally exists only in their heads, gets recorded and available for the organization.
+Specialist knowledge, which usually exists only in people's heads, is recorded and available to the organization.
 
-### Qualitative-quantitative integration
+### Qualitative–quantitative integration
 
-Qualitatively documented causal relationships can be combined with statistical analyses for cross-validation.
+Causal relations documented qualitatively can be combined with statistical analyses for cross-validation.
 
-### Foundation for artificial intelligence
+### A foundation for artificial intelligence
 
-Organizations investing in Causal Knowledge Graphs need structured knowledge as input. Synesis provides this structure from documentary sources.
+Organizations investing in Causal Knowledge Graphs need structured knowledge as input. Synesis provides that structure from documentary sources.
 
-### Grounded decision making
+### Grounded decision-making
 
-Instead of decisions based on "gut feeling" or superficial correlations, the organization operates based on documented and verifiable causal relationships.
+Instead of decisions based on guesswork or superficial correlations, the organization works with documented, verifiable causal relations.
 
 ---
 
-## Comparison with other approaches
+## Comparison with Other Approaches
 
-| Approach | Data source | Relationship type | Limitation |
+| Approach | Data source | Type of relation | Limitation |
 |-----------|---------------|-----------------|-----------|
-| Traditional statistical analysis | Numerical | Correlation | Doesn't distinguish cause from effect |
-| Statistical causal discovery | Numerical | Causal (estimated) | Requires large volumes; may err on direction |
+| Traditional statistics | Numerical | Correlation | Does not tell cause from effect |
+| Statistical causal discovery | Numerical | Causal (estimated) | Needs large volumes; may get direction wrong |
 | Traditional qualitative research | Textual | Qualitative | Unstructured; hard to integrate |
-| **Synesis** | Textual | Causal (documented) | Requires human analysis; complements statistics |
+| **Synesis** | Textual | Causal (documented) | Needs human analysis; complements statistics |
 
-The ideal combination: use Synesis to structure qualitative knowledge, statistical causal discovery for numerical data, and integrate both in a Causal Knowledge Graph.
+The ideal combination: Synesis to structure qualitative knowledge, statistical causal discovery for numerical data, and both integrated into a Causal Knowledge Graph.
 
 ---
 
-## Integrated use scenario
+## An Integrated Scenario
 
-Imagine a company wanting to simultaneously improve:
-- Success rate in commercial negotiations
+Imagine a company that wants to improve at the same time:
+
+- The success rate of sales negotiations
 - Employee engagement
 - Project delivery quality
 
@@ -199,66 +224,67 @@ Imagine a company wanting to simultaneously improve:
 
 1. **Structured collection**
    - Engagement surveys documented in Synesis
-   - Negotiation analysis documented in Synesis
+   - Negotiation reviews documented in Synesis
    - Quality reports documented in Synesis
 
-2. **Connection identification**
+2. **Finding connections**
    - Statistical discovery identifies: Engagement → Delivery Quality
-   - Synesis documents: Teamwork → Engagement (from literature)
-   - Synesis documents: Delivery Quality → Customer Trust (from negotiations)
+   - Synesis documents: Teamwork → Engagement (from the literature)
+   - Synesis documents: Delivery Quality → Client Trust (from negotiations)
 
 3. **Integrated graph**
    - Teamwork → Engagement → Quality → Trust → Negotiation Success
 
 4. **Grounded recommendation**
-   - Investing in teamwork initiatives has documented cascade effect up to commercial results
+   - Investing in teamwork initiatives has a documented cascade effect up to commercial results
 
 ---
 
-## Getting started with Synesis
+## Getting Started
 
-### For organizations
+### For Organizations
 
-1. **Identify a pilot domain** — HR, operations, or commercial are good starting points
-2. **Define initial vocabulary** — what concepts are relevant for your decisions?
-3. **Train analysts** — the learning curve is low for those who already work with qualitative data
-4. **Integrate with existing processes** — Synesis complements, doesn't replace, current tools
+1. **Pick a pilot domain** — HR, operations or sales are good starting points
+2. **Define the initial vocabulary** — which concepts matter for your decisions?
+3. **Train the analysts** — the syntax is readable; the main effort is defining concepts well
+4. **Integrate with existing processes** — Synesis complements current tools, it does not replace them
+5. **Protect data** — remove personal data before using AI services
 
-### For individual professionals
+### For Individual Professionals
 
-1. **Experiment with a small project** — a literature review, a set of interviews
-2. **Focus on causal relationships** — always ask "what causes what?"
-3. **Maintain consistency** — use the same terms for the same concepts
-4. **Document your interpretations** — the annotation is as important as the citation
+1. **Try a small project** — a literature review, a set of interviews
+2. **Focus on causal relations** — always ask "what causes what?"
+3. **Stay consistent** — use the same terms for the same concepts
+4. **Document your interpretations** — the annotation matters as much as the quotation
 
 ---
 
-## Frequently asked questions
+## Frequently Asked Questions
 
 ### Does Synesis replace BI or analytics tools?
 
-No. Synesis works with qualitative knowledge and integrates with quantitative tools. It's a complement, not a replacement.
+No. Synesis works with qualitative knowledge and integrates with quantitative tools. It is a complement, not a substitute.
 
 ### Do I need technical knowledge to use it?
 
-The syntax is simple and readable. Research, analysis, and management professionals can learn quickly. Programming is not required.
+The syntax is simple and readable. Research, analysis and management professionals can learn it quickly. No programming is required.
 
 ### How does Synesis relate to artificial intelligence?
 
-AI systems that work with causal reasoning need structured knowledge. Synesis provides this knowledge from sources that AI can't process alone with the same quality.
+AI systems that reason about causes need structured knowledge. Synesis helps build it from textual sources, with a trail that lets people check what the AI or the analyst recorded.
 
-### What's the difference between Synesis and simply using spreadsheets?
+### How is Synesis different from simply using spreadsheets?
 
-Spreadsheets have no consistency validation, don't natively structure causal relationships, and don't guarantee traceability. Synesis was specifically designed for causal knowledge capture.
+Spreadsheets have no consistency validation, do not structure causal relations natively and do not guarantee traceability. Synesis was designed for capturing causal knowledge.
 
 ---
 
 ## Conclusion
 
-In a world where decisions need to be increasingly data-grounded, qualitative knowledge can't be left out. Synesis offers a bridge between expert knowledge — dispersed in documents, reports, and observations — and the analysis systems that support decision making.
+In a world where decisions need to rest increasingly on data, qualitative knowledge cannot be left out. Synesis offers a bridge between expert knowledge — scattered across documents, reports and observations — and the analysis systems that support decisions.
 
-The combination of structured causal knowledge with statistical analysis represents the next step in the evolution of organizational intelligence: decisions not only based on data, but based on **causal understanding** of phenomena.
+Combining structured causal knowledge with statistical analysis is the next step in organizational intelligence: decisions based not only on data, but on a **causal understanding** of phenomena.
 
 ---
 
-*Synesis: transforming dispersed knowledge into actionable intelligence.*
+*Synesis: turning scattered knowledge into actionable intelligence.*

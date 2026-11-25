@@ -148,12 +148,12 @@ Cada item conecta a evidência textual à sua interpretação e à relação cau
 
 ```synesis
 ONTOLOGY engajamento
-    descricao: "Nível de comprometimento e conexão emocional do funcionário com a organização."
+    descricao: Nível de comprometimento e conexão emocional do funcionário com a organização.
     grupo: resultados_organizacionais
 END ONTOLOGY
 
 ONTOLOGY falta_de_clareza_estrategica
-    descricao: "Ausência de comunicação clara sobre direção, objetivos ou visão da organização."
+    descricao: Ausência de comunicação clara sobre direção, objetivos ou visão da organização.
     grupo: fatores_organizacionais
 END ONTOLOGY
 ```
@@ -163,9 +163,12 @@ Conceitos são definidos explicitamente, garantindo consistência ao longo do pr
 ### 4. O sistema valida e estrutura
 
 O compilador Synesis:
-- Verifica consistência das anotações
+
+- Verifica a consistência das anotações contra o modelo definido (o *template*)
 - Gera formatos estruturados (JSON, CSV, planilhas)
-- Permite integração com sistemas de análise
+- Permite integração com sistemas de análise e bancos de grafos
+
+Os nomes dos campos e as relações permitidas são definidos pela própria organização. Para começar com a ajuda de um assistente, veja a [Skill do Synesis para o Claude Desktop](../tutorials/synesis_claude_desktop.qmd); para codificar grandes volumes com IA e revisão humana, o [synesis-coder](synesis_coder.qmd).
 
 ---
 
@@ -239,8 +242,9 @@ Imagine uma empresa que quer melhorar simultaneamente:
 
 1. **Identifique um domínio piloto** — RH, operações ou comercial são bons pontos de partida
 2. **Defina o vocabulário inicial** — quais conceitos são relevantes para suas decisões?
-3. **Treine os analistas** — a curva de aprendizado é baixa para quem já trabalha com dados qualitativos
+3. **Treine os analistas** — a sintaxe é legível; o esforço principal está em definir bem os conceitos
 4. **Integre com processos existentes** — Synesis complementa, não substitui, ferramentas atuais
+5. **Cuide dos dados** — retire dados pessoais antes de usar serviços de IA
 
 ### Para profissionais individuais
 

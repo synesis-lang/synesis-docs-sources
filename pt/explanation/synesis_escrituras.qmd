@@ -49,7 +49,7 @@ END ITEM
 
 ITEM @thompson1999
     passagem: Pv 15.5
-    citação: "O tolo despreza a discipina de seu pai, mas o que atende à correção mostra prudência."
+    citação: "O tolo despreza a disciplina de seu pai, mas o que atende à correção mostra prudência."
     temas: Valor_da_Reprovação, Desonra_dos_Pais, Prudência, Pessoas_Insensatas
 END ITEM 
 ```
@@ -132,7 +132,7 @@ ITEM @teologia_sistematica2026
 END ITEM
 ```
 
-Synesis é uma ferramenta única ao oferecer um modelo de dados capaz de expressar encadeamento relacional entre conceitos teológicos com essa precisão e facilidade de anotação, com dados abertos e rastreáveis.
+Synesis oferece um modelo de dados que expressa o encadeamento relacional entre conceitos teológicos com precisão e facilidade de anotação, com dados abertos e rastreáveis.
 
 ### Vocabulário teológico controlado
 

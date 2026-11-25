@@ -1,0 +1,518 @@
+---
+title: "Language Grammar"
+subtitle: "The formal LALR(1) specification of Synesis — commented rule by rule"
+---
+
+::: {.callout-tip}
+## Who is this document for?
+Developers who need to understand, extend or debug the Synesis syntax. The grammar below is the **canonical specification** — the compiler runs it literally. If the compiler accepts or rejects something at the syntax level, the answer is here. This page follows the file `synesis/grammar/synesis.lark` of **synesis 0.16.0**.
+
+For the whole compilation flow (not only the grammar), see [Inside the Compiler](../explanation/fluxo_compilacao_interno.qmd).
+:::
+
+
+## How to Read This Document
+
+The grammar uses the **Lark EBNF** format:
+
+| Syntax | Meaning |
+|---|---|
+| `rule: A B C` | `rule` is `A`, then `B`, then `C`, in that order |
+| `A \| B` | `A` or `B` (alternative) |
+| `A*` | Zero or more repetitions of `A` |
+| `A+` | One or more repetitions of `A` |
+| `A?` | `A` is optional (zero or one) |
+| `"text"` | Exact literal |
+| `/regex/` | Regex pattern |
+| `/regex/i` | Case-insensitive regex |
+| `TOKEN.N` | Token with priority `N` (higher wins in case of ambiguity) |
+| `_INDENT` / `_DEDENT` | Indentation tokens generated automatically |
+
+**Lowercase** rules (`project_block`) are grammar rules — they produce nodes in the syntax tree.
+**UPPERCASE** rules (`IDENTIFIER`) are tokens — atomic units recognized by the lexer.
+
+::: {.callout-note}
+## Permissive grammar, strict semantics
+Several restrictions of the language are **not** in the grammar but in the semantic validator. This is deliberate: a grammar error is an "unexpected token"; a semantic error explains what to do. **A grammar error teaches nothing; a semantic error does.**
+:::
+
+
+## Starting Point {#sec-start}
+
+Every compilation starts here. The `start` rule accepts a sequence of blocks separated by blank lines:
+
+```lark
+start: (block | NEWLINE)* block (block | NEWLINE)*
+
+block: project_block
+     | source_block
+     | item_block
+     | ontology_block
+     | template_header
+     | field_spec_block
+     | field_def_block
+```
+
+A Synesis file is a list of blocks. Which blocks make sense depends on the file type:
+
+- **`.synp`** holds a `project_block`
+- **`.syn`** holds `source_block` and `item_block`
+- **`.syno`** holds `ontology_block`
+- **`.synt`** holds `template_header`, `field_spec_block` and `field_def_block`
+
+The grammar accepts any combination; the semantic validator checks the context. An empty `.syn` or `.syno`, or one with comments only, is handled before the parser and declares no block.
+
+
+## Keywords {#sec-keywords}
+
+All keywords are case-insensitive — `PROJECT`, `project` and `Project` are equivalent:
+
+```lark
+KW_PROJECT.5: /project/i
+KW_SOURCE.5: /source/i
+KW_ITEM.5: /item/i
+KW_ONTOLOGY.5: /ontology/i
+KW_TEMPLATE.5: /template/i
+KW_FIELD.5: /field/i
+KW_END.5: /end/i
+KW_INCLUDE.5: /include/i
+KW_SHARED.5: /shared(?![\p{L}\p{N}_-])/i
+KW_BIBLIOGRAPHY.5: /bibliography/i
+KW_ANNOTATIONS.5: /annotations/i
+KW_FIELDS.5: /fields/i
+KW_REQUIRED.5: /required/i
+KW_OPTIONAL.5: /optional/i
+KW_FORBIDDEN.5: /forbidden/i
+KW_BUNDLE.5: /bundle/i
+KW_TYPE.5: /type/i
+KW_SCOPE.5: /scope/i
+KW_FORMAT.5: /format/i
+KW_DESCRIPTION.5: /description(?![\p{L}\p{N}_-])/i
+KW_ARITY.5: /arity/i
+KW_VALUES.5: /values/i
+KW_RELATIONS.5: /relations/i
+KW_METADATA.5: /metadata/i
+KW_QUOTATION.5: /quotation(?![\p{L}\p{N}_-])/i
+KW_MEMO.5: /memo(?![\p{L}\p{N}_-])/i
+KW_CODE.5: /code(?![\p{L}\p{N}_-])/i
+KW_CHAIN.5: /chain(?![\p{L}\p{N}_-])/i
+KW_TEXT.5: /text(?![\p{L}\p{N}_-])/i
+KW_DATE.5: /date(?![\p{L}\p{N}_-])/i
+KW_SCALE.5: /scale(?![\p{L}\p{N}_-])/i
+KW_ENUMERATED.5: /enumerated(?![\p{L}\p{N}_-])/i
+KW_ORDERED.5: /ordered(?![\p{L}\p{N}_-])/i
+KW_TOPIC.5: /topic(?![\p{L}\p{N}_-])/i
+KW_GUIDELINES.5: /guidelines/i
+
+// .synp blocks
+KW_EXPORT.5: /export(?![\p{L}\p{N}_-])/i
+KW_MAP.5: /map(?![\p{L}\p{N}_-])/i
+KW_QUESTIONS.5: /questions(?![\p{L}\p{N}_-])/i
+KW_PHASE.5: /phase(?![\p{L}\p{N}_-])/i
+
+// FIELD properties and value origin
+KW_ROLE.5: /role(?![\p{L}\p{N}_-])/i
+KW_IDENTIFIES.5: /identifies(?![\p{L}\p{N}_-])/i
+KW_REFERS.5: /refers(?![\p{L}\p{N}_-])/i
+KW_TO.5: /to(?![\p{L}\p{N}_-])/i
+KW_ON.5: /on(?![\p{L}\p{N}_-])/i
+KW_DATASET.5: /dataset(?![\p{L}\p{N}_-])/i
+KW_CONTEXT.5: /context(?![\p{L}\p{N}_-])/i
+KW_FROM.5: /from(?![\p{L}\p{N}_-])/i
+```
+
+Priority `.5` makes keywords win over `IDENTIFIER` and `FIELD_NAME` (priority `.1`). Without it, `SOURCE` would be read as a generic identifier.
+
+### Boundary Lookahead
+
+The suffix `(?![\p{L}\p{N}_-])` is a *negative lookahead* that stops a token from matching as a **prefix of a longer name**. Without it, the start of a field called `code_quality` would be consumed by the `CODE` keyword and the rest would become syntax garbage. This applies to type names and to short words: `TO` and `ON` would match inside `total`, `to_do`, `on_hold` or `onset`. With the lookahead, `texto`, `chain_length`, `date_created` and `topic_area` are field names.
+
+
+## PROJECT Block {#sec-project}
+
+```lark
+project_block: KW_PROJECT IDENTIFIER NEWLINE project_body KW_END KW_PROJECT
+
+project_body: _INDENT project_items _DEDENT
+            | project_items
+
+project_items: (include_stmt | metadata | description | questions
+                | phase_block | export_block | NEWLINE)+
+```
+
+The body may be entirely indented or entirely at column 0.
+
+### TEMPLATE and INCLUDE
+
+```lark
+include_stmt: KW_TEMPLATE STRING NEWLINE
+            | KW_INCLUDE include_type STRING NEWLINE
+include_type: KW_SHARED? (KW_BIBLIOGRAPHY | KW_ANNOTATIONS | KW_ONTOLOGY | KW_DATASET)
+```
+
+```synesis
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations/"
+    INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE DATASET "records/*.toml"
+    INCLUDE SHARED ONTOLOGY "../shared/vocabulary.syno"
+END PROJECT
+```
+
+`KW_SHARED?` precedes **any** type, although it only applies to `ONTOLOGY`: `INCLUDE SHARED BIBLIOGRAPHY` parses and then receives [error E084](guia_erros.qmd#sec-e084), with the explanation.
+
+### METADATA, DESCRIPTION and QUESTIONS
+
+```lark
+metadata: KW_METADATA NEWLINE _INDENT (metadata_line | NEWLINE)+ _DEDENT KW_END KW_METADATA NEWLINE
+metadata_line: TEXT_LINE NEWLINE
+
+description: KW_DESCRIPTION NEWLINE description_lines KW_END KW_DESCRIPTION NEWLINE?
+description_lines: (TEXT_LINE NEWLINE | NEWLINE)+
+
+questions: KW_QUESTIONS NEWLINE _INDENT question_lines _DEDENT KW_END KW_QUESTIONS NEWLINE?
+question_lines: (TEXT_LINE NEWLINE | NEWLINE)+
+```
+
+These are free-text blocks. Note the indentation difference: `DESCRIPTION` declares **no** `_INDENT` (its lines sit at the same level as the keyword), while `METADATA` and `QUESTIONS` require indented lines. The `<id>: <text>` form of questions is checked by the compiler ([E091](guia_erros.qmd#sec-e091)–[E093](guia_erros.qmd#sec-e093)).
+
+### PHASE and EXPORT
+
+```lark
+phase_block: KW_PHASE phase_scope IDENTIFIER NEWLINE _INDENT (export_prop | NEWLINE)+ _DEDENT KW_END KW_PHASE NEWLINE?
+phase_scope: KW_ANNOTATIONS | KW_ONTOLOGY
+
+export_block: KW_EXPORT IDENTIFIER IDENTIFIER? NEWLINE _INDENT (map_stmt | export_prop | NEWLINE)+ _DEDENT KW_END KW_EXPORT NEWLINE?
+export_prop: (IDENTIFIER | KW_DESCRIPTION) TEXT_LINE NEWLINE
+
+map_stmt: KW_MAP KW_RELATIONS? map_names (KW_FROM IDENTIFIER)? KW_TO map_target NEWLINE
+map_names: field_key ("," field_key)*
+map_target: IDENTIFIER+
+```
+
+The properties (`OUTPUT`, `NAMESPACE`, `FIELDS`, `INPUT`…) are **ordinary words**, and the `EXPORT` format is an identifier. The grammar does not change when a new property appears; the compiler checks them.
+
+
+## Annotation Blocks {#sec-annotation}
+
+```lark
+source_block: KW_SOURCE BIBREF NEWLINE
+              (_INDENT (field_entry | NEWLINE)* _DEDENT)?
+              KW_END KW_SOURCE
+
+item_block: KW_ITEM BIBREF NEWLINE
+            (_INDENT (field_entry | NEWLINE)* _DEDENT)?
+            KW_END KW_ITEM
+
+ontology_block: KW_ONTOLOGY concept_name NEWLINE
+                (_INDENT (field_entry | NEWLINE)* _DEDENT)?
+                KW_END KW_ONTOLOGY
+
+concept_name: CONCEPT_NAME
+```
+
+- `SOURCE` and `ITEM` take a `BIBREF` (such as `@smith2024`).
+- `ONTOLOGY` takes a `concept_name`, which is more permissive (see [Tokens](#sec-tokens)).
+- The body is **optional**: empty blocks are syntactically valid, but the validator may reject them ([E023](guia_erros.qmd#sec-e023)).
+- Indentation (`_INDENT`/`_DEDENT`) delimits the body.
+
+
+## Fields and Values {#sec-fields}
+
+```lark
+field_entry: field_key ":" value NEWLINE continuation_block?
+           | field_key ":" NEWLINE _INDENT text_block _DEDENT NEWLINE?
+```
+
+Two forms: a value on the same line (with optional continuation) or a value that starts on the next line, indented.
+
+### Field Keys
+
+```lark
+field_key: FIELD_NAME
+         | KW_TOPIC | KW_DESCRIPTION | KW_CODE | KW_CHAIN
+         | KW_TEXT | KW_MEMO | KW_QUOTATION | KW_DATE
+         | KW_SCALE | KW_ENUMERATED | KW_ORDERED
+```
+
+Besides user-defined names (`FIELD_NAME`), type keywords can name fields — hence `code:`, `chain:` and `description:`.
+
+### Value Types
+
+```lark
+value: STRING
+     | NUMBER TEXT_LINE
+     | NUMBER
+     | chain_expr
+     | code_list
+     | TEXT_LINE
+```
+
+Token priorities (`.2`, `.3`, `.4`) resolve ambiguities. The final interpretation of a value depends on the **type declared in the template**: a `TEXT` containing `->` is still text.
+
+### Code Lists and Chain Expressions
+
+```lark
+code_list: CODE_ELEMENT ("," CODE_ELEMENT)*
+chain_expr: CHAIN_ELEMENT ("->" CHAIN_ELEMENT)+
+```
+
+```synesis
+ITEM @smith2024
+    code: Social_Cohesion, Collective_Action
+    chain: Trust -> Cooperation -> Collective_Action
+END ITEM
+```
+
+### Multi-line Text
+
+```lark
+continuation_block: _INDENT text_block _DEDENT
+text_block: TEXT_LINE (NEWLINE TEXT_LINE)* NEWLINE?
+```
+
+```synesis
+ITEM @smith2024
+    note: Participant describes spontaneous collective action as a
+        primary resilience mechanism, bypassing formal institutions.
+        Suggests strong bonding social capital.
+END ITEM
+```
+
+`_INDENT` and `_DEDENT` are generated by the `SynesisIndenter`, as in Python's significant indentation. From synesis 0.16.0 on, continuation lines reach the value in full, also in code lists and chains.
+
+
+## TEMPLATE Block {#sec-template}
+
+### Header
+
+```lark
+template_header: KW_TEMPLATE IDENTIFIER template_meta*
+template_meta: IDENTIFIER ":" value
+```
+
+There is no `NEWLINE` in the rule: metadata goes **on the same line** as the name.
+
+### Fields by Scope
+
+```lark
+field_spec_block: scope_type KW_FIELDS NEWLINE _INDENT field_list _DEDENT
+                  KW_END scope_type KW_FIELDS
+scope_type: KW_SOURCE | KW_ITEM | KW_ONTOLOGY
+
+field_list: (requirement_clause | NEWLINE)*
+requirement_clause: KW_REQUIRED bundle_modifier? field_names
+                  | KW_OPTIONAL bundle_modifier? field_names
+                  | KW_FORBIDDEN field_names
+                  | KW_REQUIRED field_key KW_ON KW_BIBLIOGRAPHY
+                  | KW_OPTIONAL field_key KW_ON KW_BIBLIOGRAPHY
+                  | KW_REQUIRED field_key KW_ON KW_DATASET STRING
+                  | KW_OPTIONAL field_key KW_ON KW_DATASET STRING
+
+bundle_modifier: KW_BUNDLE
+field_names: field_key ("," field_key)*
+```
+
+The `ON BIBLIOGRAPHY` and `ON DATASET` alternatives use `field_key` (singular), not `field_names`. In a list, `REQUIRED a, b ON BIBLIOGRAPHY` would be ambiguous; the grammar removes the case.
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+    OPTIONAL region ON DATASET "interview.region"
+END SOURCE FIELDS
+```
+
+### Field Definition
+
+```lark
+field_def_block: KW_FIELD field_key KW_TYPE type_spec
+                 (field_props | NEWLINE)*
+                 (_INDENT (field_props | NEWLINE)* _DEDENT)?
+                 KW_END KW_FIELD
+
+type_spec: simple_type | KW_CHAIN | KW_ENUMERATED | KW_ORDERED | KW_TOPIC
+simple_type: KW_QUOTATION | KW_MEMO | KW_CODE | KW_TEXT | KW_DATE | KW_SCALE
+
+field_props: KW_SCOPE scope_type
+           | KW_ROLE IDENTIFIER+
+           | KW_FORMAT format_spec
+           | KW_DESCRIPTION TEXT_LINE
+           | KW_ARITY COMPARATOR NUMBER
+           | KW_VALUES value_list KW_END KW_VALUES
+           | KW_RELATIONS relation_list KW_END KW_RELATIONS
+           | KW_IDENTIFIES entity_label
+           | KW_REFERS KW_TO entity_label
+           | KW_CONTEXT KW_FROM KW_DATASET dataset_paths
+           | guidelines_block
+
+entity_label: FIELD_NAME
+dataset_paths: STRING ("," STRING)*
+```
+
+The grammar accepts any property on any type; the matrix is semantic:
+
+| Type | Required | Exclusive |
+|---|---|---|
+| `CHAIN` | `ARITY` | `ARITY`, `RELATIONS` |
+| `ORDERED` | `VALUES` (with `[N]`) | `VALUES` |
+| `ENUMERATED` | `VALUES` (without `[N]`) | `VALUES` |
+| `SCALE` | `FORMAT` | `FORMAT` |
+| others | — | — |
+
+`DESCRIPTION`, `GUIDELINES` and `CONTEXT FROM DATASET` apply to all. `IDENTIFIES` and `REFERS TO` only in `SCOPE SOURCE` ([E078](guia_erros.qmd#sec-e078)); `ROLE` only in `SCOPE ONTOLOGY` ([E108](guia_erros.qmd#sec-e108)). The role after `ROLE` is a sequence of ordinary words, checked against the compiler's catalogue.
+
+### VALUES and RELATIONS
+
+```lark
+value_list: (value_entry | NEWLINE)+
+          | NEWLINE _INDENT (value_entry | NEWLINE)+ _DEDENT
+          | _INDENT (value_entry | NEWLINE)+ _DEDENT
+value_entry: index_prefix? IDENTIFIER ":" TEXT_LINE
+index_prefix: "[" NUMBER "]"
+
+relation_list: (relation_entry | NEWLINE)+
+             | NEWLINE _INDENT (relation_entry | NEWLINE)+ _DEDENT
+             | _INDENT (relation_entry | NEWLINE)+ _DEDENT
+relation_entry: IDENTIFIER ":" TEXT_LINE
+```
+
+Each value is an `IDENTIFIER` (no spaces) followed by `:` and a description. The `[N]` prefix is required in `ORDERED` and forbidden in `ENUMERATED` ([E087](guia_erros.qmd#sec-e087)).
+
+### FORMAT and ARITY
+
+```lark
+format_spec: IDENTIFIER | scale_format
+scale_format: "[" NUMBER ".." NUMBER "]"
+```
+
+`FORMAT` defines the range of a `SCALE`: `[0..10]`, `[1..5]`. `ARITY` uses a comparator and an integer: `>= 2`, `= 3`, `< 5`.
+
+### GUIDELINES Block
+
+```lark
+guidelines_block: KW_GUIDELINES NEWLINE guidelines_lines KW_END KW_GUIDELINES
+guidelines_lines: (_INDENT | _DEDENT | guideline_line | NEWLINE)*
+guideline_line: guideline_token+ NEWLINE
+guideline_token: TEXT_LINE | IDENTIFIER | FIELD_NAME | BIBREF | STRING | NUMBER | COMPARATOR
+               | KW_PROJECT | KW_SOURCE | KW_ITEM | ... | KW_GUIDELINES
+               | COLON | "," | "->"
+```
+
+It is prose inside a `FIELD`, so it accepts almost any token. The text is reassembled from the original tokens, with the spelling of the file.
+
+::: {.callout-tip}
+## Avoid starting a GUIDELINES line with a keyword
+Words such as `Include`, `Item`, `Source`, `Field` or `End` at the start of a line can confuse the reading. Rephrase ("To include…" → "Add…"). `#` inside `GUIDELINES` is not a comment: the line goes to the model.
+:::
+
+
+## Tokens {#sec-tokens}
+
+### Identifiers and References
+
+```lark
+BIBREF: "@" /[a-zA-Z0-9][a-zA-Z0-9_-]*/
+
+IDENTIFIER.1: /[\p{L}_][\p{L}\p{N}_\-]*/u
+
+FIELD_NAME.1: /(?![eE][nN][dD]\b)[\p{L}_][\p{L}\p{N}_\-]*/u
+
+CONCEPT_NAME.0: /[^\s#\n\r][^#\n\r]*/u
+```
+
+| Token | Accepts | Example |
+|---|---|---|
+| `BIBREF` | `@` + letter or digit + alphanumerics/`_`/`-` | `@smith2024`, `@WHO-2023`, `@001` |
+| `IDENTIFIER` | letter/`_` + alphanumerics/`_`/`-` | `demo`, `Social_Cohesion` |
+| `FIELD_NAME` | as `IDENTIFIER`, except `END` | `code`, `citation` |
+| `CONCEPT_NAME` | any text up to `#` or end of line | `Social_Cohesion` |
+
+::: {.callout-important}
+## FIELD_NAME vs END
+The negative lookahead `(?![eE][nN][dD]\b)` stops `END` from being read as a field name; without it, `END ITEM` would be a field called `END`.
+:::
+
+::: {.callout-note}
+## `CONCEPT_NAME` and spaces
+The grammar accepts spaces in the name of an `ONTOLOGY` block, but a concept with spaces cannot be cited in chains ([E015](guia_erros.qmd#sec-e015)) or used as a code ([E033](guia_erros.qmd#sec-e033)). Use `_`.
+:::
+
+### Code and Chain Elements
+
+```lark
+CHAIN_ELEMENT.2: /[\p{L}_](?:(?!->)[\p{L}\p{N}_\- ])*/u
+CODE_ELEMENT.2: /[\p{L}_](?:(?!,)[\p{L}\p{N}_\- ])*/u
+```
+
+Both capture inner spaces and stop before their delimiter (`->` or `,`). Capturing the space lets the validator explain the error instead of the parser failing.
+
+### Values and Text
+
+```lark
+STRING: /"[^"]*"/
+NUMBER.4: /[0-9]+(\.[0-9]+)?/
+COMPARATOR: ">=" | "<=" | "=" | ">" | "<"
+TEXT_LINE.3: /[^\s\n\r:][^\n\r]*/
+```
+
+| Token | Accepts | Priority |
+|---|---|---|
+| `STRING` | text in double quotes | — |
+| `NUMBER` | integer or decimal | `.4` |
+| `COMPARATOR` | comparison operators | — |
+| `TEXT_LINE` | text not starting with a space or `:` | `.3` |
+
+`TEXT_LINE` captures whatever more specific tokens do not. It allows scientific symbols (`n=2383`, `p<0.05`).
+
+### Special Tokens
+
+```lark
+COMMENT: "#" /[^\n]*/
+NEWLINE: /(\r?\n[ \t]*)+/
+%declare _INDENT _DEDENT
+%ignore /[ \t]+/
+%ignore COMMENT
+```
+
+- **Comments** (`#`) are ignored by the parser, except inside `GUIDELINES`.
+- **`NEWLINE`** captures the line break and the following indentation, which feeds the `SynesisIndenter`.
+- **Spaces and tabs** outside that context are ignored.
+
+
+## Priorities — How Ambiguities Are Resolved {#sec-prioridades}
+
+| Token | Priority | Why |
+|---|---|---|
+| Keywords (`KW_*`) | `.5` | win over identifiers |
+| `NUMBER` | `.4` | `42` is a number, not text |
+| `TEXT_LINE` | `.3` | generic text |
+| `CHAIN_ELEMENT`, `CODE_ELEMENT` | `.2` | win over `IDENTIFIER` in values |
+| `IDENTIFIER`, `FIELD_NAME` | `.1` | base for names |
+| `CONCEPT_NAME` | `.0` | only when nothing else fits |
+
+
+## Significant Indentation {#sec-indentacao}
+
+Like Python, Synesis uses significant indentation. The `SynesisIndenter` processes the lines and emits `_INDENT` and `_DEDENT`:
+
+1. Tabs are converted to 4 spaces
+2. More indentation than the previous line → `_INDENT`
+3. Less indentation → `_DEDENT`
+4. Same indentation → nothing
+
+```lark
+project_body: _INDENT project_items _DEDENT
+source_block: KW_SOURCE BIBREF NEWLINE (_INDENT ... _DEDENT)? KW_END KW_SOURCE
+```
+
+::: {.callout-warning}
+## Inconsistent indentation
+Closing a block at a column that matches no open level produces a syntax error with an approximate position. Avoid mixing tabs and spaces.
+:::
+
+
+## The Generated Parser {#sec-standalone}
+
+In production the compiler uses `synesis_standalone.py`, an LALR parser pre-generated from the `.lark` file (faster start-up, same grammar). Whoever changes the grammar must **regenerate** that file; tests compare the two.

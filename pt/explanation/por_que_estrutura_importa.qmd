@@ -82,14 +82,14 @@ Isso parece trabalhoso, mas considere a alternativa: você vai ter que fazer ess
 
 O compilador Synesis valida que:
 
-- Se você usa o código "Custo de Aquisição", ele deve estar definido na ontologia
+- Se você usa o código `Custo_de_Aquisição`, ele deve estar definido na ontologia (caso contrário, o compilador avisa; com `--strict`, recusa)
 - Se você muda o nome de um código, você precisa atualizar a definição ou usar um alias
 - Se você cita uma fonte bibliográfica, ela deve existir no arquivo `.bib`
 
 **Isso não é burocracia, é auditoria automática.** É a diferença entre:
 
 - **Sistema frágil**: Você esquece que renomeou "Custo" para "Custo de Aquisição" em algumas anotações e esquece outras. Sua análise final está inconsistente e você nem percebe.
-- **Sistema robusto**: O compilador rejeita a compilação e te diz exatamente onde está o problema. Você corrige uma vez e segue confiante.
+- **Sistema robusto**: O compilador aponta exatamente onde está o problema. Você corrige uma vez e segue em frente.
 
 ### Rastreabilidade Bidirecional
 
@@ -133,7 +133,7 @@ Esta é uma confusão legítima, mas vem de mal-entendido sobre o que "estrutura
 
 1. Começar com ontologia vazia
 2. Anotar livremente criando códigos conforme emergem
-3. Periódicamente consolidar: "Esses três códigos são na verdade o mesmo conceito"
+3. Periodicamente consolidar: "Esses três códigos são na verdade o mesmo conceito"
 4. Atualizar a ontologia
 5. Recompilar para validar consistência
 
@@ -143,7 +143,7 @@ Esta é uma confusão legítima, mas vem de mal-entendido sobre o que "estrutura
 
 - **Pseudoliberdade**: Não ter regras sobre terminologia. Resultado: você fica preso tentando lembrar o que cada termo significa três meses depois.
 
-- **Liberdade real**: Ter um sistema que valida sua consistência automaticamente. Resultado: sua mente fica livre para o trabalho interpretativo, confiando que o sistema cuida da integridade estrutural.
+- **Liberdade real**: Ter um sistema que confere sua consistência automaticamente. Resultado: sua mente fica livre para o trabalho interpretativo, confiando que o sistema cuida da integridade estrutural.
 
 Analogia: músicos de jazz improvisam livremente — mas sobre estruturas harmônicas bem definidas (II-V-I, blues de 12 compassos). **A estrutura não limita a criatividade, ela a canaliza.**
 

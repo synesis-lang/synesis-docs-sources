@@ -102,12 +102,17 @@ END FIELD
 
 FIELD importância TYPE SCALE
     SCOPE ITEM
-    FORMAT [0..1]
-    DESCRIPTION Importância do fator (0=nula ou baixa, 0.5=moderada, 1=alta)
+    FORMAT [0..2]
+    DESCRIPTION Importância do fator (0=nula ou baixa, 1=moderada, 2=alta)
 END FIELD
 ```
 
 Cada item combina cinco tipos de campo: `QUOTATION` (o dado bruto), `MEMO` (interpretação), `CODE` (fator temático vinculado à ontologia), `ENUMERATED` (classificação SWOT) e `SCALE` (significância).
+
+:::{.callout-note}
+## Pontuação em inteiros
+Um `SCALE` declarado com limites inteiros, como `[0..2]`, só aceita valores inteiros. Por isso a importância usa 0, 1 e 2.
+:::
 
 ## Ontologia: o que cada fator significa
 
@@ -185,11 +190,11 @@ ITEM @oficina_coqueiros2026
 
     fator: Pesca_Artesanal
     swot: fo
-    importância: 1
+    importância: 2
 END ITEM
 ```
 
-Fator interno positivo: a pesca artesanal sustenta famílias e carrega significado cultural. Importância alta (1).
+Fator interno positivo: a pesca artesanal sustenta famílias e carrega significado cultural. Importância alta (2).
 
 ---
 
@@ -206,11 +211,11 @@ ITEM @oficina_coqueiros2026
 
     fator: Descarte_Residuos
     swot: fr
-    importância: 0.5
+    importância: 1
 END ITEM
 ```
 
-Fator interno negativo: prática local de descarte inadequado, agravada pela ausência de serviço público. Importância moderada (0.5).
+Fator interno negativo: prática local de descarte inadequado, agravada pela ausência de serviço público. Importância moderada (1).
 
 ---
 
@@ -228,11 +233,11 @@ ITEM @jornal_litoral2026
 
     fator: Turismo_Comunitario
     swot: op
-    importância: 1
+    importância: 2
 END ITEM
 ```
 
-Fator externo positivo: oportunidade de diversificação econômica vinda de política pública. Importância alta (1).
+Fator externo positivo: oportunidade de diversificação econômica vinda de política pública. Importância alta (2).
 
 ---
 
@@ -251,11 +256,11 @@ ITEM @relatorio_ambiental2025
 
     fator: Assoreamento
     swot: am
-    importância: 1
+    importância: 2
 END ITEM
 ```
 
-Fator externo negativo: processo ambiental que independe da ação da comunidade, mas afeta diretamente sua sustentabilidade. Importância alta (1).
+Fator externo negativo: processo ambiental que independe da ação da comunidade, mas afeta diretamente sua sustentabilidade. Importância alta (2).
 
 ---
 
@@ -275,7 +280,7 @@ ITEM @oficina_coqueiros2026
 
     fator: Patrimonio_Cultural
     swot: fo
-    importância: 0.5
+    importância: 1
 END ITEM
 
 ITEM @oficina_coqueiros2026
@@ -288,7 +293,7 @@ ITEM @oficina_coqueiros2026
 
     fator: Saneamento_Basico
     swot: fr
-    importância: 1
+    importância: 2
 END ITEM
 ```
 
@@ -296,7 +301,7 @@ END ITEM
 
 # Ontologia: os fatores e suas dimensões {#sec-ontologia}
 
-Cada fator mencionado nos itens deve existir na ontologia com sua descrição e dimensão de sustentabilidade.
+Cada fator mencionado nos itens deve ter uma entrada na ontologia, com descrição e dimensão de sustentabilidade. O compilador avisa quando um fator não está definido.
 
 ```synesis
 ONTOLOGY Pesca_Artesanal
@@ -359,9 +364,9 @@ Uma vez compilados, e exportados, os dados permitem diversas análises:
 - **Filtrar por SWOT**: quantas forças vs. fraquezas? A comunidade tem mais oportunidades ou ameaças?
 - **Agrupar por dimensão**: qual dimensão da sustentabilidade concentra mais fraquezas?
 - **Comparar comunidades**: aplicando o mesmo template em várias vilas, os resultados são diretamente comparáveis
-- **Exportar**: JSON para visualizações, Neo4j para grafos de relações entre fatores, Excel ou Jupiter Lab para matrizes SWOT
+- **Exportar**: JSON para visualizações, Excel ou CSV para matrizes SWOT (por exemplo, no Jupyter Lab) e, com o [synesis-graph](../reference/synesis_graph.qmd), um grafo no Neo4j ou no ArcadeDB para explorar fatores, fontes e dimensões
 
-A estrutura compilável garante que todos os fatores mencionados nos itens existam na ontologia e que todos os campos obrigatórios estejam preenchidos --- erros de referência ou campos ausentes são detectados antes da análise.
+A estrutura compilável permite detectar problemas antes da análise: campos obrigatórios ausentes e valores fora do permitido são erros; fatores sem definição na ontologia são avisos (tratados como erro com `--strict`).
 
 ## Escala de sustentabilidade local {#sec-escala}
 
@@ -386,17 +391,17 @@ Somando os pontos de importância dos itens apresentados:
 
 | Categoria | Fatores | Importância |
 |-----------|---------|-------------|
-| **Forças (F)** | Pesca_Artesanal (1) + Patrimonio_Cultural (0.5) | **1.5** |
-| **Oportunidades (O)** | Turismo_Comunitario (1) | **1.0** |
-| **Fraquezas (Fr)** | Descarte_Residuos (0.5) + Saneamento_Basico (1) | **1.5** |
-| **Ameaças (A)** | Assoreamento (1) | **1.0** |
+| **Forças (F)** | Pesca_Artesanal (2) + Patrimonio_Cultural (1) | **3** |
+| **Oportunidades (O)** | Turismo_Comunitario (2) | **2** |
+| **Fraquezas (Fr)** | Descarte_Residuos (1) + Saneamento_Basico (2) | **3** |
+| **Ameaças (A)** | Assoreamento (2) | **2** |
 
 : Pontos de importância por categoria SWOT {.striped .hover}
 
 Aplicando a fórmula:
 
 $$
-\text{Escala} = \frac{(1{,}5 + 1{,}0) - (1{,}5 + 1{,}0)}{(1{,}5 + 1{,}0) + (1{,}5 + 1{,}0)} \times 5 + 5 = \frac{0}{5} \times 5 + 5 = 5{,}0
+\text{Escala} = \frac{(3 + 2) - (3 + 2)}{(3 + 2) + (3 + 2)} \times 5 + 5 = \frac{0}{10} \times 5 + 5 = 5{,}0
 $$
 
 O resultado **5,0** situa a Vila dos Coqueiros na faixa de **Estagnação** --- os fatores positivos e negativos se equilibram.
@@ -435,12 +440,12 @@ from plotly.subplots import make_subplots
 
 # Dados extraídos dos exemplos da página
 fatores = pd.DataFrame([
-    {"fator": "Pesca Artesanal",    "swot": "Força",      "dimensao": "Econômica",      "importancia": 1.0},
-    {"fator": "Patrimônio Cultural", "swot": "Força",      "dimensao": "Sociocultural",   "importancia": 0.5},
-    {"fator": "Turismo Comunitário", "swot": "Oportunidade","dimensao": "Econômica",      "importancia": 1.0},
-    {"fator": "Descarte Resíduos",   "swot": "Fraqueza",   "dimensao": "Ambiental",       "importancia": 0.5},
-    {"fator": "Saneamento Básico",   "swot": "Fraqueza",   "dimensao": "Governamental",   "importancia": 1.0},
-    {"fator": "Assoreamento",        "swot": "Ameaça",     "dimensao": "Ambiental",       "importancia": 1.0},
+    {"fator": "Pesca Artesanal",    "swot": "Força",      "dimensao": "Econômica",      "importancia": 2},
+    {"fator": "Patrimônio Cultural", "swot": "Força",      "dimensao": "Sociocultural",   "importancia": 1},
+    {"fator": "Turismo Comunitário", "swot": "Oportunidade","dimensao": "Econômica",      "importancia": 2},
+    {"fator": "Descarte Resíduos",   "swot": "Fraqueza",   "dimensao": "Ambiental",       "importancia": 1},
+    {"fator": "Saneamento Básico",   "swot": "Fraqueza",   "dimensao": "Governamental",   "importancia": 2},
+    {"fator": "Assoreamento",        "swot": "Ameaça",     "dimensao": "Ambiental",       "importancia": 2},
 ])
 
 fontes = pd.DataFrame([
@@ -478,9 +483,9 @@ import numpy as np
 
 faixas = [
     {"label": "Muito desfavorável", "inicio": 0,   "fim": 2.5, "cor": "#E57373", "txt": "#7f0000"},
-    {"label": "Desfavorável",       "inicio": 2.5, "fim": 4.3, "cor": "#FFB74D", "txt": "#6d3b00"},
-    {"label": "Estagnação",         "inicio": 4.3, "fim": 5.8, "cor": "#FFF176", "txt": "#5a4a00"},
-    {"label": "Favorável",          "inicio": 5.8, "fim": 7.5, "cor": "#81C784", "txt": "#1b4d1e"},
+    {"label": "Desfavorável",       "inicio": 2.5, "fim": 4.25, "cor": "#FFB74D", "txt": "#6d3b00"},
+    {"label": "Estagnação",         "inicio": 4.25, "fim": 5.75, "cor": "#FFF176", "txt": "#5a4a00"},
+    {"label": "Favorável",          "inicio": 5.75, "fim": 7.5, "cor": "#81C784", "txt": "#1b4d1e"},
     {"label": "Muito favorável",    "inicio": 7.5, "fim": 10,  "cor": "#388E3C", "txt": "#ffffff"},
 ]
 
@@ -501,7 +506,7 @@ for f in faixas:
            color=f["cor"], edgecolor="white", linewidth=2.5, align="edge")
 
 # Marcadores numéricos nos limites
-for v in [0, 2.5, 4.3, 5.8, 7.5, 10]:
+for v in [0, 2.5, 4.25, 5.75, 7.5, 10]:
     ax.annotate(f"{v:g}".replace(".", ","),
                 xy=(val_para_rad(v), 2.58),
                 ha="center", va="center",
@@ -582,24 +587,24 @@ fig = px.bar(
     text="Importância",
     height=320,
 )
-fig.update_traces(texttemplate="%{text:.1f}", textposition="outside", width=0.45)
+fig.update_traces(texttemplate="%{text:.0f}", textposition="outside", width=0.45)
 fig.update_layout(
     template="plotly_white",
     showlegend=False,
     font=dict(size=13),
-    yaxis=dict(range=[0, 2], title="Importância acumulada"),
+    yaxis=dict(range=[0, 4], title="Importância acumulada"),
     xaxis_title="",
     margin=dict(t=20, b=10),
     shapes=[
         dict(type="line", x0=-0.5, x1=1.5, y0=0, y1=0,
              line=dict(color="#ccc", width=1)),
-        dict(type="rect", x0=1.5, x1=3.5, y0=0, y1=2,
+        dict(type="rect", x0=1.5, x1=3.5, y0=0, y1=4,
              fillcolor="rgba(198,40,40,0.04)", line_width=0),
     ],
 )
-fig.add_annotation(x=0.5, y=1.85, text="Positivos", showarrow=False,
+fig.add_annotation(x=0.5, y=3.7, text="Positivos", showarrow=False,
                    font=dict(color="#2E7D32", size=12))
-fig.add_annotation(x=2.5, y=1.85, text="Negativos", showarrow=False,
+fig.add_annotation(x=2.5, y=3.7, text="Negativos", showarrow=False,
                    font=dict(color="#C62828", size=12))
 fig.show()
 ```
@@ -627,12 +632,12 @@ fig = px.bar(
     height=350,
     category_orders={"Categoria": ordem},
 )
-fig.update_traces(texttemplate="%{text:.1f}", textposition="outside")
+fig.update_traces(texttemplate="%{text:.0f}", textposition="outside")
 fig.update_layout(
     template="plotly_white",
     font=dict(size=12),
     legend_title_text="",
-    yaxis=dict(range=[0, 1.4], title="Importância"),
+    yaxis=dict(range=[0, 2.6], title="Importância"),
     xaxis_title="",
     margin=dict(t=20, b=10),
 )
@@ -645,7 +650,7 @@ fig.show()
 
 | Etapa | Quem faz | O que produz |
 |-------|----------|--------------|
-| Leitura técnica | Equipe técnica | Dados referênciais sobre a comunidade |
+| Leitura técnica | Equipe técnica | Dados referenciais sobre a comunidade |
 | Leitura comunitária | Comunidade + facilitador | Percepções locais (oficinas participativas) |
 | Design do template | Pesquisador | `.synt` com campos SWOT, dimensões e significância |
 | Itemização e codificação | Pesquisador | `.syn` com itens, fatores e classificações |

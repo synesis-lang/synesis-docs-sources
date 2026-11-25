@@ -1,0 +1,674 @@
+---
+title: "Inside the Compiler"
+subtitle: "How Synesis turns text into structured knowledge — stage by stage"
+---
+
+::: {.callout-tip}
+## Who is this document for?
+Developers and technical readers who want to understand what happens inside when the Synesis compiler processes a project. No prior knowledge of the source code is needed.
+
+For a high-level overview, see [The Compilation Flow](../reference/fluxo_compilacao.qmd). To understand how the compiler connects to the editor through LSP, see [The LSP Interface](interface_lsp.qmd).
+:::
+
+## What the Compiler Does
+
+The Synesis compiler takes a set of text files with their own syntax (`.synp`, `.synt`, `.syn`, `.syno`, `.bib`) and:
+
+1. Reads and validates each file
+2. Checks consistency between them (e.g. does every code used exist in the dictionary?)
+3. Links the pieces (sources, excerpts, codes, ontology) into a semantic graph
+4. Exports the result as JSON, CSV, Excel and other formats
+
+To follow each stage with concrete examples we use the `Basic` project — a minimal but complete project.
+
+
+## The Example Project {#sec-projeto-exemplo}
+
+Before diving into the compiler, look at the files to be processed. They are deliberately simple — they serve as reference throughout the document.
+
+### `project.synp` — Entry point
+
+```synesis
+PROJECT demo
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations.syn"
+    INCLUDE ONTOLOGY "ontology.syno"
+END PROJECT
+```
+
+This is the "project file". It says which other files exist and how they relate.
+
+### `template.synt` — Field schema
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL description
+END SOURCE FIELDS
+
+FIELD description TYPE TEXT
+    SCOPE SOURCE
+END FIELD
+
+ITEM FIELDS
+    REQUIRED citation, note, code
+END ITEM FIELDS
+
+FIELD citation TYPE QUOTATION
+    SCOPE ITEM
+END FIELD
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+END FIELD
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+END FIELD
+
+ONTOLOGY FIELDS
+    REQUIRED definition, group
+END ONTOLOGY FIELDS
+
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+END FIELD
+
+FIELD group TYPE TOPIC
+    SCOPE ONTOLOGY
+END FIELD
+```
+
+Defines which fields exist, which are required and of what type. It is the contract the rest of the project must respect.
+
+### `references.bib` — Bibliography
+
+```bibtex
+@article{smith2024,
+    author = {Smith, Jane},
+    title  = {Understanding Community Resilience},
+    journal = {Journal of Social Research},
+    year   = {2024},
+    volume = {12},
+    pages  = {45--67}
+}
+```
+
+Lists the bibliographic references. Each key (`smith2024`) identifies a data source.
+
+### `annotations.syn` — Coded data
+
+```synesis
+SOURCE @smith2024
+    description: Qualitative study on community resilience
+        strategies in urban contexts.
+END SOURCE
+
+ITEM @smith2024
+    citation: "People here look out for each other. When the flood
+        came, nobody waited for official help — neighbors just
+        organized themselves."
+
+    note: Participant describes spontaneous collective action as a
+        primary resilience mechanism, bypassing formal institutions.
+        Suggests strong bonding social capital.
+
+    code: Social_Cohesion, Collective_Action
+END ITEM
+```
+
+Contains the data excerpts and the researcher's annotations. Each ITEM references a SOURCE through the `@bibref` key.
+
+### `ontology.syno` — Code dictionary
+
+```synesis
+ONTOLOGY Social_Cohesion
+    definition: The degree to which community members trust,
+        support, and cooperate with one another. Applies when
+        participants describe solidarity, mutual aid, or a shared
+        sense of belonging.
+    group: Community_Resilience
+END ONTOLOGY
+
+ONTOLOGY Collective_Action
+    definition: Coordinated efforts by community members to address
+        shared challenges without formal institutional direction.
+        Applies when groups self-organize in response to a problem
+        or crisis.
+    group: Community_Resilience
+END ONTOLOGY
+```
+
+Defines the meaning of each code used in annotations. It is the project's controlled vocabulary.
+
+
+## Pipeline Overview {#sec-pipeline}
+
+The compiler runs 8 stages in sequence. Each stage receives data from the previous one and produces a richer structure:
+
+```{mermaid}
+flowchart TB
+    classDef stage fill:#E0F7FA,stroke:#084C54,stroke-width:2px,color:#084C54,font-weight:bold;
+    classDef data fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
+
+    S1["1. Project parsing"]:::stage
+    D1["ProjectNode"]:::data
+
+    S2["2. Template loading"]:::stage
+    D2["TemplateNode"]:::data
+
+    S3["3. Bibliography loading"]:::stage
+    D3["Dict of BibEntry"]:::data
+
+    S4["4. Ontology parsing"]:::stage
+    D4["List of OntologyNode"]:::data
+
+    S5["5. Annotation parsing"]:::stage
+    D5["Lists of SourceNode + ItemNode"]:::data
+
+    S6["6. Semantic validation"]:::stage
+    D6["ValidationResult"]:::data
+
+    S7["7. Linking"]:::stage
+    D7["LinkedProject"]:::data
+
+    S8["8. Export"]:::stage
+    D8["JSON / CSV / Excel ..."]:::data
+
+    S1 --> D1 --> S2 --> D2 --> S3 --> D3 --> S4 --> D4 --> S5 --> D5 --> S6 --> D6 --> S7 --> D7 --> S8 --> D8
+```
+
+
+## Stage 1 — Project Parsing
+
+**Where:** `compiler.py` → `SynesisCompiler.parse_project()`
+
+### Input
+The path of `project.synp`, passed when creating the compiler.
+
+### What happens
+1. `parse_file("project.synp")` reads the file and runs the **Lark parser** — an LALR(1) parser that turns the raw text into a concrete syntax tree (`lark.Tree`).
+2. `SynesisTransformer.transform(tree)` walks that tree and builds a typed Python object: the `ProjectNode`.
+
+### Output
+```python
+ProjectNode(
+    name          = "demo",
+    template_path = Path("template.synt"),
+    includes      = [
+        IncludeNode(include_type="BIBLIOGRAPHY", path="references.bib"),
+        IncludeNode(include_type="ANNOTATIONS",  path="annotations.syn"),
+        IncludeNode(include_type="ONTOLOGY",      path="ontology.syno"),
+    ],
+    metadata    = {},
+    description = None,
+    location    = SourceLocation(file="project.synp", line=1, column=1)
+)
+```
+
+The compiler then checks the project structure: files in the directory that were not included, declared files that are not found, a missing template and invalid dates.
+
+::: {.callout-note}
+## SourceLocation — full traceability
+Every AST node carries a `SourceLocation` with the file, line and column it came from. This lets error messages point to the exact place in the source — even in projects with dozens of files.
+:::
+
+
+## Stage 2 — Template Loading
+
+**Where:** `parser/template_loader.py` → `load_template()`
+
+### Input
+The path of `template.synt`, taken from `ProjectNode.template_path`.
+
+### What happens
+
+1. The `.synt` file is parsed the same way as the `.synp` — via Lark + Transformer.
+2. A `TemplateNode` is built, organizing the fields into categories:
+   - **`field_specs`** — dictionary with all field definitions (name, type, scope)
+   - **`required_fields`** — which fields are required per scope (SOURCE, ITEM, ONTOLOGY)
+   - **`optional_fields`** — which are optional
+   - **`forbidden_fields`** — which are forbidden
+   - **`bundled_fields`** — which must appear together
+3. `validate_template()` checks structural inconsistencies — for instance, a field listed as REQUIRED without a FIELD definition.
+
+If the template does not exist or cannot be parsed, compilation ends here: without a contract there is nothing to validate.
+
+### Output
+```python
+TemplateNode(
+    name = "",               # the example has no TEMPLATE line
+    field_specs = {
+        "description": FieldSpec(type=TEXT,      scope=SOURCE),
+        "citation":    FieldSpec(type=QUOTATION, scope=ITEM),
+        "note":        FieldSpec(type=MEMO,      scope=ITEM),
+        "code":        FieldSpec(type=CODE,      scope=ITEM),
+        "definition":  FieldSpec(type=TEXT,       scope=ONTOLOGY),
+        "group":       FieldSpec(type=TOPIC,      scope=ONTOLOGY),
+    },
+    required_fields = {
+        SOURCE:   [],
+        ITEM:     ["citation", "note", "code"],
+        ONTOLOGY: ["definition", "group"],
+    },
+    optional_fields = {
+        SOURCE: ["description"],
+        ITEM:     [],
+        ONTOLOGY: [],
+    },
+)
+```
+
+The template works as a **contract**: from here on, all validation is based on it.
+
+
+## Stage 3 — Bibliography Loading
+
+**Where:** `parser/bib_loader.py` → `load_bibliography()`
+
+### Input
+The path of the `.bib` file.
+
+### What happens
+Uses the `bibtexparser` library to parse BibTeX. It lower-cases all keys, ensuring case-insensitive comparison. Several `INCLUDE BIBLIOGRAPHY` lines add up; for a repeated key the first occurrence wins. When the project declares `INCLUDE DATASET`, the TOML records are loaded at this same point.
+
+### Output
+```python
+{
+    "smith2024": {
+        "ID":            "smith2024",
+        "ENTRYTYPE":     "article",
+        "author":        "Smith, Jane",
+        "title":         "Understanding Community Resilience",
+        "journal":       "Journal of Social Research",
+        "year":          "2024",
+        "_original_key": "smith2024"
+        # ... other fields of the entry
+    }
+}
+```
+
+::: {.callout-note}
+## Why normalize the keys?
+So that `@Smith2024`, `@smith2024` and `@SMITH2024` are treated as the same reference. The `_original_key` field preserves the original spelling for use in exports.
+:::
+
+
+## Stage 4 — Ontology Parsing
+
+**Where:** `compiler.py` → `SynesisCompiler.parse_ontologies()`
+
+### Input
+List of `.syno` paths, taken from the `IncludeNode`s of the `ProjectNode`.
+
+### What happens
+For each `.syno` file, the same process as the previous stages:
+
+1. `parse_file()` produces a `lark.Tree`
+2. `SynesisTransformer.transform()` converts it into Python objects
+
+Ontology files are read one after another, in `INCLUDE` order.
+
+### Output
+```python
+[
+    OntologyNode(
+        concept     = "Social_Cohesion",
+        description = "",   # filled only by a field called "description"
+        fields      = {"definition": "The degree to which community members trust...",
+                       "group": "Community_Resilience"},
+        field_names = ["definition", "group"],
+        location    = SourceLocation("ontology.syno", line=1, column=1)
+    ),
+    OntologyNode(
+        concept     = "Collective_Action",
+        description = "",
+        fields      = {"definition": "Coordinated efforts by community members...",
+                       "group": "Community_Resilience"},
+        field_names = ["definition", "group"],
+        location    = SourceLocation("ontology.syno", line=9, column=1)
+    ),
+]
+```
+
+
+## Stage 5 — Annotation Parsing
+
+**Where:** `compiler.py` → `SynesisCompiler.parse_annotations()`
+
+### Input
+List of `.syn` paths.
+
+### What happens
+Same process as Stage 4. A `.syn` file may contain several SOURCE and ITEM blocks, which the compiler separates into **distinct lists**. With more than three annotation files, parsing is distributed across up to four processes (`ProcessPoolExecutor`).
+
+::: {.callout-important}
+## ITEMs are not nested in SOURCEs — yet
+At this stage ITEMs are returned in a flat list, separate from SOURCEs. The ITEM → SOURCE link happens only in **Stage 7 (Linking)**, based on the shared `@bibref` key. This allows SOURCE and ITEM to live in different files.
+:::
+
+### Output
+```python
+# SourceNode
+SourceNode(
+    bibref   = "@smith2024",       # as written; comparisons use the normalized form
+    fields   = {"description": "Qualitative study on community resilience..."},
+    items    = [],                 # empty now — filled in Stage 7
+    location = SourceLocation("annotations.syn", line=1, column=1)
+)
+
+# ItemNode
+ItemNode(
+    bibref           = "@smith2024",
+    quote            = "",         # the QUOTATION field named "citation" lives in extra_fields
+    codes            = ["Social_Cohesion", "Collective_Action"],
+    notes            = ["Participant describes spontaneous..."],
+    chains           = [],
+    extra_fields     = {"citation": '"People here look out for each other..."'},
+    code_locations   = {"code": [SourceLocation(...), SourceLocation(...)]},
+    field_names      = ["citation", "note", "code"],
+    location = SourceLocation("annotations.syn", line=6, column=1)
+)
+```
+
+
+## Stage 6 — Semantic Validation
+
+**Where:** `semantic/validator.py` → `SemanticValidator`
+
+### Input
+All parsed nodes: `ProjectNode`, `TemplateNode`, `Dict[BibEntry]`, lists of `SourceNode`, `ItemNode` and `OntologyNode`.
+
+It also receives a `norm_cache: dict` — a shared dictionary that memoizes string normalization results, avoiding repeated conversions.
+
+### What happens
+`SemanticValidator` walks **every node** and applies rules beyond syntax. Concrete examples with the Basic project:
+
+| Check | Result in Basic | If it failed |
+|---|---|---|
+| Does `@smith2024` exist in the `.bib`? | Yes | [E001](../reference/guia_erros.qmd#sec-e001): `UnregisteredSource` (error) |
+| Does `Social_Cohesion` exist in the ontology? | Yes | [E090](../reference/guia_erros.qmd#sec-e090): summary of undefined codes (warning); with `--check-codes`, one [E004](../reference/guia_erros.qmd#sec-e004) per occurrence |
+| Are the required fields (citation, note, code) present in the ITEM? | Yes | [E020](../reference/guia_erros.qmd#sec-e020): `MissingRequiredField` (error) |
+| Is there a field not declared in the template? | No | [E022](../reference/guia_erros.qmd#sec-e022): `UnknownFieldName` (error) |
+| Do the values respect the declared type (list, scale, chain)? | Yes | Type-specific error |
+
+### Output
+```python
+ValidationResult(
+    errors   = [],    # blocks export
+    warnings = [],    # does not block, but is reported
+    info     = [],    # purely informative
+)
+```
+
+In the Basic project everything is correct — the three lists come out empty.
+
+
+## Stage 7 — Linking
+
+**Where:** `semantic/linker.py` → `Linker.link()`
+
+This is the most important stage: it **turns a collection of loose nodes into a coherent semantic graph**.
+
+### Input
+All node lists, the project and the template. Whatever problems the Linker finds are added to the `ValidationResult` of Stage 6.
+
+### What happens — step by step
+
+1. **`ORDERED` normalization** — the materialized value is always the index, as an integer.
+2. **Duplicate bibref check** across SOURCE blocks ([E070](../reference/guia_erros.qmd#sec-e070)).
+3. **ITEM → SOURCE association** — each ITEM is linked to the SOURCE with the same `bibref`, and the `SourceNode.items` list is filled. An ITEM without a SOURCE is an error ([E002](../reference/guia_erros.qmd#sec-e002)); a SOURCE without ITEMs, a warning ([E003](../reference/guia_erros.qmd#sec-e003)).
+4. **Duplicate concepts and descriptions** in the ontology ([E068](../reference/guia_erros.qmd#sec-e068)).
+5. **Building `ontology_index`** — dictionary `{normalized_code → OntologyNode}`, with values already interpreted by declared type.
+6. **Deprecated terms** — with the `USE` role, mentions of the old term count toward the adopted term.
+7. **Building `code_usage`** — dictionary `{code → [ItemNode, ...]}` answering: "which items used this code?"
+8. **Triple extraction** — chains such as `A -> B -> C` become triples `(A, relation, B)`, `(B, relation, C)`, indexed in `relation_index`.
+9. **Building `topic_index`** — ontology TOPIC fields become `{topic → [codes]}`.
+10. **Hierarchy** — fields with `ROLE HIERARCHY` produce `role_hierarchy`.
+
+### Output
+```python
+LinkedProject(
+    project = ProjectNode(...),
+
+    # Sources now with their items
+    sources = {
+        "smith2024": SourceNode(
+            bibref = "@smith2024",
+            items  = [ItemNode(...)]   # filled!
+        )
+    },
+
+    # Code → definition lookup
+    ontology_index = {
+        "social_cohesion":   OntologyNode(concept="Social_Cohesion", ...),
+        "collective_action": OntologyNode(concept="Collective_Action", ...),
+    },
+
+    # Which ITEMs used each code
+    code_usage = {
+        "social_cohesion":   [ItemNode(...)],
+        "collective_action": [ItemNode(...)],
+    },
+
+    # CHAIN triples (empty in Basic)
+    all_triples    = [],
+    relation_index = {},
+
+    # Topics → codes (from the ontology TOPIC field)
+    topic_index = {
+        "Community_Resilience": ["Social_Cohesion", "Collective_Action"]
+    },
+
+    hierarchy      = {},     # older route, via "parent"/"is_a" fields
+    role_hierarchy = None,   # filled by fields with ROLE HIERARCHY
+    aliases        = {},     # deprecated → adopted (USE role)
+)
+```
+
+
+## Stage 8 — Export
+
+**Where:** `exporters/`
+
+### Input
+The complete `LinkedProject` + `TemplateNode` + bibliography.
+
+### What happens
+Each exporter walks the `LinkedProject` and serializes the data into the target format. On the command line, export only happens if there are **no errors** (or with `--force`).
+
+### Output
+
+| Format | Module | Content |
+|---|---|---|
+| JSON | `json_export.py` | Project, template, bibliography, indices, ontology and corpus |
+| CSV | `csv_export.py` | `sources.csv`, `items.csv`, `ontologies.csv` and, if there are chains, `chains.csv` |
+| Excel | `xls_export.py` | Workbook with sheets matching the CSV tables |
+| Alpaca | `alpaca_export.py`, `alpaca_mapped.py` | Fine-tuning data |
+| OKF (experimental) | `okf_export.py` | File-based knowledge bundle |
+| SKOS | `skos_export.py` | SKOS vocabulary, declared by an `EXPORT` block in the `.synp` |
+
+Linking several projects (`synesis compile p1.synp p2.synp`) is a later step, in `semantic/link_step.py`: see [Linking Projects](../howto/ligar_projetos.qmd).
+
+
+## The Orchestrator {#sec-orquestrador}
+
+**Where:** `compiler.py` → `SynesisCompiler`
+
+The compiler is the conductor — it calls each stage in order and decides what to do with errors:
+
+```python
+# Simplified for clarity
+def compile(self) -> CompilationResult:
+    project, pv = self.parse_project()                      # Stage 1
+    sv = self.validate_project_structure(project)
+    template, tv = self._safe_load_template(project)        # Stage 2
+    if template is None:
+        return CompilationResult(success=False, ...)        # ends here
+    validate_template(template)
+    bibliography = self.load_bibliography(project)          # Stage 3
+    dataset, dv = self.load_dataset_index(project, template)
+    ontologies, ov = self.parse_ontologies(project)         # Stage 4
+    sources, items, av = self.parse_annotations(project)    # Stage 5
+    validation = self.validate_all(...)                     # Stage 6
+    linked = self.link_all(..., validation_result=validation)  # Stage 7
+    # partial results (pv, sv, tv...) are merged into `validation`
+    # Stage 8 is triggered by the caller: result.to_json(), etc.
+
+    return CompilationResult(
+        success           = not validation.has_errors(),
+        linked_project    = linked,
+        validation_result = validation,
+        stats             = self._compute_stats(linked, sources, items, ontologies),
+        template          = template,
+        bibliography      = bibliography,
+        dataset           = dataset,
+    )
+```
+
+The final result is a `CompilationResult` with all the information:
+
+```python
+CompilationResult(
+    success = True,
+    linked_project    = LinkedProject(...),
+    validation_result = ValidationResult(errors=[], warnings=[], info=[]),
+    stats = CompilationStats(
+        source_count   = 1,
+        item_count     = 1,
+        ontology_count = 2,
+        code_count     = 2,
+        chain_count    = 0,
+        triple_count   = 0,
+    ),
+    template     = TemplateNode(...),
+    bibliography = {"smith2024": {...}},
+    dataset      = None,
+)
+```
+
+
+## Behind the Scenes: the Lark Parser {#sec-lark}
+
+All parsing stages (1, 2, 4, 5) share the same internal mechanism.
+
+### How Text Becomes a Tree
+
+```
+Raw text (.syn, .synt, etc.)
+        │
+        ▼
+  SynesisIndenter        ← counts each tab as 4 columns and
+        │                   emits INDENT/DEDENT tokens (like Python)
+        ▼
+  LALR(1) lexer          ← tokenizes: KEYWORD, STRING, IDENTIFIER, NEWLINE...
+        │
+        ▼
+  LALR(1) parser         ← applies the grammar (synesis.lark)
+        │
+        ▼
+  lark.Tree              ← concrete syntax tree
+        │
+        ▼
+  SynesisTransformer     ← turns the tree into typed AST nodes
+        │
+        ▼
+  ProjectNode / SourceNode / ItemNode / OntologyNode / ...
+```
+
+Synesis uses **Lark** — a Python parsing library that accepts EBNF grammars and generates efficient LALR(1) parsers. The compiler uses a standalone parser generated from `synesis.lark`. The complete grammar, explained rule by rule, is in [Language Grammar](../reference/gramatica.qmd).
+
+### How the Tree Becomes Python Objects
+
+`SynesisTransformer` extends `lark.Transformer`. Each method corresponds to a grammar rule:
+
+```python
+class SynesisTransformer(Transformer):
+
+    def source_block(self, items) -> SourceNode:
+        # Extracts the bibref, builds the field dict
+        # Returns SourceNode
+
+    def item_block(self, items) -> ItemNode:
+        # Separates fields (quote, notes, codes, chains, extra_fields)
+        # Preserves raw tokens in field_line_tokens
+        # Returns ItemNode
+
+    def ontology_block(self, items) -> OntologyNode:
+        # Builds OntologyNode with concept, description and extra fields
+```
+
+### Field Name Normalization
+
+```python
+_normalize_field_name("CODE")     # → "code"    (all caps → lowercase)
+_normalize_field_name("citation") # → "citation" (unchanged)
+_normalize_field_name("MyField")  # → "MyField"  (mixed → unchanged)
+```
+
+This ensures `CODE` and `code` in `.syn` files are treated as the same field.
+
+### Syntax Errors
+
+When the parser finds an error, `parse_string()` intercepts the Lark exception and raises a `SynesisSyntaxError` with:
+
+- **Precise location** — file, line and column
+- **Pedagogical message** — via `create_pedagogical_error()`, which turns Lark tokens into readable suggestions
+- **Expected tokens** — what the parser expected at that point
+
+
+## Data Map Between Stages {#sec-mapa-dados}
+
+This table shows where each structure is created and consumed:
+
+| Structure | Created in | Consumed in |
+|---|---|---|
+| `ProjectNode` | Stage 1 | 2, 3, 4, 5, 6, 7 |
+| `TemplateNode` | Stage 2 | 6, 7, 8 |
+| `Dict[BibEntry]` | Stage 3 | 6, 7, 8 |
+| `List[OntologyNode]` | Stage 4 | 6, 7 |
+| `List[SourceNode]` | Stage 5 | 6, 7 |
+| `List[ItemNode]` | Stage 5 | 6, 7 |
+| `ValidationResult` | Stages 1–7 | CLI, editor, API |
+| `LinkedProject` | Stage 7 | 8 |
+| `CompilationResult` | Orchestrator | CLI, editor, API |
+
+
+## AST Node Quick Reference {#sec-nos-ast}
+
+| Node | Main fields | Created by |
+|---|---|---|
+| `ProjectNode` | `name`, `template_path`, `includes`, `metadata`, `description`, `questions`, `exports` | Transformer |
+| `IncludeNode` | `include_type`, `path`, `shared` | Transformer |
+| `TemplateNode` | `field_specs`, `required_fields`, `optional_fields`, `forbidden_fields`, `bundled_fields` | template_loader |
+| `FieldSpec` | `name`, `type`, `scope`, `arity`, `values`, `relations`, `guidelines`, `role` | Transformer |
+| `SourceNode` | `bibref`, `fields`, `items` | Transformer |
+| `ItemNode` | `bibref`, `codes`, `notes`, `chains`, `extra_fields`, `code_locations` | Transformer + Linker |
+| `OntologyNode` | `concept`, `description`, `fields`, `parent_chains` | Transformer |
+| `ChainNode` | `nodes`, `relations`, `node_locations` | Transformer |
+| `SourceLocation` | `file`, `line`, `column` | Transformer |
+| `BibEntry` | `ID`, `ENTRYTYPE`, `author`, `title`, `year` | bib_loader |
+| `LinkedProject` | `sources`, `ontology_index`, `code_usage`, `all_triples`, `topic_index`, `role_hierarchy` | Linker |
+| `ValidationResult` | `errors`, `warnings`, `info` | Validator + Linker |
+| `CompilationResult` | `success`, `linked_project`, `validation_result`, `stats` | Compiler |
+
+
+## Most Common Errors {#sec-erros}
+
+| Code | Name | Severity | When it happens |
+|---|---|---|---|
+| [E001](../reference/guia_erros.qmd#sec-e001) | `UnregisteredSource` | error | The SOURCE bibref does not exist in the `.bib` file |
+| [E002](../reference/guia_erros.qmd#sec-e002) | `OrphanItem` | error | The ITEM references a bibref with no matching SOURCE |
+| [E003](../reference/guia_erros.qmd#sec-e003) | `SourceWithoutItems` | warning | A SOURCE was declared but no ITEM references it |
+| [E090](../reference/guia_erros.qmd#sec-e090) | `UndefinedCodesSummary` | warning | Codes are used but not defined in the ontology (summary) |
+| [E004](../reference/guia_erros.qmd#sec-e004) | `UndefinedCode` | warning | Each undefined code, with `--check-codes` |
+| [E005](../reference/guia_erros.qmd#sec-e005) | `OntologyWithoutTemplateFields` | error | There are ONTOLOGY blocks but the template defines no `ONTOLOGY FIELDS` |
+| [E020](../reference/guia_erros.qmd#sec-e020) | `MissingRequiredField` | error | A required field is missing |
+| [E022](../reference/guia_erros.qmd#sec-e022) | `UnknownFieldName` | error | A field not declared in the template was used |
+| [E023](../reference/guia_erros.qmd#sec-e023) | `EmptyItemBlock` | error | An ITEM block is empty (no fields) |
+| [E061](../reference/guia_erros.qmd#sec-e061) | `MissingAnnotationsInclude` | error | A `.syn` file exists in the directory but is not listed in the `.synp` |
+| [E064](../reference/guia_erros.qmd#sec-e064) | `MissingTemplateFile` | error | The template was not found or could not be parsed |
+| [E068](../reference/guia_erros.qmd#sec-e068) | `DuplicateOntologyConcept` | error | The same concept was defined twice in the ontology |
+| [E070](../reference/guia_erros.qmd#sec-e070) | `DuplicateSourceBibref` | error | The same bibref appears in two SOURCE blocks |
+
+The complete list is in the [Error Guide](../reference/guia_erros.qmd).

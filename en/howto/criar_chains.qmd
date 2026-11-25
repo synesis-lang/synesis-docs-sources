@@ -1,0 +1,412 @@
+---
+title: "How to Create and Validate Chains"
+subtitle: "A practical guide to modelling structured causal relations"
+---
+
+# How to Create and Validate Chains
+
+This guide shows **how to build chains** to express relations between concepts in a systematic, auditable way.
+
+**Use this guide if you:**
+
+- Need to express causality, influence or mediation
+- Want to build maps of relations between concepts
+- Need to validate the consistency of your chains
+- Want to extract relation networks for analysis or visualization
+
+---
+
+## What Is a Chain?
+
+A **chain** is a sequence of concepts linked by `->`, expressing how they relate. When the field declares relations, every link is named.
+
+```text
+concept_a -> RELATION -> concept_b
+```
+
+```synesis
+ITEM @interview_01
+    chain: high_cost -> INHIBITS -> adoption
+END ITEM
+```
+
+Read: "high_cost INHIBITS adoption".
+
+---
+
+## How to Declare the Field
+
+Relations are declared **in the template**, in a field of type `CHAIN`. The field name is free; `ARITY` is required.
+
+```synesis
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relation between concepts stated by the source
+    RELATIONS
+        CAUSES: X directly causes Y
+        INHIBITS: X reduces the likelihood or intensity of Y
+        FAVORS: X promotes or eases Y
+        MEDIATES: X mediates the effect on Y
+        CORRELATES: X and Y occur together, with no defined causal direction
+    END RELATIONS
+    GUIDELINES
+        Record only relations the passage states.
+        Test CAUSES or FAVORS: without X, would Y not happen? Then CAUSES.
+        Correct: high_cost -> INHIBITS -> adoption (the passage says price deters)
+        Wrong: high_cost -> CAUSES -> adoption (the passage states no cause)
+    END GUIDELINES
+END FIELD
+```
+
+- `ARITY >= 2` accepts a single link
+- `ARITY >= 3` requires a **mediator** (antecedent → mediator → outcome)
+
+If the field declares **no** `RELATIONS`, the chain is simple (`a -> b`): it records the association without naming it.
+
+---
+
+## How to Create Simple Chains
+
+### Two Concepts
+
+```synesis
+ITEM @interview_01
+    quote: "The high price discourages the purchase"
+    memo: Economic barrier identified
+    chain: high_price -> INHIBITS -> purchase_decision
+END ITEM
+```
+
+**When to use:** direct relations.
+
+### Several Steps
+
+```synesis
+ITEM @interview_01
+    chain: lack_of_training -> CAUSES -> low_skill -> INHIBITS -> adoption
+END ITEM
+```
+
+Read: "lack of training CAUSES low skill, which INHIBITS adoption". Each consecutive pair becomes a relation (triple) in the exports.
+
+**When to use:** to record mechanisms with intermediate elements.
+
+---
+
+## How to Choose Relations
+
+A small, well-separated set is worth more than many overlapping relations. If two relations cannot be told apart in one sentence, they are the same.
+
+| Relation | Meaning | Example |
+|---------|-------------|---------|
+| `CAUSES` | X directly causes Y | `software_bug -> CAUSES -> system_failure` |
+| `INHIBITS` | X reduces or prevents Y | `high_cost -> INHIBITS -> adoption` |
+| `FAVORS` | X promotes or eases Y | `training -> FAVORS -> usability` |
+| `MEDIATES` | X mediates | `technical_support -> MEDIATES -> satisfaction` |
+| `CORRELATES` | they occur together, no direction | `turnover -> CORRELATES -> disengagement` |
+
+---
+
+## How to Build Structures
+
+### Divergent (One Causes Many)
+
+```synesis
+ITEM @doc_01
+    chain: lack_of_resources -> INHIBITS -> ai_investment
+    chain: lack_of_resources -> INHIBITS -> staff_training
+    chain: lack_of_resources -> CAUSES -> short_term_priorities
+END ITEM
+```
+
+### Convergent (Many Cause One)
+
+```synesis
+ITEM @doc_02
+    chain: ease_of_use -> FAVORS -> satisfaction
+    chain: responsive_support -> FAVORS -> satisfaction
+    chain: affordable_cost -> FAVORS -> satisfaction
+END ITEM
+```
+
+### With Mediators
+
+```synesis
+ITEM @doc_03
+    chain: capacity_building -> FAVORS -> team_skill -> FAVORS -> quality
+END ITEM
+```
+
+---
+
+## How to Qualify a Claim {#sec-qualificar}
+
+A chain says a relation exists. Sources rarely say only that: they hypothesize, test, deny. Pair the chain with its qualifiers in a `BUNDLE`:
+
+```synesis
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL BUNDLE chain, status
+END ITEM FIELDS
+
+FIELD status TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION How the text presents the relation right before it
+    VALUES
+        Asserted: presented as a finding or fact
+        Hypothetical: proposed without being asserted
+        Negated: the text states it does not hold
+    END VALUES
+END FIELD
+```
+
+```synesis
+ITEM @article_01
+    quote: "Training reduced clicks but did not increase reporting."
+    chain: training -> INHIBITS -> clicks
+    status: Asserted
+    chain: training -> FAVORS -> reporting
+    status: Negated
+END ITEM
+```
+
+Each `chain:` pairs by position with its `status:`. Without the qualifier, a hypothesis and a finding look the same in every export.
+
+---
+
+## How to Validate Chains
+
+### Automatic Validation
+
+```bash
+synesis compile analysis.synp --check-codes
+```
+
+The compiler checks:
+
+1. the structure (concept → relation → concept alternation)
+2. whether each relation is declared in the field
+3. whether the arity is met
+4. whether the concepts have a definition in the ontology
+
+| Message | Cause | Fix |
+|------|-------|---------|
+| `Relation 'Y' not declared in the template` | relation outside `RELATIONS` | use a declared one or add it to the template |
+| `Concept 'A B' contains spaces` | concept with spaces | use `A_B` |
+| `Simple chain in 'chain' but the template requires named relations` | relation missing | `A -> REL -> B` |
+| `Qualified chain with incorrect structure` | ends in a relation or a concept is missing | concept, relation, concept |
+| `Chain with N element(s), the template requires >= M` | arity | complete the chain |
+| `Code 'X' is not defined in the organizing model` | concept without a block | define it in a `.syno` (warning) |
+
+Details in the [Error Guide](../reference/guia_erros.qmd#sec-chains).
+
+### Manual Semantic Review
+
+1. **Direction**: does A → B make sense, or should it be B → A?
+2. **Type**: is it really `INHIBITS`, or `CAUSES`?
+3. **Completeness**: is a mediator missing?
+4. **Evidence**: does the passage support the relation?
+
+The compiler checks the form; the reading is yours. For AI-generated chains, use the [review pipeline](synesis_coder.qmd#sec-act).
+
+---
+
+## How to Extract and Analyse Chains
+
+### CSV
+
+```bash
+synesis compile analysis.synp --csv out/
+```
+
+`out/chains.csv`, one row per triple:
+
+```text
+bibref,from_code,relation,to_code,source_file,source_line,source_column
+'@interview_01,high_cost,INHIBITS,adoption,annotations.syn,8,5
+```
+
+### JSON
+
+Each item of `corpus` carries its chains, and `indices.triples` gathers all of them, with their origin:
+
+```json
+{
+  "indices": {
+    "triples": [
+      {
+        "from": "high_cost",
+        "relation": "INHIBITS",
+        "to": "adoption",
+        "source_item": "interview_01_item0001",
+        "location": {"file": "annotations.syn", "line": 8, "column": 5}
+      }
+    ]
+  }
+}
+```
+
+---
+
+## How to Visualize Chains
+
+### In VS Code
+
+With the **Synesis** extension: `Ctrl+Alt+G` (per source), `Ctrl+Alt+F` (file) or `Ctrl+Alt+I` (item under the cursor).
+
+### As a Graph
+
+```bash
+pip install synesis-graph
+synesis-graph html --project analysis.synp --output graph.html --all
+```
+
+For network analysis, see [How to export to Neo4j](exportar_neo4j.qmd).
+
+---
+
+## Common Patterns
+
+### Barrier → Inhibition
+
+```text
+chain: lack_of_information -> INHIBITS -> trust -> INHIBITS -> adoption
+```
+
+### Facilitator → Promotion
+
+```text
+chain: hands_on_demo -> FAVORS -> understanding -> FAVORS -> adoption
+```
+
+### Feedback Loop
+
+Record each direction as the source states it, in separate chains, using the **same** concept names:
+
+```synesis
+ITEM @doc_04
+    chain: satisfaction -> FAVORS -> engagement
+    chain: engagement -> FAVORS -> satisfaction
+END ITEM
+```
+
+Cycles across chains are allowed: chains record what sources state. The ban on cycles applies only to the **hierarchy** declared in the ontology.
+
+### Trade-off
+
+```synesis
+ITEM @doc_05
+    chain: full_automation -> FAVORS -> efficiency
+    chain: full_automation -> INHIBITS -> flexibility
+END ITEM
+```
+
+---
+
+## How to Iterate
+
+### 1. Draft
+
+```synesis
+ITEM @doc_01
+    quote: "The technology helps, but it is expensive"
+    chain: technology -> FAVORS -> efficiency
+    chain: cost -> INHIBITS -> adoption
+END ITEM
+```
+
+### 2. Refine
+
+After several sources, consolidate the recurring concepts:
+
+```synesis
+ITEM @doc_01
+    chain: perceived_usefulness -> FAVORS -> intention_to_use
+    chain: perceived_cost -> INHIBITS -> intention_to_use
+    chain: intention_to_use -> FAVORS -> adoption
+END ITEM
+```
+
+### 3. Compare Across Sources
+
+```synesis
+# Source A
+ITEM @source_a
+    chain: training -> FAVORS -> skill -> FAVORS -> adoption
+END ITEM
+
+# Source B
+ITEM @source_b
+    chain: mentoring -> FAVORS -> skill -> FAVORS -> adoption
+END ITEM
+# Observation: "skill" is a recurring mediator
+```
+
+---
+
+## How to Document Decisions
+
+Record the justification in a memo field (preferably in the same `BUNDLE` as the chain) and use comments for method decisions:
+
+```synesis
+ITEM @policy_doc
+    quote: "Investment in digital infrastructure reduced operating costs"
+    memo: Relation confirmed by quantitative data (Table 3)
+    chain: digital_infrastructure -> INHIBITS -> operating_costs
+    # DECISION 2026-02-04: INHIBITS rather than CAUSES, given the gradual effect
+END ITEM
+```
+
+---
+
+## When NOT to Use Chains
+
+1. **Simple descriptions.** If the source only mentions a theme, use a `CODE` field:
+   ```text
+   # Forced
+   chain: cost -> DESCRIBES -> interview
+
+   # Appropriate
+   code: cost
+   ```
+2. **Uncertain relations.** With no direction or type, record the code and note the uncertainty in a memo.
+3. **Taxonomies.** "Is a kind of" is a conceptual decision of the project: declare it in the ontology with [`ROLE HIERARCHY`](../reference/organizing_model.qmd). If it is something **sources state**, it is a chain — and can be brought into a vocabulary with `MAP RELATIONS`.
+
+---
+
+## Practice Exercise
+
+> "The lack of adequate technical support frustrated the team, which led to low uptake of the new system."
+
+Build the chain that captures the relation.
+
+### Proposed Solution
+
+```synesis
+ITEM @manager_interview
+    quote: "The lack of adequate technical support frustrated the team, which led to low uptake of the new system."
+    memo: Explicit temporal chain: insufficient support, frustration, low uptake
+    code: inadequate_support, frustration, low_uptake
+    chain: inadequate_support -> CAUSES -> frustration -> CAUSES -> low_uptake
+END ITEM
+```
+
+- Three concepts, two relations
+- `CAUSES` declared in the template
+- The chain follows the order of the passage
+- The memo makes the interpretation explicit
+
+Note the names: the concept is `low_uptake`, and the relation is the one the text states ("led to"). Writing `frustration -> INHIBITS -> low_uptake` would reverse the meaning.
+
+---
+
+## References
+
+- [Language Reference](../reference/guia_referencia.qmd) — formal syntax
+- [How to define an ontology](definir_ontologia.qmd)
+- [Getting Started](../tutorials/getting-started.qmd)
+
+---
+
+**Questions?** Check [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) or open an issue.

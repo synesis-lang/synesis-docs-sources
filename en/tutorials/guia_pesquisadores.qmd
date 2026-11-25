@@ -1,273 +1,550 @@
-# Synesis: A Language for Organizing Your Qualitative Research
+---
+title: "Synesis for Qualitative Research"
+subtitle: "A hands-on tutorial for humanities researchers"
+---
 
-**Introductory guide for humanities researchers**
+# Welcome, Researcher!
+
+In this tutorial **we will** build a qualitative analysis project together using Synesis. If you work with interviews, document analysis, grounded theory or thematic analysis, this guide is for you.
+
+**What you will build:**
+
+- An interview analysis project
+- A conceptual coding system
+- Causal relations between concepts
+- Exports for quantitative analysis
+
+**Prerequisites:**
+
+- Python 3.10+ and the compiler installed (`pip install synesis`)
+- A reference manager (Zotero recommended, but optional)
+- Basic familiarity with qualitative research
+
+:::{.callout-tip}
+## New to Synesis?
+If you have never used Synesis, start with [Getting Started](getting-started.qmd). This tutorial assumes you know the basic commands.
+:::
 
 ---
 
-## What is Synesis?
+## Our Research Scenario
 
-Synesis is a structured way to record your qualitative research annotations in simple text files. Think of it as a **digital field notebook** with clear rules that help you maintain consistency throughout your entire project.
-
-The name comes from the Greek *σύνεσις* (sýnesis), which means "comprehension" or "understanding" — exactly what we seek when analyzing qualitative data.
+We will work on a fictitious study about **resistance to telemedicine adoption** in rural communities. Imagine you ran 3 semi-structured interviews and now need to analyse the data.
 
 ---
 
-## Why use Synesis?
+## Step 1: Prepare the Sources
 
-### The common problem
+Create a project folder:
 
-If you've worked with qualitative research before, you've probably encountered these situations:
+```bash
+mkdir telemedicine-analysis
+cd telemedicine-analysis
+```
 
-- Notes scattered across different files and formats
-- Difficulty remembering why you marked a particular excerpt as important
-- Codes that change names throughout the project
-- Hours reorganizing data before being able to analyze them
-- Difficulty explaining your analytical process to other researchers
+Create `references.bib` with the references of the interviews. The keys are neutral and do not identify participants:
 
-### Synesis proposal
+<!-- file: references.bib -->
+```bibtex
+@misc{interview01,
+  author = {Participant 01},
+  title = {Interview on access to health care},
+  year = {2026},
+  note = {Resident of a rural community, 45 minutes (fictitious data)}
+}
 
-Synesis offers a simple and consistent structure to:
+@misc{interview02,
+  author = {Participant 02},
+  title = {Interview on technology and health},
+  year = {2026},
+  note = {Resident of a rural community, 60 minutes (fictitious data)}
+}
 
-- **Record** relevant excerpts from your sources
-- **Annotate** your interpretations and reflections
-- **Code** excerpts with analytical concepts
-- **Relate** concepts to each other (causal relations, influence, etc.)
-- **Document** your conceptual vocabulary (ontology)
+@misc{interview03,
+  author = {Participant 03},
+  title = {Interview, professional perspective},
+  year = {2026},
+  note = {Rural physician, 40 minutes (fictitious data)}
+}
+```
 
-All of this in text files that you can open on any computer, now or twenty years from now.
+:::{.callout-note}
+## Checkpoint ✓
+You should have the folder `telemedicine-analysis/` with the file `references.bib` and your 3 interviews.
+:::
 
 ---
 
-## How does it work in practice?
+## Step 2: Define the Template
 
-### A simple example
+Create `template.synt`, fitted to qualitative analysis:
 
-Imagine you're analyzing interviews about acceptance of new technologies. You find this excerpt:
+<!-- file: template.synt -->
+```synesis
+TEMPLATE qualitative_analysis version: "1.0"
 
-> "I even wanted to use it, but the cost is too high for my budget."
+# ============================================
+# SOURCE FIELDS
+# ============================================
 
-In Synesis, you would record it like this:
+SOURCE FIELDS
+    REQUIRED speaker
+END SOURCE FIELDS
+
+FIELD speaker TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Who speaks in the source
+    VALUES
+        User: Resident served by the service
+        Professional: Health professional
+    END VALUES
+END FIELD
+
+# ============================================
+# ITEM FIELDS
+# ============================================
+
+ITEM FIELDS
+    REQUIRED quote, memo, chain
+    OPTIONAL context
+END ITEM FIELDS
+
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt from the interview
+    GUIDELINES
+        Copy the speech literally, in one to three sentences.
+        Do not copy the interviewer's questions.
+    END GUIDELINES
+END FIELD
+
+FIELD memo TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Analytical memo with the interpretation and the mechanism identified
+    GUIDELINES
+        Interpret the speech; do not repeat it.
+        Separate what the source states from what you infer.
+    END GUIDELINES
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Causal or relational chain between ontology concepts
+    RELATIONS
+        MEDIATES: one factor softens or mediates the effect of another
+        FAVORS: direct positive effect (A favors B)
+        INHIBITS: limits or restricts (A reduces the viability of B)
+        ENABLES: creates a condition for B to happen
+    END RELATIONS
+    GUIDELINES
+        Record only relations the speech supports.
+    END GUIDELINES
+END FIELD
+
+FIELD context TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Nuances of the moment of speech (tone, emotion, hesitation)
+    GUIDELINES
+        Fill in only with what was recorded during the interview.
+    END GUIDELINES
+END FIELD
+
+# ============================================
+# ONTOLOGY
+# ============================================
+
+ONTOLOGY FIELDS
+    REQUIRED definition, group
+END ONTOLOGY FIELDS
+
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definition of the concept and application criterion
+    GUIDELINES
+        Define the concept and say when to apply it.
+    END GUIDELINES
+END FIELD
+
+FIELD group TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Thematic group of the concept
+    GUIDELINES
+        Use a term without spaces.
+    END GUIDELINES
+END FIELD
+```
+
+**Notice:** the `context` field is optional and records qualitative nuances (hesitation, emotion, changes of tone).
+
+:::{.callout-note}
+## Checkpoint ✓
+Validate the template:
+```bash
+synesis validate-template template.synt
+```
+It should print `OK`.
+:::
+
+---
+
+## Step 3: Build the Ontology
+
+In qualitative research codes emerge from the data; let us create the initial ones from a first reading. Create `ontology.syno`:
+
+<!-- file: ontology.syno -->
+```synesis
+ONTOLOGY technological_distrust
+    definition: Fear about the effectiveness of remote medical care, such as doubting a diagnosis without physical examination.
+    group: barriers
+END ONTOLOGY
+
+ONTOLOGY lack_of_infrastructure
+    definition: Missing or precarious internet, equipment or power that makes use unfeasible.
+    group: barriers
+END ONTOLOGY
+
+ONTOLOGY preference_for_in_person_contact
+    definition: Valuing face-to-face meetings, linking quality of care to physical presence.
+    group: barriers
+END ONTOLOGY
+
+ONTOLOGY low_digital_literacy
+    definition: Difficulty with digital technologies, creating dependence on outside help.
+    group: barriers
+END ONTOLOGY
+
+ONTOLOGY urgent_need
+    definition: Emergency or lack of an in-person alternative that drives acceptance.
+    group: facilitators
+END ONTOLOGY
+
+ONTOLOGY community_support
+    definition: Help from relatives, neighbours or health agents that mediates access.
+    group: facilitators
+END ONTOLOGY
+
+ONTOLOGY telemedicine_adoption
+    definition: Patient's willingness to use remote medical services.
+    group: outcomes
+END ONTOLOGY
+
+ONTOLOGY access_to_telemedicine
+    definition: Concrete capacity to connect and use the remote service.
+    group: outcomes
+END ONTOLOGY
+
+ONTOLOGY telemedicine_use
+    definition: Actual use of remote consultations, autonomous or mediated.
+    group: outcomes
+END ONTOLOGY
+
+ONTOLOGY telemedicine_acceptance
+    definition: Receptiveness to telemedicine after experience or perceived need.
+    group: outcomes
+END ONTOLOGY
+
+ONTOLOGY in_depth_diagnosis
+    definition: Diagnosis requiring physical examination, named as a context unsuited to telemedicine.
+    group: outcomes
+END ONTOLOGY
+```
+
+:::{.callout-note}
+## Checkpoint ✓
+You have 11 concepts in 3 groups (`barriers`, `facilitators`, `outcomes`). As you analyse the data you may add others.
+:::
+
+---
+
+## Step 4: Annotate the Interviews
+
+Now the main part. Create `annotations.syn` with the first interview:
+
+<!-- file: annotations.syn -->
+```synesis
+SOURCE @interview01
+    speaker: User
+END SOURCE
+
+ITEM @interview01
+    quote: "I don't trust this business of talking to a doctor through a computer. How will they know what I have without examining me?"
+    memo: Distrust of diagnostic effectiveness. The participant links quality of care to physical presence.
+    chain: technological_distrust -> INHIBITS -> telemedicine_adoption
+    context: Said this at the very beginning, before any direct question about telemedicine.
+END ITEM
+
+ITEM @interview01
+    quote: "The internet drops all the time here. Sometimes it's out for two or three days. How am I going to book an appointment?"
+    memo: Precarious infrastructure appears as a concrete barrier.
+    chain: lack_of_infrastructure -> INHIBITS -> access_to_telemedicine
+    context: Raised their voice, showing irritation.
+END ITEM
+```
+
+**Now it's your turn!** Add the second interview to the same file:
+
+<!-- file: interview02 -->
+```synesis
+SOURCE @interview02
+    speaker: User
+END SOURCE
+
+ITEM @interview02
+    quote: "I tried it once when my granddaughter helped me. It was good, I sorted it out without leaving home. But on my own I can't, I need someone to work the phone."
+    memo: Positive experience when mediated by a relative. Recognizes the benefit but depends on informal support.
+    chain: community_support -> MEDIATES -> low_digital_literacy -> INHIBITS -> telemedicine_use
+    context: Mentioned the granddaughter with gratitude and admitted the dependence with resignation.
+END ITEM
+
+ITEM @interview02
+    quote: "When my son was in hospital in the capital, our doctor talked to theirs by video. It was a blessing, she explained the case to me properly."
+    memo: Successful use between professionals, as continuity of care in a critical situation.
+    chain: urgent_need -> FAVORS -> telemedicine_acceptance
+END ITEM
+```
+
+:::{.callout-tip}
+## Researcher's Tip
+The `context` field captures what the transcript alone loses. It is valuable in interpretation, and being optional it never forces you to invent what was not observed.
+:::
+
+And the third, with the professional perspective:
+
+<!-- file: interview03 -->
+```synesis
+SOURCE @interview03
+    speaker: Professional
+END SOURCE
+
+ITEM @interview03
+    quote: "Patients do struggle, but it's more the internet than unwillingness. When it works, they like it."
+    memo: The professional points to infrastructure, not cultural resistance, as the main barrier.
+    chain: lack_of_infrastructure -> INHIBITS -> telemedicine_use
+    context: Visible frustration when mentioning the internet.
+END ITEM
+
+ITEM @interview03
+    quote: "I prefer in person when I can, because I see things that don't show on screen. But for follow-ups and quick questions, telemedicine is perfect."
+    memo: Distinguishes suitable and unsuitable contexts of use. Not rejection, but situated use.
+    chain: preference_for_in_person_contact -> ENABLES -> in_depth_diagnosis
+    context: Pragmatic tone, weighing pros and cons.
+END ITEM
+```
+
+---
+
+## Step 5: Create the Project File
+
+Create `analysis.synp` to connect everything:
+
+<!-- file: analysis.synp -->
+```synesis
+PROJECT rural_telemedicine_analysis
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ONTOLOGY "ontology.syno"
+    INCLUDE ANNOTATIONS "annotations.syn"
+
+    METADATA
+        version: 1.0
+        author: Research team
+        created: 2026-01-15
+    END METADATA
+
+    DESCRIPTION
+    Thematic analysis of barriers and facilitators to
+    telemedicine adoption in rural communities (fictitious data).
+    END DESCRIPTION
+
+    QUESTIONS
+        Q1: Which barriers to using telemedicine do interviewees report?
+        Q2: What favors acceptance?
+    END QUESTIONS
+END PROJECT
+```
+
+Note the indentation: the text lines of `DESCRIPTION` sit at the same level as the word `DESCRIPTION`.
+
+---
+
+## Step 6: Compile and Analyse
+
+```bash
+synesis compile analysis.synp --stats
+```
+
+```text
+Compilation Summary:
+  Sources        3
+  Items          6
+  Model entries  11  (11 concepts)
+  Active codes   11
+  Chains         6
+```
+
+Export the results:
+
+```bash
+synesis compile analysis.synp --json results/analysis.json --csv results/csv --xls results/analysis.xlsx
+```
+
+```text
+results/
+├── analysis.json
+├── analysis.xlsx
+└── csv/
+    ├── sources.csv
+    ├── items.csv
+    ├── ontologies.csv
+    └── chains.csv
+```
+
+### Analysis in Excel
+
+Open `analysis.xlsx`. It has the sheets `sources`, `items`, `ontologies` and `chains`. The `chains` sheet has one row per relation, with the source and its location. An excerpt:
+
+| bibref | from_code | relation | to_code |
+|---|---|---|---|
+| `@interview01` | technological_distrust | INHIBITS | telemedicine_adoption |
+| `@interview01` | lack_of_infrastructure | INHIBITS | access_to_telemedicine |
+| `@interview02` | community_support | MEDIATES | low_digital_literacy |
+| `@interview02` | low_digital_literacy | INHIBITS | telemedicine_use |
+| `@interview03` | lack_of_infrastructure | INHIBITS | telemedicine_use |
+
+With a pivot table you count relations, cross concepts with the type of speaker and go back to the excerpt behind each row.
+
+:::{.callout-tip}
+## Analytical Insight
+`lack_of_infrastructure` appears in the speech of a user **and** of the professional. That suggests investigating the barrier as concrete and systemic, not just as "cultural resistance". Three interviews raise the hypothesis; they do not demonstrate it.
+:::
+
+---
+
+## Step 7: Refine the Analysis (Iterative Process)
+
+After seeing the first patterns, go back to the data.
+
+### 7.1 Add New Codes
+
+Add to the ontology:
 
 ```synesis
-SOURCE @interview_maria
-
-    ITEM
-        quote: "I even wanted to use it, but the cost is too high for my budget."
-        note: Participant expresses desire for adoption limited by economic barrier
-        chain: Cost -> INHIBITS -> Adoption
-    END
-
-END
+ONTOLOGY perceived_digital_exclusion
+    definition: Feeling left out for lack of access to or command of digital technologies.
+    group: barriers
+END ONTOLOGY
 ```
 
-What each part means:
+### 7.2 Refine Existing Codes
 
-- **SOURCE**: indicates where the material comes from (an interview, a document, an article)
-- **ITEM**: is a unit of analysis — an excerpt you consider relevant
-- **quote**: the literal excerpt from the source
-- **note**: your interpretation or reflection about the excerpt
-- **chain**: the relationship you identified between concepts
+If a code is ambiguous, split it into two with distinct definitions. If two codes are the same concept, consolidate them (see [`ROLE USE`](../reference/organizing_model.qmd)).
 
-### Building relationships
+### 7.3 Annotate More and Recompile
 
-The notation `Cost -> INHIBITS -> Adoption` means: "Cost INHIBITS Adoption". This way of recording allows you to gradually build a map of relationships emerging from your data.
+Return to the interviews, annotate passages you missed on the first reading and compile again. A code still without a definition shows in a summary warning; to see every occurrence:
 
-You can chain multiple relationships:
-
-```synesis
-chain: Lack of Information -> GENERATES -> Distrust -> INHIBITS -> Adoption
-```
-
-This records a sequence: lack of information generates distrust, which in turn inhibits adoption.
-
----
-
-## Basic components
-
-### 1. Sources (SOURCE)
-
-Each source you analyze receives a unique identifier, connected to your bibliographic references:
-
-```synesis
-SOURCE @silva2023
-    ...
-END
-```
-
-The `@silva2023` corresponds to an entry in your references file (BibTeX format, used by managers like Zotero and Mendeley).
-
-### 2. Analysis items (ITEM)
-
-Within each source, you record relevant excerpts:
-
-```synesis
-ITEM
-    quote: "The literal text extracted from the source"
-    note: Your interpretation or analytical comment
-    code: Concept A, Concept B
-    chain: Concept A -> RELATION -> Concept B
-END
-```
-
-You can have as many items as you need in each source.
-
-### 3. Conceptual vocabulary (ONTOLOGY)
-
-To maintain consistency, you define your main concepts:
-
-```synesis
-ONTOLOGY Cost
-    topic: Economic Factors
-    description: Financial expense associated with technology acquisition or use
-END
-
-ONTOLOGY Adoption
-    topic: Behavior
-    description: Decision to incorporate a technology into daily life
-END
-```
-
-This creates a living glossary for your project, helping maintain clear and consistent definitions.
-
----
-
-## Types of relationships
-
-Relationships between concepts depend on your field of study. Some common examples:
-
-| Relationship | Meaning | Example |
-|---------|-------------|---------|
-| INFLUENCES | One factor affects another | Income -> INFLUENCES -> Access |
-| GENERATES | One factor produces another | Misinformation -> GENERATES -> Fear |
-| INHIBITS | One factor hinders another | Bureaucracy -> INHIBITS -> Participation |
-| ENABLES | One factor allows another | Education -> ENABLES -> Autonomy |
-| DEPENDS_ON | One factor requires another | Trust -> DEPENDS_ON -> Transparency |
-
-You define which relationships make sense for your research in the template file.
-
----
-
-## Benefits for your research
-
-### Traceability
-
-Each interpretation is connected to the original excerpt. You (or another researcher) can always go back to the source to verify the context.
-
-### Consistency
-
-With a defined vocabulary, you avoid using "Cost", "Price" and "Economic Value" for the same concept at different moments of the analysis.
-
-### Methodological transparency
-
-Your analytical process is documented. When writing the methodology for your article or thesis, you have a clear record of how you reached your conclusions.
-
-### Portability
-
-Simple text files work on any operating system and don't depend on specific software. Your research isn't "locked" in a program.
-
-### Collaboration
-
-Colleagues can review your annotations, suggest alternative interpretations, and contribute to the project using the same conventions.
-
----
-
-## How to get started
-
-### Step 1: Organize your sources
-
-Gather your bibliographic references in a `.bib` file (exportable from Zotero, Mendeley or similar).
-
-### Step 2: Define your structure
-
-Create a basic template defining:
-- Which fields you'll use (quote, note, code, chain)
-- Which types of relationships make sense for your study
-- Which concept categories you expect to find
-
-### Step 3: Start annotating
-
-As you read your sources, record relevant excerpts with your interpretations. Don't worry about having everything perfect from the start — the process is iterative.
-
-### Step 4: Refine your vocabulary
-
-As patterns emerge, document your concepts in the ontology. Revise definitions, group related concepts, refine relationships.
-
-### Step 5: Analyze the results
-
-The Synesis compiler transforms your annotations into structured formats (spreadsheets, for example) that facilitate pattern visualization and report generation.
-
----
-
-## A complete project in miniature
-
-To visualize how the pieces fit together:
-
-```
-PROJECT: Green Technology Acceptance
-│
-├── references.bib          ← Your bibliographic references
-│
-├── template.synt            ← Your project rules
-│
-├── annotations/
-│   ├── interviews.syn      ← Interview annotations
-│   └── documents.syn       ← Document annotations
-│
-└── ontology.syno           ← Your conceptual vocabulary
-```
-
-The project file (`.synp`) connects everything:
-
-```synesis
-PROJECT green_technology_acceptance
-
-TEMPLATE "template.synt"
-INCLUDE BIBLIOGRAPHY "references.bib"
-INCLUDE ANNOTATIONS "annotations/interviews.syn"
-INCLUDE ANNOTATIONS "annotations/documents.syn"
-INCLUDE ONTOLOGY "ontology.syno"
-
-DESCRIPTION
-    Study on factors influencing the acceptance
-    of green technologies in urban communities.
-END
-
-END
+```bash
+synesis compile analysis.synp --check-codes
 ```
 
 ---
 
-## Frequently asked questions
+## Step 8: Visualize the Relations
 
-### Do I need to know how to program?
+In VS Code, with the **Synesis** extension, open `annotations.syn` and press `Ctrl+Alt+F` to see the relation graph of the file.
 
-No. Synesis uses a simple and readable syntax. If you can organize a document with titles and subtitles, you can use Synesis.
+For a graph that opens in the browser, or a graph database:
 
-### Can I use it with my current software?
+```bash
+pip install synesis-graph
+synesis-graph html --project analysis.synp --output results/graph.html --all
+```
 
-Yes. Synesis files are plain text, editable in any editor (Word, Google Docs, Notepad, or specialized editors). The compiler generates spreadsheets that you can open in Excel or Google Sheets.
-
-### What if I make a syntax error?
-
-The compiler indicates exactly where the problem is and suggests how to fix it. Error messages are written to be understandable, not technical.
-
-### Does Synesis replace software like NVivo or Atlas.ti?
-
-Synesis has a different purpose. While these software packages offer complete graphical interfaces, Synesis focuses on structuring and documenting the analytical process. Some researchers use both: Synesis for structured recording and other software for visualization.
-
-### Can I use it for any type of qualitative research?
-
-Synesis is flexible. The template allows adapting the structure for different methodological approaches: content analysis, grounded theory, thematic analysis, among others.
+See [synesis-graph](../reference/synesis_graph.qmd) and [How to export to Neo4j](../howto/exportar_neo4j.qmd).
 
 ---
 
-## Next steps
+## 🎉 Congratulations!
 
-1. **Read the Reference Guide** to learn all available commands
-2. **Experiment with a small project** — a few interviews or documents
-3. **Adapt the template** to your research's specific needs
-4. **Share your questions** with the user community
+You completed a structured qualitative analysis with Synesis. You:
+
+- ✅ Prepared the sources
+- ✅ Created a template fitted to qualitative research
+- ✅ Defined an ontology of concepts
+- ✅ Annotated 6 excerpts from 3 interviews with analytical memos
+- ✅ Recorded qualitative nuances
+- ✅ Declared relations between concepts, with evidence
+- ✅ Compiled, exported and learned the refinement cycle
 
 ---
 
-*Synesis was developed to make qualitative research more organized, transparent, and reproducible — without requiring advanced technical knowledge.*
+## Good Practices for Researchers
+
+### 1. Annotate Progressively
+Do not wait for data collection to end: analysis helps you adjust the interview guide.
+
+### 2. Use Memos Analytically
+The `memo` field is not for repeating the quotation. Interpret, point out contradictions, raise hypotheses, connect with theory.
+
+### 3. Document Decisions
+Record **why** you assigned a code, in definitions and memos. The template `GUIDELINES` are your protocol.
+
+### 4. Review Systematically
+Every 5 to 10 annotations, compile and look at the distribution. Is a code too generic? Does another appear only once? Is there a pattern without a name?
+
+### 5. Validate with Peers
+Share the `.syno` and the template. Ask whether definitions are clear and whether there are overlaps.
+
+### 6. Protect Participants
+Use neutral keys, remove identifying data and check what goes to AI services.
+
+---
+
+## Differences Between Methodological Approaches
+
+### Grounded Theory
+- Start with no ontology (the compiler sums up codes without a concept in a single warning)
+- Let codes emerge from the data and define them afterwards
+- Use `chain` to relate categories
+- Iterate until theoretical saturation
+
+### Thematic Analysis
+- Define initial themes (deductive) or let them emerge (inductive)
+- Group concepts with a `TOPIC` field
+- Use memos to reflect on recurring themes
+
+### Content Analysis
+- A stricter template, with `ENUMERATED` and `ORDERED` fields
+- Ontology defined a priori
+- Focus on frequency, from the CSV tables
+
+### Critical Discourse Analysis
+- Use the context field extensively (prosody, hesitation, silences)
+- Record discursive strategies in memos
+- Use `chain` to make assumptions explicit
+
+---
+
+## Further Resources
+
+- [How to define an ontology](../howto/definir_ontologia.qmd)
+- [How to create and validate chains](../howto/criar_chains.qmd)
+- [AI coding (synesis-coder)](../howto/synesis_coder.qmd)
+- [Why structured annotation matters](../explanation/por_que_estrutura_importa.qmd)
+- [Language Reference](../reference/guia_referencia.qmd)
+
+---
+
+## Next Project
+
+1. **Several source types**: combine interviews, documents and observations
+2. **Longitudinal analysis**: record the collection date in a SOURCE field
+3. **Comparative analysis**: compare relations by source type
+4. **Zotero integration**: the [zotero-synesis-export](https://github.com/synesis-lang/zotero-synesis-export) plugin exports PDF highlights as `.syn`
+
+---
+
+**Methodological questions?** Open a discussion on [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions).
+
+**Happy researching!** 📚🔍✨

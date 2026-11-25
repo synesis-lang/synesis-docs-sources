@@ -15,6 +15,11 @@ A codificação qualitativa assistida por IA depende criticamente do modelo de l
 Todos os dados apresentados aqui são reais --- extraídos de um artigo científico publicado e processados pelo `synesis-coder` com os mesmos prompts e template. A anotação de referência foi revisada manualmente por um pesquisador.
 :::
 
+:::{.callout-note}
+## Registro de um experimento datado
+Esta avaliação é de abril de 2026 e usa os modelos e as versões das ferramentas disponíveis então. Ela se baseia em um único abstract e uma execução por modelo: ilustra um método de comparação e não permite generalizar sobre os modelos. No compilador atual, aspas no campo `text` não geram erro de compilação: passam a fazer parte do valor armazenado, o que continua sendo indesejável.
+:::
+
 ---
 
 # O caso de teste {#sec-caso-teste}
@@ -35,7 +40,7 @@ Antes de apresentar os resultados comparativos, é necessário contextualizar o 
 
 ## Variação não é erro
 
-A pesquisa qualitativa e, consequentemente, a busca por objetividade e rigor, envolve uma série de questões. Em primeiro lugar, é preciso considerar que o fato de haverem destaques e codificações diferenciadas **não invalida o esforço de análise qualitativa**. Um dos pontos principais, como veremos a seguir, é a transparência e a rastreabilidade dos dados. Assim como toda pesquisa --- seja ela qualitativa ou quantitativa --- requer ciclos de revisão constantes, a codificação qualitativa assistida por IA não está isenta da mesma abordagem.
+A pesquisa qualitativa e, consequentemente, a busca por objetividade e rigor, envolve uma série de questões. Em primeiro lugar, é preciso considerar que o fato de haver destaques e codificações diferenciadas **não invalida o esforço de análise qualitativa**. Um dos pontos principais, como veremos a seguir, é a transparência e a rastreabilidade dos dados. Assim como toda pesquisa --- seja ela qualitativa ou quantitativa --- requer ciclos de revisão constantes, a codificação qualitativa assistida por IA não está isenta da mesma abordagem.
 
 A análise dos itens extraídos pelos modelos revela um esforço sofisticado para traduzir o texto em cadeias de relações causais e lógicas (chains), conforme as instruções de busca por relações causais no prompt (GUIDELINES). No entanto, embora a extração capture os temas do abstract, a precisão analítica oscila. Em vários momentos, a interpretação extrapola o texto original, forçando relações de causalidade e sequenciamento onde o texto apresenta apenas correlação ou listas paralelas.
 
@@ -63,7 +68,7 @@ Isso é diretamente relevante para esta comparação: quando dois modelos atribu
 
 @shenton2004 propõe quatro critérios para fundamentar a pesquisa qualitativa, adaptados dos critérios tradicionais das ciências naturais:
 
-- **Credibilidade** (em vez de validade): quão congruentes são os achados com a realidade? Na codificação assistida por IA, isso se manifesta na **rastreabilidade** de cada chain ao texto-fonte --- nenhum dos modelos testados alucionou, o que é um indicador positivo de credibilidade.
+- **Credibilidade** (em vez de validade): quão congruentes são os achados com a realidade? Na codificação assistida por IA, isso se manifesta na **rastreabilidade** de cada chain ao texto-fonte --- nenhum dos modelos testados alucinou, o que é um indicador positivo de credibilidade.
 - **Transferibilidade** (em vez de generalização): os resultados são aplicáveis a outros contextos? A comparação com múltiplos modelos demonstra que os achados estruturais (barreiras, habilitadores, efeitos ambientais) são consistentes entre modelos, mesmo que a granularidade varie.
 - **Confiabilidade** (em vez de reprodutibilidade): o processo é explícito o suficiente para ser replicado? O uso de prompts padronizados, templates declarativos e linhas de comando documentadas garante confiabilidade processual.
 - **Confirmabilidade** (em vez de objetividade): as descobertas refletem os dados e não o viés do pesquisador? Nas palavras de Shenton, "as crenças que sustentam as decisões tomadas e os métodos adotados devem ser reconhecidas no relatório de pesquisa" [@shenton2004, p. 72]. No contexto de IA, isso se traduz na **trilha de auditoria** --- o registro de cada decisão interpretativa, que no Synesis é materializado pelo campo `note` de cada ITEM.
@@ -89,7 +94,7 @@ As diferenças quantitativas entre modelos (número de ITEMs, cobertura de chain
 
 # A anotação de referência {#sec-referencia}
 
-A anotação-padrão (`Padrão/agaton2020.syn`) foi produzida revisada manualmente e contém **12 ITEMs** com **13 cadeias causais (chains)**, organizadas em cinco eixos temáticos.
+A anotação-padrão (`Padrão/agaton2020.syn`) foi revisada manualmente e contém **12 ITEMs** com **13 cadeias causais (chains)**, organizadas em cinco eixos temáticos.
 
 :::{.callout-note}
 ## Por que 12 ITEMs?
@@ -622,7 +627,7 @@ A referência decompõe fatores paralelos em ITEMs separados --- três ITEMs par
 
 Dois modelos produziram saída com problemas de formato:
 
-- **Sonnet:** Adicionou aspas duplas (`"..."`) no campo `text`, o que pode causar erro no compilador Synesis. Também apresentou caracteres em-dash corrompidos (`ÔÇö` em vez de `---`).
+- **Sonnet:** Adicionou aspas duplas (`"..."`) no campo `text`, o que altera o valor armazenado pelo compilador. Também apresentou caracteres em-dash corrompidos (`ÔÇö` em vez de `---`).
 - **Gemma4:** Adicionou aspas simples (`'...'`) no campo `text`, inconsistente com a convenção Synesis.
 
 :::{.callout-note}
@@ -653,13 +658,13 @@ A posição do Sonnet 4.6 (5.o lugar) pode surpreender, pois suas notas analíti
 
 1. **O Opus 4.6 é o único modelo que reproduziu a estratégia analítica da referência humana.** A decomposição paralela, a seleção correta de relações, e o uso de flags `*complex*`/`*borderline*` demonstram compreensão profunda das GUIDELINES do template.
 
-2. **Nenhum modelo alucionou.** Todos os cinco modelos geraram anotações rastreáveis ao texto-fonte --- um indicador positivo da confiabilidade dos prompts do `synesis-coder`.
+2. **Nenhum modelo alucinou.** Todos os cinco modelos geraram anotações rastreáveis ao texto-fonte --- um indicador positivo da confiabilidade dos prompts do `synesis-coder`.
 
 3. **A relação CONSTRAINS vs. ENABLES é o diferencial de qualidade.** Modelos que erraram a polaridade da relação (Haiku: INFLUENCES; Gemma4: ENABLES) demonstram compreensão superficial do contexto de barreiras descrito no texto.
 
 4. **Modelos menores comprimem em vez de decompor.** A tendência a gerar 5--6 ITEMs (em vez dos 12 da referência) indica que modelos menores priorizam síntese sobre decomposição analítica --- o oposto do que as GUIDELINES instruem para fatores paralelos.
 
-5. **Formato é um critério eliminatório.** Aspas no campo `text` (Sonnet, Gemma4) podem causar erros de parsing no compilador. Para uso em produção, apenas Opus, Haiku e Qwen produziram saída diretamente compilável.
+5. **Formato é um critério eliminatório.** Aspas no campo `text` (Sonnet, Gemma4) alteram o valor armazenado e prejudicam a conferência literal contra a fonte. Apenas Opus, Haiku e Qwen produziram saída aproveitável sem ajuste de formato.
 
 ## Recomendações práticas
 

@@ -1,0 +1,279 @@
+---
+title: "Knowledge Graphs and GraphRAG"
+subtitle: "Why knowledge graphs transform qualitative research"
+---
+
+# Knowledge Graphs and GraphRAG
+
+When you export your Synesis annotations to a graph database (Neo4j or ArcadeDB, through [`synesis-graph`](../reference/synesis_graph.qmd)), you are not just "saving data in another format". You are turning **structured text into navigable knowledge** — a fundamental change in how we interact with qualitative analyses.
+
+---
+
+## What Is a Knowledge Graph?
+
+A **knowledge graph** is a representation of information where:
+
+- **Nodes** (vertices) represent **entities** (concepts, codes, annotations, sources)
+- **Edges** (relationships) represent **connections** between those entities
+- **Properties** store **attributes** of nodes and edges
+
+### The Fundamental Difference: Tables vs Graphs
+
+**Tables (CSV/Excel):**
+```
+| Code        | Frequency   |
+|-------------|-------------|
+| Cost        | 15          |
+| Adoption    | 23          |
+```
+
+You know "Cost" appears 15 times, but **not how it relates to "Adoption"**.
+
+**Graphs:**
+
+```cypher
+(Cost)-[INHIBITS {frequency: 8}]->(Adoption)
+```
+
+You know not only that they exist, but **how they connect** and **how strongly**.
+
+---
+
+## Why Graphs Matter for Qualitative Research
+
+### 1. Relations Are First-class Citizens
+
+In tables, relations are implicit (you join them mentally or in SQL). In graphs, relations are explicit and navigable.
+
+**Practical example:**
+
+You want to know: *"Which codes are affected by 'Lack of Infrastructure'?"*
+
+**In CSV** you need to:
+
+1. Open `chains.csv`
+2. Filter rows where `from_code = "Lack_of_Infrastructure"`
+3. List the unique values of `to_code`
+4. Check transitive chains by hand
+
+**In a graph:**
+```cypher
+MATCH (origin {name: "Lack_of_Infrastructure"})-[r:RELATES_TO*1..3]->(affected)
+RETURN DISTINCT affected.name AS affected_code, length(r) AS distance
+ORDER BY distance
+```
+
+**Result:** the database walks direct and indirect connections (up to 3 hops). An indirect path, assembled from chains of different sources, is a **hypothesis to examine**: no single source need have asserted the whole path.
+
+### 2. Network Analysis Reveals Hidden Patterns
+
+Network metrics that are trivial in graphs (and nearly impossible in tables):
+
+| Metric | What It Reveals | Use in Research |
+|---------|--------------|----------------------|
+| **Degree centrality** | How many connections a node has | The most connected codes — candidates for central concepts in the theory |
+| **Betweenness centrality** | How often a node lies on paths between other nodes | Codes that "bridge" thematic clusters |
+| **PageRank** | Importance based on important connections | Codes connected not only widely, but to other important codes |
+| **Community detection** | Densely connected groups of nodes | Thematic clusters emerging from the data (themes, subdimensions) |
+
+**Practical insight:**
+
+In an analysis of resistance to technology you might find:
+
+- **High degree**: "Trust" has 23 connections → central concept
+- **High betweenness**: "Digital Literacy" links the "Technology" and "Social Exclusion" clusters → important mediator
+- **Same community**: "Cost", "Infrastructure" and "Access" form a cohesive cluster → "Structural Barriers" dimension
+
+These patterns are **emergent** — you did not program them; they emerge from the structure of your annotations.
+
+---
+
+## GraphRAG: Grounding AI with Graphs
+
+**RAG** (Retrieval-Augmented Generation) is a technique in which LLMs (such as Claude or GPT) look up information in databases before answering. **GraphRAG** uses graphs instead of plain text.
+
+### Why GraphRAG Is More Powerful
+
+**Traditional (vector) RAG:**
+
+- Retrieves semantically similar texts
+- Works well for document retrieval
+- **Limitation**: does not understand structural relations
+
+**GraphRAG:**
+
+- Retrieves explicit relations between concepts
+- Can follow reasoning paths (A → B → C)
+- **Advantage**: auditable, traceable answers
+
+### A Concrete Example
+
+**Question to Claude Desktop (with MCP connected to the graph):**
+
+> "Why does 'Technological Distrust' hinder telemedicine adoption?"
+
+**Answer with GraphRAG:**
+
+> "According to your project's knowledge graph:
+>
+> 1. 'Technological Distrust' appears in 8 annotations
+> 2. Of these, 6 establish the relation: `Distrust -> INHIBITS -> Adoption`
+> 3. The most representative annotation is `@interview_mrs_maria, item 1`:
+>    - Quotation: *"How will they know what I have without touching me?"*
+>    - Memo: *"The participant links diagnostic quality to physical presence"*
+>
+> 'Technological Distrust' also co-occurs frequently with:
+> - 'Preference for In-person Contact' (5 times)
+> - 'Lack of Information' (3 times)
+>
+> You may want to explore whether distrust softens when local health agents mediate (see the chain in `@interview_mr_joao, item 3`)."
+
+**Notice:**
+
+- The answer is traceable (it cites specific sources)
+- It includes frequencies (quantification over qualitative data)
+- It suggests further analyses based on graph patterns
+- **You can check every claim** by running the query and reading the source
+
+Purely vector RAG returns similar passages without the relational structure that allows these counts and paths. The two complement each other: see [Vector Embeddings and GraphRAG](graphrag_embeddings_vetoriais.qmd). An assistant's answer can still be wrong; the advantage is that each claim can be checked in the graph and in the source text.
+
+---
+
+## Architecture of a Synesis Knowledge Graph
+
+When a project is exported, the graph structure is:
+
+```text
+(Item)-[:FROM_SOURCE]->(Source)
+(Item)-[:MENTIONS]->(Concept)
+(Concept)-[:RELATES_TO {type: "INHIBITS"}]->(Concept)
+(Concept)-[:GROUPED_BY]->(Theme)
+(Concept)-[:KIND_OF]->(Concept)        # with ROLE HIERARCHY
+```
+
+### Nodes
+
+| Type | Content | Example |
+|------|------------------------|---------|
+| `Source` | bibliographic reference and SOURCE fields | interview, article, document |
+| `Item` | quotation, interpretation, ITEM fields and file location | coded unit |
+| Concept (label = field name) | name, definition and ontology fields | `:Code`, `:Factor`, `:Second_order` |
+| Taxonomy (label = field name) | groupings such as `TOPIC` | `:Topic`, `:Group` |
+| `ProjectContext` | project description, template and GUIDELINES | one per graph |
+
+### Edges
+
+| Type | Meaning |
+|------|-------------|
+| `FROM_SOURCE` | the item comes from that source |
+| `MENTIONS` | the item mentions the concept |
+| `RELATES_TO` | relation stated in a chain, with its type |
+| `GROUPED_BY`, `QUALIFIED_BY`, `BELONGS_TO` | classification of the concept |
+| `IS_LINKED_TO` | coupling between categories |
+| `KIND_OF`, `PART_OF`, `INSTANCE_OF` | hierarchy adopted in the `.syno` |
+
+### Dynamic, Not Fixed
+
+The graph structure is **derived from the template (`.synt`)**. Add an ITEM field `FIELD context TYPE TEXT` and it becomes a property of the `Item` nodes. That is why the same tool serves any domain.
+
+---
+
+## When Graphs Are NOT the Answer
+
+Graphs are no panacea. **Do not use a graph database if:**
+
+1. **Your focus is pure quantitative analysis** (frequencies, descriptive statistics)
+   - Use CSV + R/Python. Simpler and faster.
+
+2. **You have few explicit relations** (isolated codes, no chains)
+   - Excel is enough. A graph adds needless complexity.
+
+3. **You need complex longitudinal temporal analyses**
+   - Temporal graphs exist, but time-series databases (InfluxDB, TimescaleDB) are more efficient.
+
+4. **You have no Cypher background**
+   - There is a learning curve. If you only want it to "look nice", use CSV visualizers (RAWGraphs, Flourish).
+
+**Use a graph database when:**
+
+- You have many chains (more than 20% of annotations)
+- You want network metrics (centrality, communities)
+- You will integrate with AI systems (GraphRAG, MCP)
+- You want to publish interactive, navigable visualizations
+
+---
+
+## Graph Data Science (GDS): Beyond Queries
+
+Neo4j Graph Data Science is a library of optimized graph algorithms. A few examples:
+
+### Path Finding
+
+```cypher
+// What is the shortest path between "Cost" and "Satisfaction"?
+MATCH path = shortestPath((a {name:"Cost"})-[:RELATES_TO*]-(b {name:"Satisfaction"}))
+RETURN path
+```
+
+**Insight:** if there is a direct or indirect path, you can trace it conceptually.
+
+### Node Similarity
+
+```cypher
+// Which concepts are structurally similar to "Trust"?
+// (requires the GDS plugin and a projection called 'myGraph')
+CALL gds.nodeSimilarity.stream('myGraph')
+YIELD node1, node2, similarity
+WHERE gds.util.asNode(node1).name = "Trust"
+RETURN gds.util.asNode(node2).name AS similar_code, similarity
+ORDER BY similarity DESC
+LIMIT 10
+```
+
+**Insight:** codes with similar connection patterns may be candidates for merging or related categories.
+
+### Gaps: Co-occurrence Without a Stated Relation
+
+```cypher
+// Pairs that appear together in many items but were never linked by a chain
+MATCH (i:Item)-[:MENTIONS]->(a), (i)-[:MENTIONS]->(b)
+WHERE a.name < b.name AND NOT (a)-[:RELATES_TO]-(b)
+RETURN a.name, b.name, count(DISTINCT i) AS together
+ORDER BY together DESC
+LIMIT 20
+```
+
+**Use:** point to where rereading pays off. Appearing together does not mean a relation exists; the decision goes back to the text.
+
+---
+
+## The Future: Multimodal Graphs
+
+Synesis currently works with text. The graph architecture allows future extensions:
+
+- **Images**: `Image` nodes connected to `Item` (annotations on images in visual research)
+- **Audio**: `AudioSegment` nodes with timestamps (oral interview analysis)
+- **Video**: `VideoFrame` nodes (analysis of recorded interactions)
+- **Geo**: `lat`, `lon` properties on `Source` for spatial analysis
+
+The graph structure accommodates these naturally — new node types are added while relations stay consistent.
+
+---
+
+## Learn More
+
+### Graph Concepts
+- [Neo4j Graph Academy](https://graphacademy.neo4j.com/) — free Cypher courses
+- [The Practitioner's Guide to Graph Data](https://neo4j.com/graph-data-book/) — free book
+
+### GraphRAG
+- [Model Context Protocol](https://modelcontextprotocol.io/) — connecting assistants to databases
+- [Microsoft GraphRAG](https://www.microsoft.com/en-us/research/project/graphrag/) — original research
+
+### How to Export (Practice)
+- [How to export to Neo4j](../howto/exportar_neo4j.qmd) — hands-on guide
+- [synesis-graph](../reference/synesis_graph.qmd) — also ArcadeDB (no server) and HTML
+
+---
+
+**Closing thought:** graphs do not replace analytical thinking — they **amplify** patterns already implicit in your data. Just as Synesis does not replace interpretation (it makes it traceable), a graph does not replace analysis (it makes it navigable).

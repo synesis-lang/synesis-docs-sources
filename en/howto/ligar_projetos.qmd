@@ -1,0 +1,334 @@
+---
+title: "How to Link Independent Projects"
+subtitle: "Triangulating heterogeneous corpora with IDENTIFIES and REFERS TO"
+---
+
+# How to Link Independent Projects
+
+This guide shows how to connect two or more Synesis projects that describe **the same entities from different sources** — CVs and articles, interviews and institutional documents, profiles and publications.
+
+**Use this guide if you:**
+
+- Have separate corpora referring to the same people, organizations or processes
+- Want to cross those corpora without merging them into one giant project
+- Need each corpus to keep compiling fast and being edited independently
+- Want to share a single conceptual vocabulary among several projects
+
+:::{.callout-important}
+## What this guide does **not** do
+Linking does not merge projects or create a "master project". Each `.synp` remains an autonomous compilation unit. The link is resolved in an explicit command-line step and is never loaded by the editor.
+:::
+
+---
+
+# The Problem {#sec-problema}
+
+Imagine a study with two corpora:
+
+- **`lattes.synp`** — researchers' CVs, one SOURCE per researcher
+- **`abstracts.synp`** — scientific articles, one SOURCE per article
+
+Each article has an author who also has a CV. You want to ask: *which concepts appear in the articles of researchers who declared a given line of research?*
+
+Three bad paths and why they were discarded:
+
+| Attempt | Why it fails |
+|---|---|
+| Put everything in one `.synp` | The editor recompiles the whole study on every save. |
+| Reconcile by identity (`A is B`) | Only models 1:1. Many articles → one researcher is **not** identity, it is a relation. |
+| Have the central corpus name each peripheral one | Adding a third corpus would require editing the central template. |
+
+The adopted solution is the **C/C++ linker** model: each project compiles in isolation and exposes its external references; a link step resolves the references between them.
+
+---
+
+# Step 1: Declare Who Owns the Entity {#sec-identifies}
+
+Choose the corpus that **owns** the entity — the one where each value identifies a single record. Here, the CVs: each researcher has exactly one.
+
+In `lattes.synt`, mark the identifying field with `IDENTIFIES`:
+
+```synesis
+FIELD lattes_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Lattes identifier of the researcher
+    IDENTIFIES researcher
+END FIELD
+```
+
+`researcher` is the **entity label**, a name you choose. The other projects refer to the entity by it, without ever naming `lattes.synp`.
+
+:::{.callout-note}
+## `IDENTIFIES` is a primary key
+Each value must correspond to a single SOURCE. Two SOURCEs with the same value produce [error E077](../reference/guia_erros.qmd#sec-e077) already in the isolated compilation of the project.
+:::
+
+## When the Identifier Lives in the `.bib`
+
+Identifiers such as ORCID or a registration number are usually source metadata, not something extracted from the text. Declare the origin with `ON BIBLIOGRAPHY`:
+
+```synesis
+SOURCE FIELDS
+    REQUIRED lattes_id ON BIBLIOGRAPHY
+END SOURCE FIELDS
+```
+
+```bibtex
+@misc{cv_maria,
+    author    = {Silva, Maria},
+    title     = {Lattes CV},
+    year      = {2026},
+    lattes_id = {ID-0001}
+}
+```
+
+For structured TOML records, the equivalent is [`ON DATASET`](../reference/guia_referencia.qmd).
+
+---
+
+# Step 2: Point to the Entity {#sec-refers-to}
+
+In the templates of the peripheral corpora, declare the field that points to the entity with `REFERS TO`:
+
+```synesis
+# abstracts.synt
+FIELD author_id TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Lattes identifier of the article's author
+    REFERS TO researcher
+END FIELD
+```
+
+No mention of `lattes.synp`, no file path, no compilation order: the peripheral project only knows the label `researcher`. That is why adding a fourth corpus requires touching no existing template.
+
+:::{.callout-tip}
+## Free cardinality
+`REFERS TO` may repeat. Several articles pointing to the same researcher (**n:1**) is the normal case. A multivalued field, such as an article with several authors, creates one edge per value (**n:n**).
+:::
+
+## The Two Modifiers Side by Side
+
+| Modifier | Role | Creates a graph node? | Value repeats? |
+|---|---|:---:|:---:|
+| `IDENTIFIES <entity>` | Primary key | Yes | No |
+| `REFERS TO <entity>` | Foreign key | No | Yes |
+
+Both apply only to `SCOPE SOURCE` fields ([E078](../reference/guia_erros.qmd#sec-e078)).
+
+---
+
+# Step 3: Share the Ontology (Optional) {#sec-shared}
+
+So that the corpora use the **same vocabulary**, put the ontology in a common folder and declare it with `INCLUDE SHARED ONTOLOGY`:
+
+```text
+study/
+├── shared/
+│   └── vocabulary.syno
+├── lattes/
+│   ├── lattes.synp
+│   └── lattes.synt
+└── abstracts/
+    ├── abstracts.synp
+    └── abstracts.synt
+```
+
+```synesis
+PROJECT Lattes
+    TEMPLATE "lattes.synt"
+    INCLUDE BIBLIOGRAPHY "cvs.bib"
+    INCLUDE ANNOTATIONS "annotations/*.syn"
+    INCLUDE SHARED ONTOLOGY "../shared/vocabulary.syno"
+END PROJECT
+```
+
+Each member lives in **its own folder**: a `.syn` present in a project folder and not included by it is an error.
+
+The word `SHARED` authorizes a target **outside** the project folder. Without it, `../shared/...` would be refused ([E075](../reference/guia_erros.qmd#sec-e075)). It also works with network shares and other drives:
+
+```synesis
+PROJECT Example
+    TEMPLATE "t.synt"
+    INCLUDE SHARED ONTOLOGY "\\server\team\vocabulary.syno"
+    INCLUDE SHARED ONTOLOGY "Z:/study/vocabulary.syno"
+END PROJECT
+```
+
+:::{.callout-warning}
+## `SHARED` applies to ONTOLOGY only
+With any other kind the error is [E084](../reference/guia_erros.qmd#sec-e084).
+:::
+
+---
+
+# Step 4: Compile in Isolation {#sec-isolado}
+
+Each project still compiles on its own:
+
+```bash
+synesis compile abstracts/abstracts.synp
+```
+
+```text
+abstracts.synt:10:1  [INFO]  External reference `researcher` (REFERS TO in author_id) — not materialized in isolation
+```
+
+It is a **notice**, neither error nor warning: an unresolved external reference in isolated compilation is expected.
+
+---
+
+# Step 5: Link the Projects {#sec-link}
+
+Pass two or more projects to the same command:
+
+```bash
+synesis compile lattes/lattes.synp abstracts/abstracts.synp
+```
+
+```text
+SYNESIS v0.16.0 — Linking projects.
+  compiling lattes …
+  compiling abstracts …
+
+✓ 2 projects linked. 1 edge(s) resolved ['researcher'].
+⚠ 2 orphan REFERS TO value(s) (no matching IDENTIFIES).
+
+Links between projects:
+
+              ────IDENTIFIES────  ─────REFERS TO─────
+  ENTITY      PROJECT  FIELD      PROJECT    FIELD
+  researcher  lattes   lattes_id  abstracts  author_id
+
+Link resolution:
+
+  abstracts (author_id)  ->  researcher     1 resolved    2 orphans  (33%)
+```
+
+What happened:
+
+1. Each member was compiled **in isolation**, with full validation (an error in any of them aborts the link)
+2. Each `REFERS TO researcher` was compared with `IDENTIFIES researcher`
+3. Each match became an edge of the aggregate
+
+The two tables help diagnosis: the first shows **what the templates declare**; the second, **how much was resolved**. A project with no sources yet shows as awaiting data collection.
+
+## Export the Aggregate
+
+```bash
+synesis compile lattes/lattes.synp abstracts/abstracts.synp \
+  --json study.json --csv out/ --xls workbooks/
+```
+
+| Option | Result |
+|---|---|
+| `--json` | aggregate in schema 3.1: `kind: "link"`, `members`, `entity_owners`, `links` (edges and orphans) |
+| `--csv` | `links.csv` with edges and orphans |
+| `--xls` | a **folder**: one `.xlsx` per member plus `links.xlsx` |
+| `--stats` | per-member and aggregate statistics |
+| `--alpaca`, `--okf` | no exporter for the aggregate: the compiler warns |
+
+`links.csv`:
+
+```text
+entity,value,from_member,from_bibref,to_member,to_bibref
+researcher,ID-0001,abstracts,abstracts:@article_silva2024,lattes,lattes:@cv_maria
+researcher,id-0001,abstracts,,(orphan),
+researcher,ID-9999,abstracts,,(orphan),
+```
+
+## Aggregate Statistics
+
+```bash
+synesis compile lattes/lattes.synp abstracts/abstracts.synp --stats
+```
+
+```text
+Per-member statistics:
+
+  PROJECT    SOURCES  ITEMS  CHAINS
+  lattes           1      1       0
+  abstracts        3      3       0
+  ─────────  ───────  ─────  ──────
+  TOTAL            4      4       0
+
+Shared organizing model:
+
+  1 concepts, identical in the 2 projects  (INCLUDE SHARED ONTOLOGY)
+```
+
+A shared ontology is counted once, not added up per member.
+
+---
+
+# Understanding the Results {#sec-resultados}
+
+## Qualified Bibrefs
+
+In the aggregate each bibref is prefixed with the alias of its project (`lattes:@cv_maria`). Two corpora may hold the same `.bib` key without being confused.
+
+## Orphan References
+
+A `REFERS TO` value without a matching `IDENTIFIES` becomes a **warning** ([W083](../reference/guia_erros.qmd#sec-w083)):
+
+```text
+<link>:0:0  [WARNING]  Orphan REFERS TO `ID-9999` (researcher) in abstracts
+```
+
+This is often legitimate — an article citing an author with no CV in the corpus. No node is created for an orphan.
+
+## Near Matches
+
+When the value would match **only** ignoring case:
+
+```text
+<link>:0:0  [WARNING]  Orphan REFERS TO `id-0001` (researcher) — near match `ID-0001` (differs only in case)
+```
+
+:::{.callout-important}
+## Why the compiler does not normalize on its own
+Normalizing would merge entities the source may consider distinct. The compiler **detects and suggests, but never merges**. Fix the value at the source, and the decision is recorded.
+:::
+
+---
+
+# Common Errors {#sec-erros}
+
+| Error | Cause | Fix |
+|---|---|---|
+| [E081](../reference/guia_erros.qmd#sec-e081) | two projects declare `IDENTIFIES` for the same label | only one owns it; the others use `REFERS TO` |
+| [E082](../reference/guia_erros.qmd#sec-e082) | fields of the same entity with different `TYPE` | use the same type |
+| [E079](../reference/guia_erros.qmd#sec-e079) | `ON BIBLIOGRAPHY` field missing in the `.bib` entry | add it to the entry |
+
+---
+
+# The Multi-project Graph {#sec-grafo}
+
+The database backends of `synesis-graph` turn each identity into a node:
+
+```bash
+synesis-graph arcadedb-embedded \
+  --project lattes/lattes.synp --project abstracts/abstracts.synp \
+  --database study
+```
+
+See [synesis-graph](../reference/synesis_graph.qmd#sec-multiprojeto).
+
+---
+
+# Why the Editor Never Loads the Aggregate {#sec-lsp}
+
+Linking is **exclusive to the command line**. The language server works with isolated projects; a study with several large corpora therefore edits as fast as a small project. Edges are an analysis result, produced when you compile the set.
+
+:::{.callout-note}
+## The shared ontology **is** seen by the editor
+An ontology declared with `INCLUDE SHARED ONTOLOGY` is loaded by the editor, with completion and validation, and a change in the external file triggers revalidation of the projects that include it. See [The LSP Interface](../explanation/interface_lsp.qmd).
+:::
+
+---
+
+# Next Steps {#sec-proximos}
+
+- [Language Reference](../reference/guia_referencia.qmd#sec-ligacao)
+- [Error Guide](../reference/guia_erros.qmd#sec-ligacao)
+- [Language Grammar](../reference/gramatica.qmd)
+- [Export to Neo4j](exportar_neo4j.qmd)

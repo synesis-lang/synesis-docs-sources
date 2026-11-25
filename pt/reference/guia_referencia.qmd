@@ -1,6 +1,6 @@
 # Synesis: Guia de Referência da Linguagem
 
-**Versão 1.1**
+**Linguagem 1.1 · verificado com o compilador synesis 0.16.0**
 
 ---
 
@@ -14,8 +14,8 @@ Synesis é uma Domain-Specific Language (DSL) declarativa para formalização, v
 
 - Valida sintaxe e semântica de anotações
 - Gera AST (Abstract Syntax Tree)
-- Produz formatos estruturados básicos (JSON, CSV, Excel)
-- Normaliza conceitos via templates configuráveis
+- Produz formatos estruturados: JSON, CSV, Excel, JSONL (Alpaca), bundle OKF e vocabulário SKOS
+- Valida e normaliza conceitos conforme templates configuráveis
 
 ### O que o Compilador NÃO Faz
 
@@ -24,10 +24,54 @@ Synesis é uma Domain-Specific Language (DSL) declarativa para formalização, v
 - Não gerencia interface de usuário
 - Não persiste estado entre execuções
 - Não cria a estrutura dos dados para você
+- Não julga a validade teórica das relações: confere a forma, não a leitura
 
 ### Fronteiras Rígidas
 
 O compilador processa arquivos de texto, produz artefatos estruturados e termina. Não há estado persistente, loops condicionais ou side-effects além da escrita de arquivos de saída.
+
+---
+
+## Instalação e linha de comando {#sec-cli}
+
+Requer Python 3.10 ou superior.
+
+```bash
+pip install synesis
+synesis --version
+```
+
+| Comando | O que faz |
+|---|---|
+| `synesis init` | cria um projeto mínimo na pasta atual |
+| `synesis compile <projeto.synp>…` | valida e compila; com dois ou mais projetos, faz a [ligação](#sec-ligacao) |
+| `synesis export <projeto.synp> [bloco]` | executa os blocos `EXPORT` do projeto |
+| `synesis check <arquivo>` | confere só a sintaxe de um arquivo |
+| `synesis validate-template <template.synt>` | confere a estrutura de um template |
+| `synesis help-field [TIPO]` | mostra o que um tipo de campo exige, aceita ou proíbe |
+| `synesis export-snippets` | gera snippets de editor a partir das regras da linguagem |
+
+: Comandos do compilador {.striped .hover}
+
+| Opção de `compile` | Efeito |
+|---|---|
+| `--json <arquivo>` | exporta o JSON canônico (schema 3.1) |
+| `--csv <pasta>` | exporta as tabelas CSV |
+| `--xls <arquivo>` | exporta uma planilha Excel |
+| `--alpaca <arquivo>` | exporta JSONL para ajuste fino de modelos |
+| `--okf <pasta>` | exporta um bundle OKF (experimental); a pasta deve ser nova ou vazia |
+| `--okf-generated-at <ISO>` | data gravada no OKF (omitida por padrão) |
+| `--stats` | mostra o resumo e o perfil estrutural |
+| `--check-codes` | lista cada código sem conceito na ontologia |
+| `--strict` | trata avisos como erros (liga `--check-codes`) |
+| `--force` | gera os artefatos mesmo com erros |
+| `--diagnostics-json <arquivo>` | grava todos os diagnósticos em JSON, mesmo quando há erros |
+
+: Opções de `compile` {.striped .hover}
+
+`synesis export` aceita `--check-codes`, `--force` e `--publish` (SKOS: registra os IRIs publicados).
+
+Para consultar a linguagem pelo terminal há o pacote [`synesis-help`](https://github.com/synesis-lang/synesis-help): `synesis-help lookup CHAIN`, `synesis-help search bundle`.
 
 ---
 
@@ -40,37 +84,44 @@ O compilador processa arquivos de texto, produz artefatos estruturados e termina
 | `.synp`  | Arquivo de projeto (ponto de entrada único) |
 | `.syn`   | Arquivos de anotação (SOURCE + ITEM) |
 | `.syno`  | Arquivos de ontologia (ONTOLOGY) |
-| `.synt`  | Arquivo de template (FIELD definitions) |
+| `.synt`  | Arquivo de template (definições FIELD) |
 | `.bib`   | Referências BibTeX/BibLaTeX |
+| `.toml`  | Registros de dataset (`INCLUDE DATASET`) |
+
+Os arquivos `.synr` (propostas de revisão do `synesis-coder`) não fazem parte do projeto e não entram em nenhum `INCLUDE`.
 
 ### Arquivos de Saída
 
-| Formato      | Descrição |
-|--------------|-----------|
-| JSON         | Representação serializada completa (inclui `location` em todos os nós) |
-| CSV          | Tabelas planas por tipo de bloco (inclui colunas `source_file`, `source_line`, `source_column`) |
-| Excel        | Tabelas planas como abas |
-| MS-Word      | Corpora em forma MS-Word |
-| REFI-QDA     | Formato padrão de interoperabilidade em softwares CAQDAS |
-| Diagnósticos | Relatório de erros com localização precisa |
+| Formato      | Como gerar | Descrição |
+|--------------|------------|-----------|
+| JSON         | `--json` ou `EXPORT JSON` | representação completa do projeto, com a localização dos nós |
+| CSV          | `--csv` ou `EXPORT CSV` | tabelas `sources`, `items`, `ontologies` e `chains` |
+| Excel        | `--xls` ou `EXPORT XLS` | as mesmas tabelas como abas |
+| Alpaca JSONL | `--alpaca` ou `EXPORT ALPACA` | pares `instruction`/`input`/`output` |
+| OKF          | `--okf` ou `EXPORT OKF` | pasta de Markdown legível por agentes (experimental) |
+| SKOS         | `EXPORT SKOS` | modelo organizador em Turtle |
+| Diagnósticos | `--diagnostics-json` | erros, avisos e informativos com localização |
 
-### Rastreabilidade em CSV
+### Rastreabilidade
 
-Cada linha CSV de ITEM, CHAIN ou ONTOLOGY inclui colunas de localização:
+Todas as saídas gravam caminhos **relativos à pasta do `.synp`**, com barras normais. Duas cópias do mesmo projeto produzem o mesmo resultado (o JSON só difere no horário de exportação). Um arquivo fora da pasta (`INCLUDE SHARED`) aparece com `../`.
 
-```csv
+Cada linha CSV inclui colunas de localização:
+
+```text
 bibref,from_code,relation,to_code,source_file,source_line,source_column
-ashworth2019,Gender,INFLUENCES,CCS Support,annotations/ccs.syn,367,11
+'@silva2024,Cost,INHIBITS,Trust,annotations.syn,6,5
 ```
+
+O apóstrofo antes de `@silva2024` é proposital: o compilador protege células que começam com `=`, `+`, `-` ou `@`, para que uma planilha não as execute como fórmula. Remova-o ao processar o CSV em outra ferramenta.
 
 ### Invariantes do Compilador
 
 1. Compilação determinística: mesma entrada produz mesma saída
-2. Erros reportados com arquivo, linha, coluna e contexto
-3. Compilação parcial pode emitir apenas diagnósticos e/ou AST parcial (não exporta JSON/CSV/Excel)
-4. Artefatos finais (JSON, CSV) gerados apenas mediante compilação completa
-5. Validação de referências bibliográficas é obrigatória
-6. Vocabulário controlado: todo CODE e todo conceito referenciado em CHAIN deve existir como ONTOLOGY <concept_name> (exceto se o projeto ativar explicitamente um modo exploratório).
+2. Erros reportados com arquivo, linha, coluna e contexto, em inglês
+3. Compilação com erros emite apenas diagnósticos; não exporta (salvo com `--force`)
+4. Validação de referências bibliográficas quando o projeto declara `INCLUDE BIBLIOGRAPHY`
+5. Vocabulário controlado: todo código usado em campo `CODE` ou em cadeia deve existir como `ONTOLOGY`. Um código sem conceito é um **aviso**; use `--strict` para tratá-lo como erro
 
 ---
 
@@ -80,108 +131,130 @@ O arquivo de projeto orquestra os componentes da análise e serve como ponto de 
 
 ### Sintaxe
 
-```synesis
+```text
 PROJECT project_name
 
-TEMPLATE "filename.synt"
-INCLUDE BIBLIOGRAPHY "filename.bib"
-INCLUDE ANNOTATIONS "filename.syn"
-INCLUDE ONTOLOGY "filename.syno"
+    TEMPLATE "filename.synt"
+    [INCLUDE BIBLIOGRAPHY "filename.bib"]
+    [INCLUDE ANNOTATIONS "arquivo, pasta ou padrão"]
+    [INCLUDE ONTOLOGY "arquivo, pasta ou padrão"]
+    [INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"]
+    [INCLUDE DATASET "registros/*.toml"]
 
-# Ontologia compartilhada entre projetos — alvo FORA da pasta do projeto
-[INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"]
+    [METADATA
+        version: 1.0
+        author: string
+        [created: date]
+        [modified: date]
+        [dataset: string]
+    END METADATA]
 
-# Colchetes indicam que todo o bloco METADATA é opcional
-[METADATA
-    version: 1.0
-    author: string
-    [created: date]    # Campo individual opcional
-    [modified: date]   # Campo individual opcional
-    [dataset: string]
-END METADATA]
+    [DESCRIPTION
+    Texto livre descrevendo o projeto (no mesmo recuo da palavra DESCRIPTION).
+    END DESCRIPTION]
 
-# Colchetes indicam que todo o bloco DESCRIPTION é opcional
-[DESCRIPTION
-    Texto livre descrevendo o projeto...
-END DESCRIPTION]
+    [QUESTIONS
+        Q1: Pergunta que o projeto precisa responder
+    END QUESTIONS]
+
+    [PHASE ONTOLOGY nome
+        FIELDS campo
+    END PHASE]
+
+    [EXPORT formato nome
+        OUTPUT "caminho"
+    END EXPORT]
 
 END PROJECT
 ```
 
+Os colchetes indicam partes opcionais; não fazem parte da sintaxe.
+
 ### Semântica
 
-- **PROJECT**: Palavra-chave obrigatória que inicia a definição do projeto
-- **TEMPLATE**: Referência ao arquivo `.synt` que define as regras de validação
-- **INCLUDE BIBLIOGRAPHY**: Caminho para arquivo `.bib` com referências
-- **INCLUDE ANNOTATIONS**: Caminho para arquivo(s) `.syn` com anotações
-- **INCLUDE ONTOLOGY**: Caminho para arquivo(s) `.syno` com definições ontológicas
-- **INCLUDE SHARED ONTOLOGY**: Ontologia compartilhada entre projetos, localizada **fora** da pasta do projeto
-- **METADATA**: Bloco opcional com metadados do projeto
-- **DESCRIPTION**: Bloco opcional com descrição livre do projeto
+- **PROJECT**: palavra-chave obrigatória que inicia a definição do projeto
+- **TEMPLATE**: o arquivo `.synt` que define as regras de validação (obrigatório)
+- **INCLUDE**: declara os arquivos do projeto. Nada é carregado por descoberta: o que não é declarado não entra na análise
+- **METADATA**: metadados do projeto
+- **DESCRIPTION**: descrição livre, que acompanha as exportações. As linhas de texto ficam no mesmo recuo de `DESCRIPTION`; um recuo maior é erro de sintaxe
+- **QUESTIONS**, **PHASE**, **EXPORT**: veja [O Modelo Organizador](modelo_organizador.qmd) e [Blocos EXPORT](#sec-export)
 
-Todos os caminhos são resolvidos **relativos à pasta onde está o arquivo `.synp`**. Por segurança, o compilador só lê arquivos contidos nessa pasta ou em suas subpastas — um caminho que escape produz o erro 75.
+Os itens do `PROJECT` devem estar todos no mesmo nível: ou todos recuados, ou todos na coluna 0.
+
+### INCLUDE: arquivos, pastas e padrões {#sec-include}
+
+Todos os `INCLUDE` aceitam um arquivo, uma pasta ou um padrão (curinga), e várias linhas do mesmo tipo se somam. Uma pasta é percorrida **recursivamente** pela extensão do tipo (`.bib`, `.syn`, `.syno`, `.toml`).
+
+```synesis
+PROJECT corpus
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "Sources"
+    INCLUDE BIBLIOGRAPHY "extra.bib"
+    INCLUDE ANNOTATIONS "annotations_*/*.syn"
+    INCLUDE ONTOLOGY "ontologia"
+END PROJECT
+```
+
+- Um `.syn` ou `.syno` presente na pasta do projeto e não declarado é erro ([E061](guia_erros.qmd#sec-e061), [E062](guia_erros.qmd#sec-e062)).
+- Um `.syn` ou `.syno` vazio, ou só com comentários, é válido.
+- A mesma chave em dois arquivos `.bib` (ou `.toml`) é erro ([E089](guia_erros.qmd#sec-e089)).
+
+Todos os caminhos são resolvidos **relativos à pasta do `.synp`**. Por segurança, o compilador só lê arquivos dessa pasta e de suas subpastas; um caminho que escape produz [E075](guia_erros.qmd#sec-e075).
 
 ### Ontologia compartilhada
 
 `INCLUDE SHARED ONTOLOGY` é a **única** exceção à regra de contenção. Ela permite que vários projetos de um mesmo estudo usem um único vocabulário conceitual sem duplicá-lo:
 
 ```synesis
-INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
-INCLUDE SHARED ONTOLOGY "Z:/estudo/ontologia.syno"
-INCLUDE SHARED ONTOLOGY "\\servidor\equipe\ontologia.syno"
+PROJECT membro
+    TEMPLATE "template.synt"
+    INCLUDE SHARED ONTOLOGY "../compartilhado/vocabulario.syno"
+END PROJECT
 ```
 
-A autorização mora na **declaração** — a palavra `SHARED`, versionada e auditável no `.synp` — e não na geometria do caminho. É por isso que aceita rede, outro drive ou `..`: nenhuma âncora de pasta conseguiria autorizar esses casos.
+A autorização mora na **declaração** — a palavra `SHARED`, versionada e auditável no `.synp` — e não na geometria do caminho. Por isso aceita rede (`\\servidor\...`), outro drive (`Z:/...`) ou `..`.
 
 ::: {.callout-warning}
 ## `SHARED` vale apenas para ONTOLOGY
-`INCLUDE SHARED BIBLIOGRAPHY` ou `INCLUDE SHARED ANNOTATIONS` produzem o erro 84. A exceção existe para compartilhar vocabulário conceitual; estendê-la a outros tipos abriria a contenção para casos que a motivação não pediu.
+`INCLUDE SHARED BIBLIOGRAPHY` ou `INCLUDE SHARED ANNOTATIONS` produzem o [erro E084](guia_erros.qmd#sec-e084).
 :::
-
-### Blocos QUESTIONS, PHASE e EXPORT (synesis ≥ 0.15)
-
-O `.synp` também declara as **questões de competência** (`QUESTIONS`), o **plano de produção** do modelo organizador executado pelo `synesis-coder` (`PHASE`) e os **artefatos** do projeto (`EXPORT`: JSON, CSV, XLS, ALPACA, OKF e SKOS, executados por `synesis export`; o ALPACA está na seção Exportação Alpaca). A função dos campos de ONTOLOGY é declarada no template com `ROLE`. Tudo isso está em [O Modelo Organizador](modelo_organizador.qmd).
 
 ---
 
 ## Definição de Template (.synt)
 
-O template define a estrutura e regras de validação para anotações.
+O template define a estrutura e as regras de validação das anotações.
 
 ### Cabeçalho do Template
 
 ```synesis
-TEMPLATE name 
-[version: "string"]
-[author: "string"]
+TEMPLATE qualitative_analysis version: "1.0" author: "Researcher"
 ```
+
+O cabeçalho é opcional. Quando presente, os metadados vão **na mesma linha** do nome: em linha própria, o template não compila.
 
 ### Blocos de Campos
 
-```synesis
-SOURCE FIELDS
-    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
-END SOURCE FIELDS
+Cada escopo tem no máximo um bloco, que diz quais campos se aplicam e com que rigor:
+
+```text
+SOURCE FIELDS | ITEM FIELDS | ONTOLOGY FIELDS
+    [REQUIRED campo [, campo]]
+    [OPTIONAL campo [, campo]]
+    [FORBIDDEN campo [, campo]]
+    [REQUIRED BUNDLE campo, campo [, campo]]
+    [OPTIONAL BUNDLE campo, campo [, campo]]
+    [REQUIRED | OPTIONAL campo ON BIBLIOGRAPHY]
+    [REQUIRED | OPTIONAL campo ON DATASET "caminho.no.registro"]
+END SOURCE FIELDS | END ITEM FIELDS | END ONTOLOGY FIELDS
 ```
 
-```synesis
-ITEM FIELDS
-    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
-END ITEM FIELDS
-```
-
-```synesis
-ONTOLOGY FIELDS
-    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
-END ONTOLOGY FIELDS
-```
+`ON BIBLIOGRAPHY` e `ON DATASET` valem apenas em `SOURCE FIELDS` e em cláusulas de **um único campo**.
 
 ### Exemplo Completo
 
 ```synesis
-TEMPLATE qualitative_analysis
-version: "1.0"
-author: "Researcher"
+TEMPLATE qualitative_analysis version: "1.0" author: "Researcher"
 
 # ============================================
 # CAMPOS DE SOURCE
@@ -193,7 +266,7 @@ END SOURCE FIELDS
 
 FIELD access_date TYPE DATE
     SCOPE SOURCE
-    DESCRIPTION Data de acesso a fonte
+    DESCRIPTION Data de acesso à fonte
 END FIELD
 
 # ============================================
@@ -208,12 +281,17 @@ END ITEM FIELDS
 
 FIELD quote TYPE QUOTATION
     SCOPE ITEM
-    DESCRIPTION Excerto textual extraído da fonte bibliográfica
+    DESCRIPTION Excerto textual extraído da fonte
 END FIELD
 
 FIELD note TYPE MEMO
     SCOPE ITEM
-    DESCRIPTION Memo analítico explicando a interpretação e mecanismo causal identificado
+    DESCRIPTION Memo analítico explicando a interpretação e o mecanismo causal identificado
+END FIELD
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Conceitos de que o excerto é evidência
 END FIELD
 
 FIELD chain TYPE CHAIN
@@ -245,48 +323,48 @@ END FIELD
 
 FIELD topic TYPE TOPIC
     SCOPE ONTOLOGY
-    DESCRIPTION Tópico ou domínio temático do conceito (categoria hierárquica superior dinâmica)
+    DESCRIPTION Tópico ou domínio temático do conceito
 END FIELD
 ```
+
+Todo campo definido precisa estar listado em um bloco `FIELDS` ([E042](guia_erros.qmd#sec-e042)), e todo campo listado precisa de um `FIELD` ([E039](guia_erros.qmd#sec-e039)) com o mesmo escopo ([E006](guia_erros.qmd#sec-e006)).
+
+Comentários começam com `#`. **Dentro** de um bloco `GUIDELINES` o `#` não é comentário: a linha faz parte da instrução enviada à IA.
 
 ---
 
 ## Definição de Campos (FIELD)
 
-A declaração FIELD especifica o tipo, escopo e restrições de cada campo.
+A declaração `FIELD` especifica o tipo, o escopo e as restrições de cada campo.
 
 ### Sintaxe
 
-```synesis
-FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE | DATE]
-    SCOPE [SOURCE | ITEM | ONTOLOGY]
-    [DESCRIPTION description text]
+```text
+FIELD nome TYPE tipo
+    SCOPE SOURCE | ITEM | ONTOLOGY
+    [DESCRIPTION texto de uma linha]
 
-    # Modificadores de ligação entre projetos — exclusivos de SCOPE SOURCE
-    [IDENTIFIES entity_label]    # chave primária da entidade
-    [REFERS TO entity_label]     # chave estrangeira para a entidade
-
-    # Propriedade exclusiva para TYPE CHAIN
-    [ARITY operator number] 
-    [RELATIONS
-        relation_name: description
+    [ARITY operador número]          # somente CHAIN (obrigatório)
+    [RELATIONS                       # somente CHAIN
+        NOME: descrição
     END RELATIONS]
 
-    # Propriedade exclusiva para TYPE ORDERED ou ENUMERATED
-    [VALUES
-        [index] value_name: description  # Para ORDERED
-        value_name: description          # Para ENUMERATED
+    [VALUES                          # somente ORDERED e ENUMERATED (obrigatório)
+        [índice] valor: descrição    # ORDERED: com [índice]
+        valor: descrição             # ENUMERATED: sem índice
     END VALUES]
 
-    # Propriedade exclusiva para TYPE SCALE
-    [FORMAT [min..max]]
+    [FORMAT [mín..máx]]              # somente SCALE (obrigatório)
 
-    # Disponível para qualquer tipo — instrução para agentes de IA
-    [GUIDELINES
-        Texto livre com instruções de preenchimento para o anotador ou agente de IA.
-        Múltiplas linhas são permitidas. Recuo é ignorado.
+    [IDENTIFIES entidade]            # somente SCOPE SOURCE
+    [REFERS TO entidade]             # somente SCOPE SOURCE
+
+    [ROLE família [espécie]]         # somente SCOPE ONTOLOGY
+
+    [CONTEXT FROM DATASET "seção"]   # qualquer tipo
+    [GUIDELINES                      # qualquer tipo
+        Instruções de preenchimento.
     END GUIDELINES]
-
 END FIELD
 ```
 
@@ -308,11 +386,11 @@ FIELD aspect TYPE ORDERED
     SCOPE ONTOLOGY
     DESCRIPTION Aspecto modal de Dooyeweerd
     VALUES
-        1 quantitative: Aspecto numérico
-        2 spatial: Aspecto espacial
-        3 kinematic: Aspecto cinético
-        4 physical: Aspecto físico
-        5 biotic: Aspecto biótico
+        [1] quantitative: Aspecto numérico
+        [2] spatial: Aspecto espacial
+        [3] kinematic: Aspecto cinético
+        [4] physical: Aspecto físico
+        [5] biotic: Aspecto biótico
     END VALUES
 END FIELD
 
@@ -346,39 +424,30 @@ END FIELD
 
 ### Bloco GUIDELINES
 
-O bloco `GUIDELINES` é um especificador opcional disponível em qualquer definição `FIELD`. Seu conteúdo é texto livre com instruções precisas sobre como o campo deve ser preenchido — destinado a agentes de IA ou anotadores humanos.
+`GUIDELINES` é um especificador opcional, aceito em qualquer `FIELD`. Seu conteúdo é texto livre com instruções sobre como o campo deve ser preenchido, destinado a agentes de IA ou anotadores humanos. `DESCRIPTION` diz o que o campo é; `GUIDELINES` diz como preenchê-lo bem.
 
 #### Propósito
 
-`GUIDELINES` transforma o template de um esquema de dados em um **playbook executável**: em vez de instruções genéricas fornecidas separadamente à IA, cada campo carrega suas próprias regras de extração. Isso permite:
+`GUIDELINES` transforma o template de um esquema de dados em um **protocolo de codificação**:
 
-- **Prompt atômico por campo**: A IA recebe instruções específicas para cada entidade, reduzindo ambiguidade
-- **Rastreabilidade de decisões**: As regras de extração estão codificadas no template, junto à estrutura, versionadas e auditáveis
-- **Ciclo de feedback estruturado**: A IA gera código Synesis → o compilador valida → erros de validação servem como instrução de correção automática
+- **Instrução por campo**: a IA recebe regras específicas para cada campo, reduzindo ambiguidade
+- **Rastreabilidade de decisões**: as regras ficam no template, versionadas e auditáveis
+- **Ciclo de correção**: a IA gera blocos Synesis → o compilador valida → os erros servem de instrução de correção
 
-#### Sintaxe
-
-```synesis
-FIELD field_name TYPE type
-    SCOPE scope
-    GUIDELINES
-        Linha 1 de instrução.
-        Linha 2 de instrução.
-        Linha N de instrução.
-    END GUIDELINES
-END FIELD
-```
+O `synesis-coder` avisa quando um campo não tem `GUIDELINES`; com `--require-guidelines`, o aviso vira erro.
 
 #### Semântica
 
-- O conteúdo é texto livre — qualquer caractere é permitido
-- Múltiplas linhas são preservadas com suas quebras de linha
-- Recuo interno é ignorado (as linhas são dedentadas automaticamente)
-- Um bloco vazio (`GUIDELINES` imediatamente seguido de `END GUIDELINES`) resulta em valor `null` no JSON exportado
-- O valor compilado é exportado no campo `"guidelines"` do JSON de cada `FieldSpec`
-- O compilador não interpreta nem valida o conteúdo — é tratado como dado opaco
+- O conteúdo é texto livre; o compilador não o interpreta nem valida
+- Múltiplas linhas são preservadas, e o recuo interno é removido
+- Um bloco vazio resulta em `null` no JSON
+- O valor compilado é exportado no campo `"guidelines"` de cada especificação de campo no JSON
 
-#### Exemplo de uso com IA
+#### O que funciona na prática
+
+- Pares **Correto/Errado**, um por decisão que o codificador vai enfrentar
+- Testes em uma frase ("Teste: todo A é um B?")
+- Dizer a unidade de cada valor ("um estatuto por cadeia")
 
 ```synesis
 FIELD note TYPE MEMO
@@ -391,23 +460,11 @@ FIELD note TYPE MEMO
         If causality is ambiguous, describe the relationship as associative.
     END GUIDELINES
 END FIELD
-
-FIELD chain TYPE CHAIN
-    SCOPE ITEM
-    ARITY >= 2
-    RELATIONS
-        INFLUENCES: Efeito causal direto
-        ENABLES: Condição necessária ou facilitadora
-        INHIBITS: Limitação ou restrição
-    END RELATIONS
-    GUIDELINES
-        Map the causal structure identified in the note field as a formal chain.
-        Use only concepts that exist in the ontology (ONTOLOGY blocks).
-        Chain elements at odd positions must be concept names; even positions must be RELATIONS.
-        Prefer specific relations (ENABLES, INHIBITS) over generic ones (INFLUENCES).
-    END GUIDELINES
-END FIELD
 ```
+
+### Função dos campos de ontologia: `ROLE`
+
+Em campos `SCOPE ONTOLOGY`, `ROLE` declara a **função** do valor no modelo organizador: rótulo (`LABEL PREFERRED|ALTERNATIVE|HIDDEN`), nota (`NOTE DEFINITION|USAGE|EXAMPLE|COUNTEREXAMPLE`), hierarquia (`HIERARCHY KIND|PART|INSTANCE`) ou nome preterido (`USE`). A tabela completa está em [O Modelo Organizador](modelo_organizador.qmd).
 
 ---
 
@@ -415,27 +472,43 @@ END FIELD
 
 ### Tabela de Tipos
 
-| Tipo       | Escopo    | Semântica |
-|------------|-----------|-----------|
-| QUOTATION  | ITEM      | Excerto textual da fonte |
-| MEMO       | ITEM      | Anotação analítica do pesquisador |
-| CODE       | ITEM      | Rótulo conceitual (categorização) |
-| CHAIN      | ITEM      | Relação qualificada entre códigos |
-| TEXT       | qualquer  | Texto livre genérico |
-| DATE       | SOURCE    | Data com formato especificado |
-| SCALE      | qualquer  | Valor numérico em intervalo [min..max] |
-| ENUMERATED | qualquer  | Valor de lista fechada sem hierarquia |
-| ORDERED    | qualquer  | Valor de lista com hierarquia ordinal indexada |
-| TOPIC      | ONTOLOGY  | Categoria hierárquica superior (agrupamento dinâmico) |
+| Tipo       | Semântica | Forma do valor | Exige |
+|------------|-----------|----------------|-------|
+| `QUOTATION`  | Excerto textual da fonte | texto | — |
+| `MEMO`       | Anotação analítica do pesquisador | texto | — |
+| `TEXT`       | Texto livre genérico | texto | — |
+| `CODE`       | Rótulo conceitual (categorização) | conceitos separados por vírgula | — |
+| `CHAIN`      | Relação entre conceitos | `A -> B` ou `A -> REL -> B` | `ARITY` |
+| `TOPIC`      | Agrupamento dinâmico | um termo sem espaços | — |
+| `ENUMERATED` | Valor de lista fechada sem ordem | um dos valores, com a mesma grafia | `VALUES` |
+| `ORDERED`    | Valor de lista fechada com ordem | o **índice** da opção | `VALUES` com `[índice]` |
+| `SCALE`      | Número em um intervalo | número | `FORMAT` |
+| `DATE`       | Data | texto (o formato não é conferido) | — |
+
+Os três escopos aceitam os mesmos tipos. A única assimetria é deliberada: `IDENTIFIES` e `REFERS TO` só existem em `SCOPE SOURCE`, e `ROLE` só em `SCOPE ONTOLOGY`. Use `synesis help-field <TIPO>` para ver a matriz de propriedades de cada tipo.
+
+### `ORDERED`: grave o índice
+
+Em um campo `ORDERED`, o dado é a posição; o rótulo é exibição (o editor o mostra ao lado do índice).
+
+```synesis
+ONTOLOGY Cost
+    aspect: 4
+END ONTOLOGY
+```
+
+Escrever o rótulo (`aspect: physical`) produz [E088](guia_erros.qmd#sec-e088), com o índice a usar.
 
 ### Distinção: Linguagem vs Template
 
 | Nível              | FIXO (linguagem)                                      | CONFIGURÁVEL (template)                    |
 |--------------------|-------------------------------------------------------|--------------------------------------------|
 | Palavras-chave     | `SOURCE`, `ITEM`, `ONTOLOGY`, `FIELD`, `END`          | Nomes de campos como `aspect`, `quote`     |
-| Tipos de dados     | `QUOTATION`, `MEMO`, `CODE`, `CHAIN`, `TEXT`, etc.    | Valores em listas ORDERED/ENUMERATED       |
-| Estrutura          | Blocos SOURCE/ITEM/ONTOLOGY, sintaxe FIELD...END      | Quais campos são REQUIRED/OPTIONAL         |
-| Modificadores      | `BUNDLE`, `REQUIRED`, `OPTIONAL`, `SCOPE`, `TYPE`     | Quais campos usar BUNDLE                   |
+| Tipos de dados     | `QUOTATION`, `MEMO`, `CODE`, `CHAIN`, `TEXT` etc.     | Valores em listas `ORDERED`/`ENUMERATED`   |
+| Estrutura          | Blocos SOURCE/ITEM/ONTOLOGY, sintaxe FIELD…END        | Quais campos são `REQUIRED`/`OPTIONAL`     |
+| Modificadores      | `BUNDLE`, `REQUIRED`, `OPTIONAL`, `SCOPE`, `TYPE`     | Quais campos formam um `BUNDLE`            |
+
+As palavras-chave não diferenciam maiúsculas de minúsculas.
 
 ---
 
@@ -443,82 +516,90 @@ END FIELD
 
 ### SOURCE
 
-Contextualiza ITEMs com referência bibliográfica. Cada SOURCE referencia exatamente uma entrada do arquivo `.bib`.
+Unidade de proveniência: de onde vem a informação. Cada `SOURCE` referencia uma entrada do `.bib` (ou um registro de dataset).
 
 ```synesis
-SOURCE @bibref                # ← Referência obrigatória ao .bib
-    [field_name: value]       # ← Campos opcionais do SOURCE
-    ...
-
+SOURCE @smith2023
+    access_date: 2025-01-15
 END SOURCE
 
-ITEM @bibref                  # ← Um ou mais ITEMs obrigatórios
-    ...
-
-END ITEM
-```
-
-**Exemplo anotado:**
-
-```synesis
-SOURCE @smith2023             # ← Deve existir em referencias.bib
-    access_date: 2025-01-15   # ← Campo opcional definido no template
-END SOURCE                   # ← Fecha o bloco SOURCE
-
-ITEM @smith2023               # ← Primeiro item de análise
+ITEM @smith2023
     quote: "The technology shows promising results."
     note: Autor expressa otimismo sobre resultados
     chain: Technology -> INFLUENCES -> Acceptance
 END ITEM
 ```
 
+O corpo do `SOURCE` é opcional quando o template não exige campos. Um mesmo `@bibref` não pode abrir dois blocos `SOURCE` no mesmo arquivo, e todo `ITEM` precisa de um `SOURCE` com o mesmo `@bibref` **no mesmo arquivo**.
+
 ### ITEM
 
-Unidade analítica fundamental. Contém excerto, memos, códigos e/ou cadeias. Pertence a exatamente um SOURCE.
+Unidade analítica fundamental. Contém excertos, memos, códigos e cadeias. Pertence a exatamente um `SOURCE`.
 
 ```synesis
-ITEM [@bibref]                # ← Referência ao SOURCE pai
-    field_name: value         # ← Um ou mais campos obrigatórios
-    [field_name: value] ...   # ← Campos adicionais conforme template
-END ITEM
-```
+ITEM @ref2025
+    quote: Texto extraído
 
-**Exemplo anotado:**
-```synesis
-ITEM @ref2025                 # ← Referência para rastreabilidade
-    quote: Texto extraído     # ← Campo obrigatório (QUOTATION)
-
-    note: Primeira interp.    # ← Primeiro par do BUNDLE
+    note: Primeira interpretação
     chain: A -> INFLUENCES -> B
 
-    note: Segunda interp.     # ← Segundo par do BUNDLE (mesma quantidade)
+    note: Segunda interpretação
     chain: C -> ENABLES -> D
-END ITEM                      # ← Fecha o bloco ITEM
+END ITEM
 ```
 
 ### ONTOLOGY
 
-Define conceito do vocabulário controlado. Estrutura plana com possibilidade de hierarquia.
+Define um conceito do vocabulário controlado.
 
 ```synesis
-ONTOLOGY concept_name         # ← Nome do conceito (não pode conter espaços)
-    field_name: value         # ← Um ou mais campos obrigatórios
-    [field_name: value] ...   # ← Campos adicionais conforme template
-END ONTOLOGY
-```
-
-**Exemplo anotado:**
-
-```synesis
-ONTOLOGY Cost                 # ← Nome simples (sem espaços)
-    topic: Economics          # ← Agrupamento dinâmico (TOPIC)
+ONTOLOGY Cost
+    topic: Economics
     description: Economic factor representing financial expenditure
 END ONTOLOGY
 
-ONTOLOGY Public_Acceptance    # ← Nome sem espaços (sem aspas)
-    topic: Social_Factors     # ← Mesmo topic agrupa conceitos relacionados
+ONTOLOGY Public_Acceptance
+    topic: Social_Factors
     description: Community-level support for technology
 END ONTOLOGY
+```
+
+Use nomes sem espaços (um conceito com espaços não pode ser citado em cadeias). A comparação entre o código usado e o conceito ignora maiúsculas e minúsculas. Dois blocos para o mesmo conceito são erro ([E068](guia_erros.qmd#sec-e068)).
+
+### Valores de várias linhas {#sec-multilinha}
+
+Um valor pode continuar nas linhas seguintes, com recuo maior que o do nome do campo. As duas formas abaixo são equivalentes:
+
+```synesis
+ITEM @smith2023
+    quote: A primeira linha do excerto
+        e a sua continuação.
+    note:
+        Um memo que começa na linha seguinte
+        e ocupa duas linhas.
+END ITEM
+```
+
+A continuação vale para texto, listas de códigos e cadeias. (Entre as versões 0.13.4 e 0.15.0, as linhas de continuação eram descartadas sem aviso; atualize para 0.16.0 ou superior.)
+
+---
+
+## Códigos e vocabulário controlado {#sec-codigos}
+
+Um campo `CODE` recebe um ou mais conceitos, separados por vírgula ou em linhas repetidas:
+
+```synesis
+ITEM @smith2023
+    quote: Texto
+    code: Climate_Belief, Risk_Perception
+    code: Trust
+END ITEM
+```
+
+Quando um código não tem bloco `ONTOLOGY`, o compilador emite por padrão **uma única linha de resumo** no `.synp` ([E090](guia_erros.qmd#sec-e090)) — útil antes de a ontologia existir. Para ver cada ocorrência, com sugestão do conceito mais próximo ([E004](guia_erros.qmd#sec-e004)):
+
+```bash
+synesis compile project.synp --check-codes
 ```
 
 ---
@@ -527,154 +608,125 @@ END ONTOLOGY
 
 ### Chain Qualificada
 
-Quando o template define RELATIONS, a cadeia usa o padrão: posições ímpares são códigos, posições pares são tipos de relação.
+Quando o campo define `RELATIONS`, a cadeia alterna conceitos e relações:
 
 ```synesis
-chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
-#      ^^^^    ^^^^^^^^    ^^^^
-#      código  relação     código (padrão alternado)
-```
-
-**Exemplo anotado:**
-```synesis
-chain: Climate_Belief -> INFLUENCES -> Support
-#      ^^^^^^^^^^^^^    ^^^^^^^^^^    ^^^^^^^
-#      código (origem)  relação       código (destino)
-
-chain: A -> INFLUENCES -> B -> ENABLES -> C
-#      ^    ^^^^^^^^^^    ^    ^^^^^^^    ^
-#      cod1 rel1          cod2 rel2       cod3 (cadeia estendida)
+ITEM @smith2023
+    chain: Climate_Belief -> INFLUENCES -> Support
+    chain: A -> INFLUENCES -> B -> ENABLES -> C
+END ITEM
 ```
 
 ### Chain Simples
 
-Quando o template NÃO define RELATIONS, apenas códigos são separados por `->`. A relação é implícita.
+Quando o campo **não** define `RELATIONS`, só há conceitos; a relação é implícita.
 
 ```synesis
-chain: Code -> Code [-> Code] ...
-#      ^^^^    ^^^^
-#      origem  destino (relação implícita entre cada par)
+ITEM @smith2023
+    chain: A -> B
+    chain: A -> B -> C
+END ITEM
 ```
 
-**Exemplo anotado:**
-```synesis
-chain: A -> B             # ← Relação implícita: A relaciona-se com B
-chain: A -> B -> C        # ← Duas relações implícitas: A→B e B→C
-```
+### Aridade
+
+`ARITY` é obrigatório em todo campo `CHAIN` e conta **conceitos**: `ARITY >= 2` aceita uma ligação; `ARITY >= 3` exige um mediador (antecedente → mediador → resultado). Os operadores são `>=`, `>`, `<=`, `<` e `=`.
 
 ### Conceitos sem aspas
 
-O parser captura conceitos compostos sem exigir aspas, mas é preciso evitar espaços.
+Conceitos compostos não levam aspas, mas não podem ter espaços.
 
-Anotação incorreta: 
+Anotação incorreta ([E015](guia_erros.qmd#sec-e015)):
 
-```synesis
+```text
 chain: Institutional Barrier -> ENABLES -> Financial Barrier
-#      ^^^^^^^^^^^^^^^^^^^^              ^^^^^^^^^^^^^^^^^^
-#      conceito com espaços              conceito com espaços
 ```
 
-Anotação correta
+Anotação correta:
 
-```synesis
+```text
 chain: Public_Acceptance -> INFLUENCES -> CCS_Support -> ENABLES -> Deployment
-#      ^^^^^^^^^^^^^^^^^                  ^^^^^^^^^^^               ^^^^^^^^^^
-#      2 palavras                         2 palavras                1 palavra
 ```
+
+Uma relação não pode ter o mesmo nome de um conceito ([E014](guia_erros.qmd#sec-e014)).
 
 ---
 
 ## Modificador BUNDLE
 
-O modificador BUNDLE define grupos de campos que formam unidade mínima repetível de interpretação.
-
-### Sintaxe
+`BUNDLE` define grupos de campos que formam uma unidade repetível de interpretação.
 
 ```synesis
 ITEM FIELDS
-    REQUIRED BUNDLE field_name, field_name [,field_name] ...
-    #        ^^^^^^ ^^^^^^^^^^  ^^^^^^^^^^
-    #        modif. campo1      campo2 (devem aparecer juntos)
+    REQUIRED quote
+    REQUIRED BUNDLE note, chain
+    OPTIONAL BUNDLE page, section
 END ITEM FIELDS
 ```
 
 ### Semântica
 
-- Campos em BUNDLE são obrigatórios como unidade indivisível
-- Mínimo 1 ocorrência do bundle completo
-- Campos do bundle **nunca** aparecem isoladamente
-- Devem aparecer em igual quantidade: `len(field1) == len(field2) == len(field3) >= 1`
-- Correspondência posicional: `field1[i]` relaciona-se com `field2[i]` e `field3[i]`
-
-### Exemplo Anotado
+- `REQUIRED BUNDLE`: ao menos uma ocorrência completa do grupo
+- `OPTIONAL BUNDLE`: o grupo pode faltar por inteiro; se um membro aparece, todos precisam aparecer
+- Os membros aparecem em igual quantidade: `len(campo1) == len(campo2)`
+- Correspondência posicional: `campo1[i]` se relaciona com `campo2[i]`
 
 ```synesis
 ITEM @ref2025
-    quote: Texto extraído da fonte    # ← Campo independente
+    quote: Texto extraído da fonte
 
-    note: Primeira interpretação      # ← bundle[0].note
-    chain: A -> INFLUENCES -> B       # ← bundle[0].chain (par 1)
+    note: Primeira interpretação
+    chain: A -> INFLUENCES -> B
 
-    note: Segunda interpretação       # ← bundle[1].note
-    chain: C -> ENABLES -> D          # ← bundle[1].chain (par 2)
+    note: Segunda interpretação
+    chain: C -> ENABLES -> D
 END ITEM
-# Resultado: 2 pares note+chain, correspondência posicional garantida
 ```
 
-### Validação
+Membro ausente produz [E016](guia_erros.qmd#sec-e016); contagens diferentes, [E017](guia_erros.qmd#sec-e017); bundle de um campo só, [E018](guia_erros.qmd#sec-e018).
 
-- Campo isolado de bundle: **erro**
-- Contagens diferentes: **erro**
-- Ausência completa de bundle obrigatório: **erro**
-- Violação de BUNDLE gera erro de compilação (não warning)
+Um uso importante é **qualificar uma afirmação**: `chain`, `status` (afirmada, hipotética, negada) e `justification` no mesmo bundle, para que uma hipótese não apareça como achado nas exportações.
 
 ---
 
 ## Tipo TOPIC
 
-O tipo TOPIC permite definir categorias hierárquicas superiores que agrupam conceitos ontológicos de forma dinâmica, sem pré-definição no template.
+`TOPIC` define categorias que agrupam conceitos de forma dinâmica, sem lista pré-definida no template.
 
-### Diferença de ENUMERATED
-
-| Característica    | ENUMERATED             | TOPIC                   |
-|-------------------|------------------------|-------------------------|
-| Valores permitidos| Lista fechada pré-definida | Aberto, dinâmico      |
-| Uso               | Categorização controlada | Agrupamento emergente  |
-| Validação         | Rejeita valores fora da lista | Aceita qualquer string |
-
-### Exemplo Anotado
+| Característica     | ENUMERATED                 | TOPIC                  |
+|--------------------|----------------------------|------------------------|
+| Valores permitidos | Lista fechada pré-definida | Aberto, dinâmico       |
+| Uso                | Categorização controlada   | Agrupamento emergente  |
+| Validação          | Rejeita valores fora da lista | Qualquer termo sem espaços |
 
 ```synesis
 ONTOLOGY Cost
-    topic: Economics              # ← Categoria emergente (não pré-definida)
+    topic: Economics
     description: Economic factor representing financial expenditure
 END ONTOLOGY
 
 ONTOLOGY Public_Acceptance
-    topic: Social_Factors         # ← Outra categoria emergente
+    topic: Social_Factors
     description: Community-level support for technology
 END ONTOLOGY
-
-# Resultado: dois topics criados dinamicamente (Economics, Social Factors)
-# O compilador aceita qualquer string sem espaços como valor de TOPIC
 ```
 
 ---
 
-## Ligação entre Projetos (IDENTIFIES / REFERS TO)
+## Ligação entre Projetos (IDENTIFIES / REFERS TO) {#sec-ligacao}
 
-Permite triangular corpora heterogêneos — currículos, abstracts, perfis institucionais — **sem** transformá-los numa única unidade de compilação. Cada projeto continua independente, rápido e autônomo; a ligação é declarada no template e resolvida num passo explícito na CLI.
+Permite triangular corpora heterogêneos — currículos, abstracts, perfis institucionais — **sem** transformá-los numa única unidade de compilação. Cada projeto continua independente; a ligação é declarada no template e resolvida num passo explícito na linha de comando.
 
-O modelo é o do **linker de C/C++**: cada projeto compila isolado e expõe suas referências externas não resolvidas; um passo de linkagem (`synesis compile p1.synp p2.synp`) resolve as referências entre eles e produz o agregado.
+O modelo é o do **linker de C/C++**: cada projeto compila isolado e expõe suas referências externas; um passo de ligação (`synesis compile p1.synp p2.synp`) resolve as referências entre eles e produz o agregado.
 
 ### Os dois modificadores
 
 | Modificador | Papel relacional | Semântica |
 |-------------|------------------|-----------|
-| `IDENTIFIES <entidade>` | Chave primária (PK) | O campo **identifica** a entidade. Cada valor corresponde a um único SOURCE. Cria o nó. |
-| `REFERS TO <entidade>` | Chave estrangeira (FK) | O campo **aponta** para a entidade. Pode repetir. Não cria nó. |
+| `IDENTIFIES <entidade>` | Chave primária | O campo **identifica** a entidade. Cada valor corresponde a um único SOURCE. |
+| `REFERS TO <entidade>` | Chave estrangeira | O campo **aponta** para a entidade. Pode repetir. |
 
-Ambos são exclusivos de campos `SCOPE SOURCE` — a ligação opera sobre SOURCEs, as unidades de coleta. Usá-los em `SCOPE ITEM` ou `SCOPE ONTOLOGY` produz o erro 78.
+Ambos são exclusivos de campos `SCOPE SOURCE`; em outro escopo produzem [E078](guia_erros.qmd#sec-e078).
 
 ### Sintaxe
 
@@ -700,7 +752,7 @@ FIELD autor_id TYPE TEXT
 END FIELD
 ```
 
-Note que o projeto periférico **não nomeia** o projeto proprietário — apenas o rótulo da entidade. Adicionar um terceiro corpus ao estudo não exige editar nenhum template existente.
+O projeto periférico **não nomeia** o proprietário, apenas o rótulo da entidade. Acrescentar um terceiro corpus não exige editar os templates existentes.
 
 ### Origem do valor: `ON BIBLIOGRAPHY`
 
@@ -722,69 +774,63 @@ END SOURCE FIELDS
 }
 ```
 
-O sufixo só é válido em cláusula de **campo único**. `REQUIRED a, b ON BIBLIOGRAPHY` é erro de sintaxe — numa lista, seria ambíguo a qual campo o sufixo se aplica.
-
-Campos `ON BIBLIOGRAPHY` são excluídos da verificação de campo obrigatório do bloco SOURCE (erro 20), já que o valor não vive no bloco. Se o valor faltar no `.bib`, o erro emitido é o 79.
+O sufixo só é válido em cláusula de **campo único**: `REQUIRED a, b ON BIBLIOGRAPHY` é erro de sintaxe. Esses campos não são cobrados no bloco SOURCE; se o valor faltar no `.bib`, o erro é [E079](guia_erros.qmd#sec-e079).
 
 ### Compilação isolada
 
-Um projeto com `REFERS TO` compila normalmente sozinho. O compilador emite apenas uma mensagem **INFO** ([informativo 80](guia_erros.qmd#sec-erro-80)) registrando que há ligações a materializar — nunca erro ou aviso:
+Um projeto com `REFERS TO` compila normalmente sozinho. O compilador emite apenas o [informativo I080](guia_erros.qmd#sec-i080):
 
 ```bash
 synesis compile abstracts.synp --json abstracts.json
 ```
 
-```
-INFO  abstracts.synp
-  Este projeto referencia a entidade externa `researcher` (`REFERS TO` em `autor_id`).
+```text
+abstracts.synt:11:1  [INFO]  External reference `researcher` (REFERS TO in autor_id) — not materialized in isolation
 ```
 
-### Passo de linkagem
-
-Com dois ou mais projetos, o comando `compile` resolve as ligações:
+### Passo de ligação
 
 ```bash
 synesis compile lattes.synp abstracts.synp --json estudo.json --csv saida/
 ```
 
-O passo de linkagem:
+O passo de ligação:
 
-1. Compila cada membro **isoladamente** (validação completa, independente)
+1. Compila cada membro **isoladamente** (validação completa)
 2. Resolve cada `REFERS TO` contra o `IDENTIFIES` proprietário, por **rótulo de entidade + igualdade exata do valor**
-3. Gera uma aresta por casamento — suporta **n:1** e **n:n** (campo multivalorado gera uma aresta por valor)
-4. Qualifica os bibrefs por alias de membro (`abstracts:@artigo_a`), dissolvendo colisões entre corpora
+3. Gera uma aresta por casamento (n:1 e n:n; um campo multivalorado gera uma aresta por valor)
+4. Qualifica os bibrefs pelo alias do membro (`abstracts:@artigo_a`), evitando colisões
+
+Um erro em qualquer membro aborta a ligação.
 
 ::: {.callout-important}
 ## O compilador nunca funde entidades
-A comparação é por igualdade exata após remover espaços nas pontas — **sem** normalização de maiúsculas/minúsculas. Um valor que casaria apenas sob normalização vira aviso de **quase-casamento** (erro 83), com sugestão de canonizar na origem. Fundir automaticamente uniria entidades que a fonte considera distintas.
+A comparação é por igualdade exata depois de remover espaços nas pontas, **sem** normalizar maiúsculas e minúsculas. Um valor que casaria apenas sob normalização vira aviso de quase-casamento ([W083](guia_erros.qmd#sec-w083)).
 :::
 
 ### Saídas do agregado
 
-| Flag | Comportamento no passo de linkagem |
+| Opção | Comportamento no passo de ligação |
 |------|-------------------------------------|
-| `--json` | Agregado no schema **v3.1** (aditivo): `kind: "link"`, `entity_owners`, seção `links` com arestas e órfãos |
-| `--csv` | Gera `links.csv` com as arestas resolvidas |
-| `--stats` | Estatísticas por membro e agregadas (ontologia compartilhada é deduplicada, não somada) |
-| `--xls` | **Sem exportador** — emite aviso explícito |
-| `--alpaca` | **Sem exportador** — emite aviso explícito |
-
-O schema v3.1 é aditivo: consumidores da v3.0 ignoram as chaves novas.
-
-`--xls` e `--alpaca` não têm exportador no agregado porque `SOURCE FIELDS` diverge entre membros — não existe tabela única coerente. A lacuna é reportada em vez de falhar em silêncio.
+| `--json` | agregado no schema 3.1: `kind: "link"`, `entity_owners`, seção `links` com arestas e órfãos |
+| `--csv` | gera `links.csv` com as arestas resolvidas |
+| `--xls` | aqui indica uma **pasta**: um `.xlsx` por membro e `links.xlsx` |
+| `--stats` | estatísticas por membro e agregadas (ontologia compartilhada não é somada em dobro) |
+| `--alpaca`, `--okf` | sem exportador no agregado: o compilador avisa |
+| `--diagnostics-json` | ainda não suportado: o compilador avisa |
 
 ::: {.callout-note}
-## O LSP nunca carrega o agregado
-A linkagem é exclusiva da CLI. O servidor LSP sempre trabalha com projetos isolados — é o que mantém a edição rápida mesmo em estudos com muitos corpora grandes.
+## O editor nunca carrega o agregado
+A ligação é exclusiva da linha de comando. O servidor de linguagem trabalha com projetos isolados, o que mantém a edição rápida.
 :::
 
-Ver o guia [Ligar Projetos Independentes](../howto/ligar_projetos.qmd) para o fluxo completo com exemplos.
+Veja o guia [Como Ligar Projetos Independentes](../howto/ligar_projetos.qmd).
 
 ---
 
 ## Campos Proibidos (FORBIDDEN)
 
-`FORBIDDEN` declara, num bloco `*_FIELDS`, um campo do **mesmo escopo** que não pode ter valor naquele bloco. Serve, por exemplo, para um template derivado que mantém a definição de um campo mas não quer que ele seja preenchido.
+`FORBIDDEN` declara, num bloco `FIELDS`, um campo do **mesmo escopo** que não pode ter valor naquele bloco. Serve, por exemplo, para um template derivado que mantém a definição de um campo mas não quer que ele seja preenchido.
 
 ```synesis
 ITEM FIELDS
@@ -793,31 +839,27 @@ ITEM FIELDS
 END ITEM FIELDS
 ```
 
-- O campo precisa estar definido com `FIELD` e ter o mesmo `SCOPE` do bloco. Listar em `ITEM FIELDS` um campo de `SCOPE SOURCE` é erro.
-- Um bloco que preenche o campo proibido produz o **erro 21**: `Forbidden field 'note' in ITEM block — remove this line`.
+Um bloco que preenche o campo proibido produz o [erro E021](guia_erros.qmd#sec-e021): `Forbidden field 'note' in ITEM block — remove this line`.
 
 ---
 
 ## Valores de um Dataset (ON DATASET, INCLUDE DATASET, CONTEXT FROM DATASET)
 
-Assim como `ON BIBLIOGRAPHY` traz o valor da entrada `.bib`, `ON DATASET` traz o valor de um **registro TOML** — um arquivo por registro. O valor não é digitado no `.syn`.
+Assim como `ON BIBLIOGRAPHY` traz o valor da entrada `.bib`, `ON DATASET` traz o valor de um **registro TOML**, um arquivo por registro. O valor não é digitado no `.syn`.
 
 ### Declarar o dataset no projeto
 
 ```synesis
 PROJECT entrevistas
-TEMPLATE "template.synt"
-INCLUDE BIBLIOGRAPHY "referencias.bib"
-INCLUDE DATASET "registros/*.toml"
-INCLUDE ANNOTATIONS "anotacoes"
+    TEMPLATE "template.synt"
+    INCLUDE DATASET "registros/*.toml"
+    INCLUDE ANNOTATIONS "anotacoes"
 END PROJECT
 ```
 
-`INCLUDE DATASET` aceita um arquivo ou um padrão (glob).
-
 ### Ligar cada registro a um SOURCE
 
-Um campo de `SCOPE SOURCE` declarado com **`IDENTIFIES`** e **`ON DATASET`** é a chave do registro: o valor encontrado nesse caminho do TOML deve ser igual ao bibref do SOURCE.
+Um campo de `SCOPE SOURCE` com **`IDENTIFIES`** e **`ON DATASET`** é a chave do registro: o valor nesse caminho do TOML deve ser igual ao bibref do SOURCE.
 
 ```synesis
 SOURCE FIELDS
@@ -842,10 +884,10 @@ id = "s1"
 regiao = "Nordeste"
 ```
 
-- A string depois de `ON DATASET` é um **caminho dentro do registro** (notação de ponto, como `entrevista.regiao`), não o nome do arquivo. O arquivo vem de `INCLUDE DATASET`.
-- Como `ON BIBLIOGRAPHY`, o sufixo só vale em cláusula de **campo único**.
+- A string depois de `ON DATASET` é um **caminho dentro do registro** (notação de ponto), não o nome do arquivo.
+- O sufixo só vale em cláusula de **campo único**.
 - No JSON compilado, os valores ficam na seção `dataset`, indexados pelo bibref.
-- Um campo `REQUIRED … ON DATASET` sem valor no registro produz o **erro 85**.
+- Um campo `REQUIRED … ON DATASET` sem valor no registro produz [E085](guia_erros.qmd#sec-e085).
 
 ### Contexto para a codificação: `CONTEXT FROM DATASET`
 
@@ -861,42 +903,59 @@ FIELD quote TYPE QUOTATION
 END FIELD
 ```
 
-Várias seções se separam por vírgula: `CONTEXT FROM DATASET "recorte", "texto"`. A propriedade é aceita por qualquer tipo de campo.
+Várias seções se separam por vírgula: `CONTEXT FROM DATASET "recorte", "texto"`.
 
 ---
 
-## Exportação Alpaca (EXPORT ALPACA)
+## Blocos EXPORT {#sec-export}
 
-`EXPORT ALPACA` grava um JSONL para afinar modelos de linguagem. Cada linha tem
+Cada bloco `EXPORT` do `.synp` declara um artefato. `synesis export projeto.synp` executa todos; `synesis export projeto.synp json` executa os de um formato (ou o de um nome). Caminhos de `OUTPUT` partem da pasta do `.synp`.
+
+| Formato | Obrigatório | Opcional |
+|---|---|---|
+| `JSON`, `OKF` | `OUTPUT` | `GENERATED_AT` |
+| `CSV`, `XLS` | `OUTPUT` | — |
+| `ALPACA` | `OUTPUT` | `INSTRUCTION`, `MAP <campos> TO …` |
+| `SKOS` | `OUTPUT`, `NAMESPACE`, `LANGUAGE` | `GENERATED_AT`, `MIN_SOURCES`, `ALIAS_LABEL`, `REGISTRY`, `MAP RELATIONS …` |
+
+Um erro em um bloco impede só aquele artefato; na compilação, aparece como aviso. Um erro do projeto impede todos (salvo `--force`). A exportação SKOS está descrita em [O Modelo Organizador](modelo_organizador.qmd).
+
+### Exportação Alpaca (EXPORT ALPACA)
+
+`EXPORT ALPACA` grava um JSONL para ajuste fino de modelos de linguagem. Cada linha tem
 `instruction`, `input` e `output`, as três como texto.
 
 - **Sem `MAP` nem `INSTRUCTION`:** o compilador escolhe pares embutidos. Eles não
   levam o qualificador de um BUNDLE que contém uma CHAIN (por exemplo, o estatuto
-  epistêmico), e uma hipótese sai como se fosse afirmação. O aviso
-  `SYNESIS_I167` diz isso.
+  epistêmico), e uma hipótese sai como se fosse afirmação. O informativo
+  [I167](guia_erros.qmd#sec-i167) diz isso.
 - **Com `MAP <campos> TO INSTRUCTION | INPUT | OUTPUT`** (synesis ≥ 0.16): o
   pesquisador declara quais campos formam cada chave.
 
 ```synesis
-EXPORT ALPACA mecanismo
-    OUTPUT "saida/mecanismo.jsonl"
-    INSTRUCTION Identifique a relação causal e como o texto a apresenta.
-    MAP trecho TO INPUT
-    MAP chain, estatuto, justificativa TO OUTPUT
-END EXPORT
+PROJECT estudo
+    TEMPLATE "template.synt"
 
-EXPORT ALPACA zona
-    OUTPUT "saida/zona.jsonl"
-    INSTRUCTION Classifique a zona retórica do trecho.
-    MAP trecho TO INPUT
-    MAP zona TO OUTPUT
-END EXPORT
+    EXPORT ALPACA mecanismo
+        OUTPUT "saida/mecanismo.jsonl"
+        INSTRUCTION Identifique a relação causal e como o texto a apresenta.
+        MAP trecho TO INPUT
+        MAP chain, estatuto, justificativa TO OUTPUT
+    END EXPORT
+
+    EXPORT ALPACA zona
+        OUTPUT "saida/zona.jsonl"
+        INSTRUCTION Classifique a zona retórica do trecho.
+        MAP trecho TO INPUT
+        MAP zona TO OUTPUT
+    END EXPORT
+END PROJECT
 ```
 
-**Uma linha por quê.** Um BUNDLE no mapa define as linhas: uma linha por
-ocorrência do bundle. Os campos fora dele são contexto, repetido inteiro em cada
-linha do ITEM, e nunca multiplicam linhas. Sem bundle, há uma linha por ITEM. No
-exemplo, um ITEM com duas cadeias gera duas linhas, ambas com o mesmo trecho.
+**Uma linha por quê.** Um BUNDLE no mapa define as linhas: uma por ocorrência do
+bundle. Os campos fora dele são contexto, repetido inteiro em cada linha do ITEM, e
+nunca multiplicam linhas. Sem bundle, há uma linha por ITEM. No exemplo, um ITEM com
+duas cadeias gera duas linhas, ambas com o mesmo trecho.
 
 **Texto de uma chave.** Um campo só gera o valor (`"Resultado"`). Vários campos
 geram um bloco rotulado por campo, na ordem do `MAP`:
@@ -913,128 +972,83 @@ A CHAIN entra com todas as triplas. Um campo sem valor numa linha fica fora do
 texto. Uma linha com todos os campos do OUTPUT vazios não é gravada. Só a
 duplicata exata das três chaves é removida.
 
-**Cartão do dataset.** Ao lado do JSONL, `<nome>.card.json` registra:
+**Cartão do dataset.** Ao lado do JSONL, `<nome>.card.json` registra a composição, os
+hashes do `.synp` e do template, as contagens (linhas, vazias, ITEMs sem o bundle,
+duplicatas), a contagem de cada valor dos `ENUMERATED`/`ORDERED` do OUTPUT e os
+campos que ficaram de fora.
 
-- a composição;
-- os hashes do `.synp` e do template;
-- as contagens: linhas, linhas vazias, ITEMs sem o bundle, duplicatas;
-- a contagem de cada valor dos ENUMERATED/ORDERED do OUTPUT;
-- os campos que ficaram de fora.
+**Regras.** Cada regra impede só este artefato:
 
-**Regras.** Cada regra abaixo impede só este artefato; o resto do projeto
-compila.
+- No modo declarado, `MAP <campos> TO OUTPUT` é obrigatório ([E158](guia_erros.qmd#sec-e158)).
+- Há exatamente uma origem de instrução ([E159](guia_erros.qmd#sec-e159)).
+- Um campo do OUTPUT não pode estar também em INPUT ou INSTRUCTION ([E162](guia_erros.qmd#sec-e162)): a resposta vazaria no prompt.
+- Campos de dois bundles são recusados ([E163](guia_erros.qmd#sec-e163)).
+- Campos de ONTOLOGY e de SOURCE com `ON BIBLIOGRAPHY` ou `ON DATASET` ainda não são suportados ([E164](guia_erros.qmd#sec-e164)).
 
-- O `OUTPUT` é obrigatório (`SYNESIS_E158`).
-- Há exatamente uma origem de instrução: o texto `INSTRUCTION` ou
-  `MAP <campo> TO INSTRUCTION` (`SYNESIS_E159`).
-- Um campo do OUTPUT não pode estar também em INPUT ou INSTRUCTION
-  (`SYNESIS_E162`): no treino, instrução e entrada viram o prompt, e a resposta
-  vazaria nele.
-- Campos de dois bundles são recusados (`SYNESIS_E163`).
-- Campos de ONTOLOGY e de SOURCE com `ON BIBLIOGRAPHY` ou `ON DATASET` ainda não
-  são suportados (`SYNESIS_E164`).
-
-Deixar fora do mapa um qualificador do bundle (por exemplo, `estatuto`) é só
-informativo (`SYNESIS_I166`): o arquivo é gerado.
-
-## Pipeline de Compilação
-
-### Etapas Obrigatórias
-
-| #  | Etapa                 | Responsabilidade |
-|----|-----------------------|------------------|
-| 1  | Descoberta            | Ler .synp, resolver caminhos, listar arquivos |
-| 2  | Template Loading      | Parsear e validar .synt (define regras) |
-| 3  | BibTeX Loading        | Carregar .bib, construir índice de referências |
-| 4  | Parsing Sintático     | Lark processa cada arquivo .syn e .syno |
-| 5  | Transformação         | Converter árvores concretas em AST tipada |
-| 6  | Validação Semântica   | Verificar referências, tipos, campos obrigatórios |
-| 7  | Normalização          | Aplicar defaults, canonicalização de valores |
-| 8  | Vinculação            | Associar ITEMs a SOURCEs, CODEs e CHAINs a ONTOLOGYs |
-| 9  | Vinculação            | Verificar que todo code: referencia um conceito existente na ontologia |
-| 10 | Vinculação            | Verificar que todo nó de chain: (códigos nas posições ímpares) referencia um conceito existente na ontologia |
-| 11 | Vinculação            | Verificar que toda RELATION usada na chain existe em RELATIONS do template |
-| 12  | Exportação            | Gerar JSON, CSV, MS-Word, REFI-QDA |
-
-### Ordem de Dependência
-
-```
-Projeto = Template + BibTeX + Anotações + Ontologia
-```
-
-O parser lê tudo, depois valida/resolve a consistência.
+Deixar fora do mapa um qualificador do bundle (por exemplo, `estatuto`) é só informativo ([I166](guia_erros.qmd#sec-i166)).
 
 ---
 
-## Error Handling Pedagógico
+## Pipeline de Compilação
 
-### Princípio de Design
+| #  | Etapa                 | Responsabilidade |
+|----|-----------------------|------------------|
+| 1  | Descoberta            | Ler o `.synp`, resolver caminhos, expandir pastas e padrões |
+| 2  | Template              | Ler e validar o `.synt` |
+| 3  | Bibliografia e dataset| Carregar `.bib` e registros TOML |
+| 4  | Parsing               | Analisar os `.syno` e `.syn` (parser LALR) |
+| 5  | Transformação         | Converter as árvores em AST tipada |
+| 6  | Validação semântica   | Referências, tipos, campos obrigatórios, bundles, cadeias, papéis |
+| 7  | Ligação (*linking*)   | Associar ITEMs a SOURCEs, códigos e cadeias à ontologia; construir índices |
+| 8  | Exportação            | Gerar os artefatos pedidos |
 
-O compilador prioriza mensagens de erro educativas que ensinam a sintaxe correta sem exigir leitura do manual.
-
-### Detector de "Vírgula Ausente" em Listas CODE
-
-**Erro comum:**
-```synesis
-code: Climate_Belief Risk_Perception  # ERRO: falta vírgula
+```text
+Projeto = Template + Bibliografia/Dataset + Anotações + Ontologia
 ```
 
-**Mensagem sugerida:**
-```
-erro: arquivo.syn:3:26: Múltiplos códigos devem ser separados por vírgula.
-    code: Climate_Belief Risk_Perception
-                         ^~~~ falta vírgula antes de "Risk"
+---
 
-Use vírgula para separar códigos:
-    code: Climate_Belief, Risk_Perception
+## Diagnósticos
 
-OU especifique cada código em linha separada:
-    code: Climate_Belief
-    code: Risk_Perception
+Cada problema é relatado com arquivo, linha, coluna e uma mensagem que indica a correção:
+
+```text
+a.syn:6:5  [ERROR]  Concept `Public Acceptance` contains spaces. Suggested fix -> `Public_Acceptance`
+a.syn:4:1  [ERROR]  Bundle (note, chain) with unequal counts: note=2, chain=1
 ```
 
-### Detector de "Cadeia Malformada" em CHAIN
-
-**Erro comum:**
-```synesis
-chain: Climate_Belief INFLUENCES Support  # ERRO: falta "->"
-```
-
-**Mensagem sugerida:**
-```
-erro: arquivo.syn:2:27: Cadeia causal exige operador '->' entre elementos.
-    chain: Climate_Belief INFLUENCES Support
-                          ^~~~~~~~~~~ falta '->' antes de "INFLUENCES"
-
-Use '->' para conectar elementos:
-    chain: Climate_Belief -> INFLUENCES -> Support
-```
+O catálogo completo, com exemplos, está no [Guia de Erros](guia_erros.qmd).
 
 ---
 
 ## Referência Rápida de Palavras-Chave
 
-### Palavras-Chave de Estrutura
+### Estrutura
 
 | Palavra-chave | Descrição |
 |---------------|-----------|
-| `PROJECT`     | Inicia definição de projeto |
-| `TEMPLATE`    | Referência ao arquivo de template ou início de definição |
-| `SOURCE`      | Bloco de fonte bibliográfica |
+| `PROJECT`     | Inicia a definição de projeto |
+| `TEMPLATE`    | Referência ao template ou cabeçalho do template |
+| `SOURCE`      | Bloco de fonte |
 | `ITEM`        | Unidade analítica |
 | `ONTOLOGY`    | Definição de conceito |
 | `FIELD`       | Definição de campo |
-| `END`         | Encerra qualquer bloco (necessita qualificação) |
+| `METADATA`, `DESCRIPTION` | Blocos do projeto |
+| `QUESTIONS`   | Questões de competência (`.synp`) |
+| `PHASE`       | Plano de produção para o `synesis-coder` (`.synp`) |
+| `EXPORT`, `MAP` | Artefatos do projeto (`.synp`) |
+| `END`         | Encerra qualquer bloco (com a qualificação) |
 
-### Palavras-Chave de Inclusão
+### Inclusão
 
 | Palavra-chave | Descrição |
 |---------------|-----------|
-| `INCLUDE`     | Inclui arquivo externo |
-| `BIBLIOGRAPHY`| Tipo de inclusão para .bib |
-| `ANNOTATIONS` | Tipo de inclusão para .syn |
+| `INCLUDE`     | Declara arquivos do projeto |
+| `BIBLIOGRAPHY`| `.bib` |
+| `ANNOTATIONS` | `.syn` |
+| `ONTOLOGY`    | `.syno` |
+| `DATASET`     | registros TOML |
 | `SHARED`      | Autoriza alvo fora da pasta do projeto (apenas com `ONTOLOGY`) |
-| `DATASET`     | Tipo de inclusão para registros TOML (arquivo ou glob) |
 
 ### Modificadores de Campo
 
@@ -1042,56 +1056,27 @@ Use '->' para conectar elementos:
 |-------------|-----------|
 | `REQUIRED`  | Campo obrigatório |
 | `OPTIONAL`  | Campo opcional |
-| `BUNDLE`    | Grupo de campos obrigatórios como unidade |
-| `ON BIBLIOGRAPHY` | O valor do campo vem da entrada `.bib`, não do texto (cláusula de campo único) |
-| `ON DATASET "<caminho>"` | O valor do campo vem do registro TOML, no caminho indicado (cláusula de campo único) |
-| `FORBIDDEN` | Campo do mesmo escopo que não pode ter valor no bloco (erro 21) |
+| `FORBIDDEN` | Campo que não pode ter valor no bloco |
+| `BUNDLE`    | Grupo de campos emparelhados |
+| `ON BIBLIOGRAPHY` | O valor vem da entrada `.bib` |
+| `ON DATASET "<caminho>"` | O valor vem do registro TOML |
 
 ### Especificadores de Campo
 
 | Especificador | Descrição |
 |---------------|-----------|
-| `TYPE`        | Define o tipo do campo |
-| `SCOPE`       | Define o escopo (SOURCE, ITEM, ONTOLOGY) |
-| `DESCRIPTION` | Texto descritivo do campo |
-| `ARITY`       | Restrição de aridade para CHAIN |
-| `RELATIONS`   | Lista de relações para CHAIN |
-| `VALUES`      | Lista de valores para ORDERED/ENUMERATED |
-| `FORMAT`      | Formato para SCALE |
-| `GUIDELINES`  | Instruções de preenchimento para o anotador ou agente de IA (qualquer tipo) |
-| `IDENTIFIES`  | Declara o campo como chave primária de uma entidade (apenas `SCOPE SOURCE`) |
-| `REFERS TO`   | Declara o campo como chave estrangeira para uma entidade (apenas `SCOPE SOURCE`) |
-| `CONTEXT FROM DATASET` | Seções do registro TOML enviadas ao modelo como contexto do campo (qualquer tipo) |
-
----
-
-## Seções (Sugeridas para Expansão da documentação)
-
-*As seções abaixo estão indicadas como tópicos para desenvolvimento futuro do guia.*
-
-### Validação de Referências Bibliográficas
-> Como o compilador valida que cada `@bibref` existe no arquivo .bib incluído.
-
-### Normalização e Canonicalização
-> Regras para normalização de valores e conceitos via template.
-
-### Exportação para JSON
-> Estrutura do JSON gerado, incluindo campos `location` para rastreabilidade.
-
-### Exportação para CSV
-> Formato das tabelas planas por tipo de bloco, colunas de rastreabilidade.
-
-### Exportação para Excel
-> Organização de abas por tipo de bloco.
-
-### Integração com Lark Parser
-> Detalhes técnicos do parser utilizado para processamento sintático.
-
-### Exemplos Completos de Projetos
-> Projetos exemplo demonstrando uso integrado de todos os componentes.
-
-### Boas Práticas de Anotação
-> Recomendações para estruturação consistente de anotações qualitativas.
+| `TYPE`        | Tipo do campo |
+| `SCOPE`       | Escopo (`SOURCE`, `ITEM`, `ONTOLOGY`) |
+| `DESCRIPTION` | Texto descritivo |
+| `ARITY`       | Número de conceitos de uma `CHAIN` |
+| `RELATIONS`   | Relações de uma `CHAIN` |
+| `VALUES`      | Opções de `ORDERED`/`ENUMERATED` |
+| `FORMAT`      | Intervalo de `SCALE` |
+| `GUIDELINES`  | Instruções de preenchimento |
+| `IDENTIFIES`  | Chave primária de uma entidade (`SCOPE SOURCE`) |
+| `REFERS TO`   | Chave estrangeira (`SCOPE SOURCE`) |
+| `ROLE`        | Função no modelo organizador (`SCOPE ONTOLOGY`) |
+| `CONTEXT FROM DATASET` | Contexto do registro TOML para a codificação |
 
 ---
 
@@ -1100,112 +1085,74 @@ Use '->' para conectar elementos:
 ### Projeto (.synp)
 
 ```synesis
-PROJECT project_name              # ← Nome do projeto (obrigatório)
+PROJECT project_name
+    TEMPLATE "filename.synt"
+    INCLUDE BIBLIOGRAPHY "filename.bib"
+    INCLUDE ANNOTATIONS "annotations"
+    INCLUDE ONTOLOGY "filename.syno"
 
-TEMPLATE "filename.synt"          # ← Arquivo de template (obrigatório)
-INCLUDE BIBLIOGRAPHY "filename.bib"   # ← Referências BibTeX
-INCLUDE ANNOTATIONS "filename.syn"    # ← Arquivos de anotação
-INCLUDE ONTOLOGY "filename.syno"      # ← Arquivos de ontologia
+    METADATA
+        version: 1.0
+        author: Research team
+    END METADATA
 
-[INCLUDE SHARED ONTOLOGY "../path.syno"]  # ← Ontologia fora da pasta do projeto
+    DESCRIPTION
+    Texto livre descrevendo o projeto.
+    END DESCRIPTION
 
-[METADATA                         # ← Bloco opcional
-    version: 1.0
-    author: string
-    [created: date]               # ← Campo opcional dentro do bloco
-    [modified: date]
-    [dataset: string]
-END METADATA]
+    QUESTIONS
+        Q1: Quais barreiras são relatadas?
+    END QUESTIONS
 
-[DESCRIPTION                      # ← Bloco opcional
-    Texto livre descrevendo o projeto...
-END DESCRIPTION]
-
-END PROJECT                        # ← Fecha o PROJECT
+    EXPORT JSON
+        OUTPUT "out/projeto.json"
+    END EXPORT
+END PROJECT
 ```
 
 ### Template (.synt)
 
 ```synesis
-TEMPLATE name                     # ← Nome do template (obrigatório)
-[version: "string"]               # ← Metadado opcional
-[author: "string"]
+TEMPLATE name version: "1.0"
 
-SOURCE FIELDS                     # ← Campos válidos em blocos SOURCE
-    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
-    [REQUIRED | OPTIONAL] field_name ON BIBLIOGRAPHY  # ← Valor vem do .bib (campo único)
-END SOURCE FIELDS
-
-ITEM FIELDS                       # ← Campos válidos em blocos ITEM
-    [REQUIRED | BUNDLE | OPTIONAL] field_name [,field_name] ...
+ITEM FIELDS
+    REQUIRED quote
+    OPTIONAL chain
 END ITEM FIELDS
 
-ONTOLOGY FIELDS                   # ← Campos válidos em blocos ONTOLOGY
-    [REQUIRED | OPTIONAL | BUNDLE] field_name [,field_name] ...
-END ONTOLOGY FIELDS
+FIELD quote TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Excerto literal
+END FIELD
 
-FIELD field_name TYPE [TEXT | QUOTATION | MEMO | CHAIN | CODE | TOPIC | ORDERED | ENUMERATED | SCALE]
-    SCOPE [SOURCE | ITEM | ONTOLOGY]  # ← Onde o campo pode ser usado
-    [DESCRIPTION description text]
-    
-    [ARITY operator number]       # ← Apenas para CHAIN
-    [RELATIONS                    # ← Apenas para CHAIN
-        relation_name: description
-    END RELATIONS]
-
-    [VALUES                       # ← Apenas para ORDERED/ENUMERATED
-        [index] value_name: description
-    END VALUES]
-
-    [FORMAT [min..max]]           # ← Apenas para SCALE
-
-    [IDENTIFIES entity_label]     # ← Chave primária — apenas SCOPE SOURCE
-    [REFERS TO entity_label]      # ← Chave estrangeira — apenas SCOPE SOURCE
-
-    [GUIDELINES                   # ← Qualquer tipo — instrução para anotador ou IA
-        Texto livre com instruções de preenchimento.
-        Múltiplas linhas permitidas.
-    END GUIDELINES]
-
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    RELATIONS
+        ENABLES: condição que possibilita
+    END RELATIONS
+    GUIDELINES
+        Instruções de preenchimento.
+    END GUIDELINES
 END FIELD
 ```
 
 ### Anotações (.syn)
 
 ```synesis
-SOURCE @bibref                    # ← Referência ao .bib (obrigatório)
-    [field_name: value]           # ← Campos do SOURCE (conforme template)        
+SOURCE @bibref
 END SOURCE
 
-ITEM @bibref                  # ← Referência ao .bib (obrigatório)
-    field_name: value         # ← Campos obrigatórios
-    [field_name: value] ...   # ← Campos opcionais
+ITEM @bibref
+    quote: Trecho da fonte
+    chain: A -> ENABLES -> B
 END ITEM
 ```
 
 ### Ontologia (.syno)
 
 ```synesis
-ONTOLOGY concept_name             # ← Nome do conceito (sem espaços)
-    field_name: value             # ← Campos obrigatórios
-    [field_name: value] ...       # ← Campos opcionais
+ONTOLOGY concept_name
+    description: Definição do conceito
 END ONTOLOGY
 ```
-
-### Cadeias (CHAIN)
-
-```synesis
-# Chain qualificada (com RELATIONS definidas no template)
-chain: Code -> RELATION -> Code [-> RELATION -> Code] ...
-#      ^^^^    ^^^^^^^^    ^^^^
-#      código  relação     código (padrão alternado obrigatório)
-
-# Chain simples (sem RELATIONS no template)
-chain: Code -> Code [-> Code] ...
-#      ^^^^    ^^^^
-#      origem  destino (relação implícita)
-```
-
----
-
-*Documento gerado a partir da especificação Synesis v1.1*

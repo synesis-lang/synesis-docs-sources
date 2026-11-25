@@ -1,0 +1,466 @@
+---
+title: "Vector Embeddings and GraphRAG"
+subtitle: "What semantic search really adds to knowledge retrieval — measured, not estimated"
+jupyter: python3
+format:
+  html:
+    code-fold: true
+    code-summary: "Show chart code"
+---
+
+::: {.callout-tip}
+## In short, before any number
+
+**What.** A second way of searching for concepts in your graph: by **meaning**, not by exact word.
+
+**Why.** Searching only by keyword fails when you do not use the exact term in your ontology — and you almost never do, because nobody memorizes their own controlled vocabulary.
+
+**What changes.** With the feature on, the right concept reaches the assistant for about **9 out of 10 questions**. Without it, just under **6 out of 10**.
+
+**What it costs.** About fifty thousandths of a second per question — imperceptible in a conversation. It runs on your computer, with no internet and no paid API.
+
+**When to turn it on.** If you talk with an assistant (Claude Desktop via MCP) about your research in your own words. If you only run structured queries in which you already know the exact concept name, you do not need it.
+:::
+
+This document explains the feature and shows the measurement behind those numbers. You can stop at the summary above and turn the feature on; the rest is the accounting.
+
+```{python}
+#| label: setup
+#| include: false
+# Loads the actual measurement. The numbers in the result charts and tables are
+# not typed by hand — they come from case-studies/benchmark_rrf/results.json.
+import json
+from pathlib import Path
+
+RES = json.loads(Path("../../case-studies/benchmark_rrf/results.json").read_text(encoding="utf-8"))
+M = RES["metricas"]
+
+num = lambda v: f"{v:.3f}"
+pct = lambda v: f"{v * 100:.1f}%"
+```
+
+---
+
+## What synesis-graph Is, and What Changes Now
+
+`synesis-graph` is the pipeline that takes an already coded Synesis project (a researcher's qualitative annotations, with their concepts, sources and relations) and turns it into a queryable graph database — today Neo4j or ArcadeDB (server or local). It is not just an export step: it is what allows Claude Desktop, connected through **MCP** (the protocol that gives an LLM access to external tools and data), to read the graph and answer questions about the research in natural language, citing the source. That use — researcher asks, agent answers from the graph — is what we call **GraphRAG**: Retrieval-Augmented Generation supported by a graph structure instead of a pile of loose text passages (see [Knowledge Graphs and GraphRAG](knowledge_graphs.qmd) for that background).
+
+Installation:
+
+```bash
+pip install synesis-graph
+```
+
+The vector search measured in this document needs the optional `embeddings` extra (it brings `sentence-transformers`, which generates vectors **on your own computer**, with no external API call and no usage cost):
+
+```bash
+pip install "synesis-graph[embeddings]"
+```
+
+Until now, when Claude Desktop needed to find a concept in the graph it had a single tool: keyword search. `synesis-graph` now offers a second one: search by meaning.
+
+::: {.callout-note}
+## Backend used in this experiment
+Vector search is currently implemented only in the **ArcadeDB** backends of `synesis-graph` (`arcadedb` and `arcadedb-embedded`) — not in Neo4j. All numbers in this document come from `synesis-graph arcadedb --vector-embeddings ...` against a real ArcadeDB database, not a simulated environment.
+:::
+
+### Three Terms, and What Each Means for Your Work
+
+The technical literature calls these methods by acronyms. It is worth translating each into the reasoning of someone who codes qualitative material, because the rest of the document depends on that intuition.
+
+**Keyword search (BM25).** Technically: the algorithm behind Elasticsearch, which scores a concept by the literal overlap of terms between the question and the description. In your practice: it is `Ctrl+F` in a transcript. It finds only if the exact word is there. If you wrote "stench" and the ontology says "odour", it does not find it — not because it is dumb, but because that is not its job.
+
+**Search by meaning (vector embeddings).** Technically: each concept description is converted into a vector of numbers; descriptions with similar meaning produce nearby vectors even without sharing a single word. In your practice: it is the colleague who read all your material and remembers — "that sounds like what you categorized as X". They do not repeat your words; they recognize the idea.
+
+**Fusing the two (RRF, *Reciprocal Rank Fusion*).** Technically: each method produces its own ranked list, and the standard formula of **IR** (*Information Retrieval*, the field that studies search systems) — `1/(60+position)` — combines them into a single list with no manual scale normalization. In your practice: it is consulting both colleagues and giving more weight to what each put at the top of their own list. As you will see, it works best — and the reason is the central point of this study.
+
+### How a Question Becomes an Answer
+
+```{mermaid}
+flowchart LR
+    classDef question fill:#E8F5E9,stroke:#2E7D32,stroke-width:2px,color:#1B5E20,font-weight:bold;
+    classDef method fill:#F8FAFC,stroke:#4A5568,stroke-width:1px,color:#084C84;
+    classDef fusion fill:#E0F7FA,stroke:#084C54,stroke-width:2px,color:#084C54,font-weight:bold;
+    classDef output fill:#FFF3E0,stroke:#E65100,stroke-width:2px,color:#E65100,font-weight:bold;
+
+    P["Researcher's question<br/>in natural language"]:::question
+    BM["Search by<br/>exact word"]:::method
+    VE["Search by<br/>meaning"]:::method
+    RRF["Fusion of the<br/>two lists"]:::fusion
+    L["List of candidate<br/>concepts"]:::output
+    R["Assistant's answer<br/>citing the source"]:::output
+
+    P --> BM
+    P --> VE
+    BM --> RRF
+    VE --> RRF
+    RRF --> L
+    L --> R
+```
+
+The researcher sees only the two ends: the question typed and the answer received. Everything in between is what this document measures.
+
+### The Case That Shows the Difference
+
+A real example from this experiment's gold standard — with what the two searches actually returned. The question was:
+
+> *"what nature provides for free that a new installation might destroy"*
+
+The right concept in the ontology is called `Ecosystem_Service`. Note that the question contains neither "ecosystem" nor "service" — not one word in common with the target's name.
+
+::: {layout-ncol=2}
+::: {.callout-important appearance="simple"}
+#### Exact-word search only
+Returned `Dominant_Social_Paradigm` and `Environmental_Condition`. The target **does not appear** in the list — the assistant answers with what it has at hand, which may be tangential.
+:::
+
+::: {.callout-tip appearance="simple"}
+#### With search by meaning
+Recognizes that "what nature provides for free" **is** the idea of ecosystem service, and brings `Ecosystem_Service` in **1st place**, even without a single word in common.
+:::
+:::
+
+This is one of the measured cases in which only vector search ranked the target 1st. The reverse pattern also exists — there are questions where only the exact word succeeds — and that is precisely why fusing both wins. The section [Where Each Method Wins Alone](#sec-alone) covers this.
+
+The question of this study is simple to ask and hard to answer honestly: **how much, exactly, does this feature improve Claude Desktop's chance of finding the right concept?**
+
+The answer does not come from opinion or third-party benchmarks. It comes from a controlled experiment on real data — the **Social_Acceptance** corpus (1,388 concepts on social acceptance of energy transition technologies), with a gold standard of 40 questions fixed **before** any search was run, measured against a real ArcadeDB database on 17 August 2026.
+
+::: {.callout-tip}
+## Want to check instead of believing?
+
+The complete gold standard of 40 questions, the exact queries sent to the database, the description of the scripts and the question-by-question results are in **[How the benchmark was run](benchmark_rrf_metodologia.qmd)** — including what went wrong and the limitations of the design.
+:::
+
+---
+
+## The Experiment
+
+### Why a Fixed Gold Standard Matters
+
+The most common trap in any search comparison is writing the question *after* seeing the result — which makes any method a "winner" by construction. To avoid that:
+
+1. A random sample of 40 concepts was drawn from the corpus (fixed seed, reproducible).
+2. For each concept, **one natural-language question** was written with vocabulary deliberately different from the concept description — the question uses synonyms and paraphrases, never the exact terms of `ontology_description`.
+3. The pair (question, expected concept) was frozen in a file before any query ran.
+4. Only then were the three search methods run against the same index, in the same ArcadeDB database.
+
+Sample of the gold standard (the first four of the 40):
+
+```{python}
+#| label: tbl-exemplo-gabarito
+#| output: asis
+lines = ["| Question (researcher's vocabulary) | Expected concept |", "|---|---|"]
+for r in RES["por_pergunta"][:4]:
+    lines.append(f"| \"{r['question']}\" | `{r['gold']}` |")
+print("\n".join(lines))
+```
+
+None of these questions contains a word that appears in the name of the target concept — a rule checked by code, not by eye. It is the realistic scenario of a researcher talking to Claude Desktop through MCP: they do not know the ontology's controlled vocabulary.
+
+The complete gold standard, with all 40 questions and the result of each method, is in [How the benchmark was run](benchmark_rrf_metodologia.qmd#sec-full-results).
+
+### What Was Compared
+
+Three retrieval strategies, all running **inside ArcadeDB**, with no intermediary:
+
+- **BM25** — the existing full-text index (`SEARCH_INDEX`), the same mechanism documented in [Knowledge Graphs and GraphRAG](knowledge_graphs.qmd).
+- **Vector** — `vector.neighbors()` over the `LSM_VECTOR` index (the structure ArcadeDB uses to find nearby vectors without scanning all of them), using the `all-mpnet-base-v2` model (768 dimensions) already embedded for this corpus.
+- **RRF** — fusion of the two previous rankings by *Reciprocal Rank Fusion*.
+
+### The Metrics, with an Example
+
+None invented for the occasion — all are in common use for evaluating search systems. The reason for using three instead of one is that each answers a different question about the same result.
+
+Suppose that for a given question the search returned this ranked list: `Payment_System`, `Tenure`, `Capacity` — and the right concept was `Tenure`, which landed in **2nd position**, not 1st.
+
+| Metric | What it answers | In this example |
+|---|---|---|
+| **Recall@k** (is the target among the first k?) | 1 if yes, 0 if no, for a chosen k | Recall@1 = 0 (not 1st); Recall@3 = 1 (among the first 3) |
+| **MRR** (average position of the right answer) | Uses the inverse of the position (1/position), so 1st place is worth 1.0 and distant positions progressively less | 1/2 = 0.5 |
+| **nDCG@k** (the same, but more forgiving) | Discounts position more gently (log instead of simple ratio) — the industry standard for search ranking | Close to MRR, slightly more forgiving of 2nd place |
+
+Note the difference in purpose: the **hit rate among the first k** is the metric that matters most for GraphRAG, because the LLM receives a *list* of concepts as context (not just the first) — what matters is whether the right concept is on the list, not its exact position. The other two complement it by showing *how close to the top* the right answer tends to fall, which matters when order is also used (for instance, to decide which concept to cite first in the answer).
+
+---
+
+## Aggregate Result (40 questions, full corpus)
+
+```{python}
+#| label: fig-resultado-agregado
+#| fig-cap: "Performance of the three methods on the 40 gold-standard questions. Longer bars are better. A plain-language reading is annotated beside each bar."
+
+import plotly.graph_objects as go
+
+metrics = ["Recall@1", "Recall@3", "Recall@5", "Recall@10", "MRR", "nDCG@5", "nDCG@10"]
+bm25   = [M["bm25"][m] for m in metrics]
+vector = [M["vector"][m] for m in metrics]
+rrf    = [M["rrf"][m] for m in metrics]
+
+GREY, BLUE, ORANGE = "#94A3B8", "#0E7490", "#E65100"
+
+def label(v, metric):
+    if metric.startswith("Recall"):
+        return f"{round(v * 10)} in 10"
+    return f"{v:.2f}"
+
+fig = go.Figure()
+for name, data, color in [
+    ("Exact word only", bm25, GREY),
+    ("Meaning only", vector, BLUE),
+    ("Both together", rrf, ORANGE),
+]:
+    fig.add_trace(go.Bar(
+        y=metrics, x=data, name=name, orientation="h",
+        marker=dict(color=color),
+        text=[label(v, m) for v, m in zip(data, metrics)],
+        textposition="outside",
+        textfont=dict(size=11),
+        hovertemplate="%{y} — " + name + ": %{x:.3f}<extra></extra>",
+    ))
+
+fig.update_layout(
+    template="plotly_white",
+    barmode="group",
+    height=620,
+    xaxis=dict(title="Performance (0 = never hits, 1 = always hits)", range=[0, 1.15]),
+    yaxis=dict(title="", autorange="reversed"),
+    legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
+    font=dict(size=12),
+    margin=dict(l=10, r=10, t=60, b=40),
+    bargap=0.25,
+)
+fig.show()
+```
+
+```{python}
+#| label: tbl-agregado
+#| output: asis
+lines = ["::: {.callout-note collapse=\"true\"}", "## The exact numbers, as a table", "",
+         "| Metric | Word only | Meaning only | Both together |", "|---|---:|---:|---:|"]
+for m in metrics:
+    vals = {k: M[k][m] for k in ("bm25", "vector", "rrf")}
+    best = max(vals, key=vals.get)
+    cells = [(f"**{vals[k]:.3f}**" if k == best else f"{vals[k]:.3f}")
+             for k in ("bm25", "vector", "rrf")]
+    lines.append(f"| {m} | " + " | ".join(cells) + " |")
+lines += ["", "Measured on 17 August 2026 — see the [full methodology](benchmark_rrf_metodologia.qmd).", ":::"]
+print("\n".join(lines))
+```
+
+Three readings, in the order worth making them:
+
+```{python}
+#| label: leituras
+#| output: asis
+o = RES["sobreposicao_top1"]
+gain_mrr = (M["rrf"]["MRR"] / M["bm25"]["MRR"] - 1) * 100
+gain_r10 = (M["vector"]["Recall@10"] / M["bm25"]["Recall@10"] - 1) * 100
+miss_bm25 = (1 - M["bm25"]["Recall@10"]) * 100
+
+print(f"""
+**Fusion wins on every metric, not only on average.** That was not guaranteed — one method could
+have been clearly superior alone, making fusion a cost without benefit. That was not the case: fusion
+delivers the best average position ({num(M['rrf']['MRR'])} against {num(M['bm25']['MRR'])} for exact
+word, a gain of **+{gain_mrr:.0f}%**) and the best top-10 hit rate
+([**{pct(M['rrf']['Recall@10'])}**]{{style="color:#c0392b"}} of the questions).
+
+**Meaning alone is not always better than exact word.** For 1st place, vector
+({num(M['vector']['Recall@1'])}) loses to exact word ({num(M['bm25']['Recall@1'])}). That is
+counter-intuitive if one expects "semantic search always wins" — it does not. Vectors bring
+*meanings* together, and a corpus with 1,388 concepts has many neighbouring meanings (`Attitude_Change`
+and `Opinion_Change`; `Discussion` and `Public_Discussion`). Missing first place between two
+near-synonyms is different from finding nothing.
+
+**Where vector really pays off is the list of the first 10** ({num(M['vector']['Recall@10'])} against
+{num(M['bm25']['Recall@10'])} for exact word — a jump of {gain_r10:.0f}%). This is the result that
+matters most for GraphRAG: vector rarely leaves the right concept *out* of the context list handed to
+the LLM, even when it does not put it first. Exact word alone leaves the target out in
+[**{miss_bm25:.0f}% of the questions**]{{style="color:#c0392b"}} — the LLM simply does not receive the
+information needed to answer.
+""")
+```
+
+---
+
+## Where Each Method Wins Alone {#sec-alone}
+
+An aggregate average hides a more interesting question: **do the two methods fail on the same questions or on different ones?** If on the same, fusion does not help. If on different ones, fusion is a real gain.
+
+```{python}
+#| label: tbl-sobreposicao
+#| output: asis
+o = RES["sobreposicao_top1"]
+print(f"""| | Count (of 40) | Real example from the measurement |
+|---|---:|---|
+| Both rank it 1st | {o['ambos']} | — |
+| Only exact word ranks it 1st | {o['so_bm25']} | "the incumbent coal oil and gas regime..." → `Fossil_Fuel` |
+| Only meaning ranks it 1st | {o['so_vetor']} | "what nature provides for free that a new installation might destroy" → `Ecosystem_Service` |
+| Neither ranks it 1st | {o['nenhum']} | (most have the target in the top-3/top-5 — see below) |""")
+```
+
+The error sets **barely overlap**. It is worth seeing this as three situations you will recognize from your own work.
+
+**When you remember the jargon, exact word is enough.** You want to check where you coded the weight of the coal, oil and gas regime. You write *"the incumbent coal oil and gas regime that locks in existing infrastructure"* — and those terms appear almost literally in the concept description. Exact word brings `Fossil_Fuel` 1st; search by meaning scatters between `Concentrated_Power` and `Infrastructure_Lock-In`, neighbouring and plausible ideas, but not the one you wanted.
+
+**When you remember the phenomenon but not the label, only meaning saves you.** You are coding an interview about what nature offers for free and a construction project may destroy. You do not remember that you categorized this as `Ecosystem_Service` months ago, and your question contains neither "ecosystem" nor "service". Exact word returns `Dominant_Social_Paradigm` and `Environmental_Condition` — nothing useful. Search by meaning recognizes the idea and brings the concept in 1st place.
+
+**When you want to avoid duplicating a concept, both together matter.** This third case does not come from the measurement — it is your own project's scenario, and the practical reason to turn the feature on. Imagine you are about to create a new category for "fear that the smell will bother the neighbours" in research on rural biodigesters. You already have 400 coded passages and no longer trust your memory of what exists in the ontology. You ask in natural language: if an odour nuisance concept already exists, search by meaning finds it even if you wrote "stench" and the ontology says "odour"; and if there is also a nearby label whose term you happened to hit, exact word brings it. Seeing both in the same list is what prevents creating a redundant concept — the kind of error that only shows much later, when analyzing frequencies.
+
+**This is the central evidence of this study**: the two methods do not compete for the same space of questions — they cover different spaces. That is why fusion adds up instead of merely repeating the better of the two.
+
+### The Cases Where No Method Came Close
+
+It is better to name the failures than to hide them behind the average:
+
+```{python}
+#| label: falhas-totais
+#| output: asis
+failures = [r for r in RES["por_pergunta"]
+            if not any(r[m]["rank"] for m in ("bm25", "vector", "rrf"))]
+print(f"In **{len(failures)} of the 40 questions** the target fell outside the top-10 of *all* methods:\n")
+for r in failures:
+    near = ", ".join(f"`{t}`" for t in r["vector"]["top3"])
+    print(f"- `{r['gold']}` — for *\"{r['question']}\"*.  \n  Search by meaning returned {near}.")
+```
+
+In both cases the "error" is a plausible adjacent concept — `Investment` for a question about buyers and investors is the kind of answer a researcher would accept in a real conversation but a single-answer gold standard does not forgive. This is a limitation of the experimental design (one question, one correct concept), not necessarily of the system — and is discussed further below.
+
+---
+
+## What This Means for GraphRAG via MCP
+
+**Retrievability**, in the IR sense, is the ability of a system to bring back the right information when someone asks for it — even without using the exact terms of the index. It is exactly the problem Claude Desktop faces with every question asked through MCP: the researcher does not know the ontology's controlled vocabulary, so each question is by definition a test of retrievability.
+
+The real usage scenario is not "find the exact node" — it is **giving the LLM enough context to answer accurately**, which corresponds to the list of the first 5 or 10, not the 1st-place hit. Through that lens:
+
+```{python}
+#| label: leitura-mcp
+#| output: asis
+print(f"""
+- **Exact word only** delivers the right concept in {pct(M['bm25']['Recall@5'])} of the questions in the
+  top-5. In half of the conversations the researcher asks and MCP simply does not bring the relevant
+  concept — Claude Desktop answers with what it has, which may be tangential.
+- **Both together** deliver it in {pct(M['rrf']['Recall@5'])} in the top-5 and
+  [**{pct(M['rrf']['Recall@10'])} in the top-10**]{{style="color:#c0392b"}}. The difference is not subtle: it
+  is the difference between "the agent usually finds what you mean" and "the agent often does not".
+""")
+```
+
+### Latency: the Cost of Adding Vector Search
+
+```{python}
+#| label: fig-latencia
+#| fig-cap: "Response time per question, measured on the same corpus (1,388 concepts, 20 runs per method). The line marks the 100 ms that usability literature uses as the threshold of what feels instantaneous."
+
+import plotly.graph_objects as go
+
+fig = go.Figure()
+
+LAT = RES["latencia_ms"]
+_vec, _bm = LAT["vetor_completo"]["media"], LAT["bm25"]["media"]
+
+fig.add_trace(go.Bar(
+    y=["With search by meaning", "Exact word only"],
+    x=[_vec, _bm],
+    orientation="h",
+    marker=dict(color=["#E65100", "#94A3B8"]),
+    text=[f"{_vec:.0f} ms", f"{_bm:.0f} ms"],
+    textposition="outside",
+    textfont=dict(size=13),
+    hovertemplate="%{y}: %{x:.1f} ms (mean)<extra></extra>",
+    showlegend=False,
+))
+
+fig.add_vline(
+    x=100, line_width=2, line_dash="dash", line_color="#c0392b",
+    annotation_text="100 ms — threshold of 'instantaneous'",
+    annotation_position="top",
+    annotation_font=dict(color="#c0392b", size=12),
+)
+
+fig.update_layout(
+    template="plotly_white",
+    height=280,
+    xaxis=dict(title="Time per question (milliseconds)", range=[0, 145]),
+    yaxis=dict(title=""),
+    font=dict(size=12),
+    margin=dict(l=10, r=10, t=50, b=40),
+    bargap=0.4,
+)
+fig.show()
+```
+
+```{python}
+#| label: texto-latencia
+#| output: asis
+extra = LAT["vetor_completo"]["media"] - LAT["bm25"]["media"]
+print(f"""
+Both methods stay well below the threshold. The additional cost of vector search is
+**~{extra:.0f} ms** over exact-word search, and the total remains below half of what a person
+perceives as a delay. In an MCP session this is imperceptible next to the latency of the LLM
+itself generating the answer — measured in seconds, not milliseconds.
+""")
+
+names = {"bm25": "Keyword search (BM25)", "encode": "Encoding the question",
+         "knn": "Vector search (kNN)", "vetor_completo": "**Full vector path** (encode + search)"}
+lines = ["::: {.callout-note collapse=\"true\"}", "## The exact numbers, by step", "",
+         "| Step | Mean | Median | p95 |", "|---|---:|---:|---:|"]
+for k, name in names.items():
+    v = LAT[k]
+    f = lambda x: f"{x:.1f} ms"
+    lines.append(f"| {name} | {f(v['media'])} | {f(v['mediana'])} | {f(v['p95'])} |")
+lines.append(":::")
+print("\n".join(lines))
+```
+
+---
+
+## What the Experiment Does Not Prove
+
+Honesty about limits, because a study that only shows victories is not trustworthy. In order of what most affects your decision:
+
+**1. These numbers come from one corpus, in English — measure on yours.**
+*What this means for you:* if your project is in Portuguese, has far fewer concepts or deals with a more homogeneous domain, the numbers may be quite different. Turn the feature on and measure on your own project before assuming the same gain. The technical detail: the values come from Social_Acceptance with the `all-mpnet-base-v2` model, and both the language and the conceptual density of the corpus affect the result.
+
+**2. The yardstick is too harsh on synonyms, so the real gain is probably larger.**
+*What this means for you:* a good share of the "errors" counted are legitimate neighbouring concepts you would accept in a conversation — `Collaboration` instead of `Cooperation`, for instance. The technical detail: the gold standard allows a single correct answer per question. A gold standard with multiple accepted answers would produce higher and probably more realistic numbers, but would be harder to build without evaluator bias.
+
+**3. No method is infallible, even with fusion on.**
+*What this means for you:* there will still be questions where the assistant does not find what you mean. Turning the feature on greatly reduces how often; it does not eliminate it. The technical detail: fusion misses 1st place on most of the 40 questions — although in most of them the target is in the top-5. There are even 3 cases in which fusion lost a target that a single method had found; they are documented in the [methodology](benchmark_rrf_metodologia.qmd#sec-went-wrong).
+
+**4. These are 40 questions: a clear pattern, not statistical proof.**
+*What this means for you:* the qualitative conclusion (the two methods fail on different questions, which is why they add up) is solid. Do not treat the specific decimals as constants. The technical detail: 40 questions are enough to reveal the pattern but do not validate a population distribution over the whole corpus.
+
+---
+
+## Frequently Asked Questions
+
+**Do I need to know how to program to enable this?**
+No. You install a package and pass one more option to the command you already use to generate the graph (`--vector-embeddings`). Not a line of code.
+
+**Does it change my ontology or my data?**
+It changes nothing you coded. Embeddings are an additional index, built from the concept descriptions and stored beside them. Your concepts, sources and relations stay exactly as they are — only the way of searching them changes.
+
+**Do I need internet or a paid API?**
+No. `sentence-transformers` generates the vectors on your own computer. There is no call to an external service, no usage cost and no sending your material out. (The assistant consuming the graph via MCP is another matter — that is Claude Desktop, and its privacy policy applies.)
+
+**Does it work in Portuguese?**
+The default model (`all-mpnet-base-v2`) was trained on English, and this experiment measured an English corpus. For Portuguese material there are multilingual models that fit in the same place (the model is chosen per project, in `[arcadedb.embeddings]` in `config.toml`) — but we have not measured them, so we promise no numbers. If your project is in Portuguese, turn it on and evaluate your own case before counting on the gain.
+
+**Is it worth it if my project is small?**
+Probably less so. The problem search by meaning solves — not remembering the exact label among hundreds of concepts — barely exists when you have thirty categories and know them all by heart. The gain grows with the size of the ontology.
+
+---
+
+## Recommendation
+
+Enable `--vector-embeddings` when the use is **conversational search** — MCP, GraphRAG, a researcher asking in their own words. This is exactly the case where exact word alone leaves the right concept out in more than 40% of questions.
+
+It is not needed for structured Cypher/SQL queries that already know the exact concept name — there keyword search (or a direct `MATCH`) is already excellent and vectors add nothing.
+
+The implementation, per-project configuration and steps to generate embeddings are documented in the [synesis-graph README](https://github.com/synesis-lang/synesis-graph#semantic-search-with-vector-embeddings-arcadedb).
+
+---
+
+**Closing thought:** search by meaning is not "better" than exact-word search — it is **complementary**, and the experiment shows exactly why: the two methods fail on different questions, not on the same ones. It is that mismatch of errors, not the superiority of one method over the other, that makes fusion worth the infrastructure investment.

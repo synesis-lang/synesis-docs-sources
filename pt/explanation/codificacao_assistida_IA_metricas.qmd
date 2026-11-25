@@ -20,7 +20,7 @@ Os gráficos abaixo são interativos (Plotly): passe o mouse para ver detalhes, 
 ## Jupyter e Quarto Publishing
 Esta página exemplifica o uso de **notebooks Jupyter** integrados ao **Quarto Publishing** para produção de documentação profissional e reproduzível. Os dados são lidos diretamente pelo compilador Synesis via `synesis.load`, sem necessidade de banco de dados externo ou exportações intermediárias — o próprio corpus de anotações alimenta os gráficos e tabelas.
 
-O código ilustra como anotações no formato Synesis podem ser compiladas em memória e convertidas em DataFrames para análise e visualização. Consulte o [Guia de Referência do `synesis.load`](../../pt/reference/synesis_load.qmd) para a documentação completa da API.
+O código ilustra como anotações no formato Synesis podem ser compiladas em memória e convertidas em DataFrames para análise e visualização. Consulte o [Guia de Referência do `synesis.load`](../reference/synesis_load.qmd) para a documentação completa da API.
 :::
 
 ---
@@ -42,7 +42,7 @@ from IPython.display import display, Markdown
 pd.set_option('display.max_colwidth', 80)
 
 # --- Carregamento do projeto ---
-project_dir = Path("../../case-studies/Social_Acceptance")
+project_dir = Path("../../case-studies/Social_Acceptance_current")
 
 def read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
@@ -455,7 +455,7 @@ display(Markdown(
 
 # Rede de conceitos {#sec-rede}
 
-O grafo abaixo mostra os **30 conceitos com mais conexões** e as relações entre eles. O tamanho dos nós reflete a frequência; as cores representam os tópicos temáticos.
+O grafo abaixo mostra os **30 conceitos com mais conexões** e as relações entre eles. O tamanho dos nós reflete o número de conexões; as cores representam os tópicos temáticos.
 
 ```{python}
 #| label: fig-network

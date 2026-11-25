@@ -33,13 +33,14 @@ Esta abordagem abrange desde conhecimentos tácitos externalizados em texto, hip
 
 O mesmo princípio aplica-se tanto a contextos cotidianos — como um bloco de anotações na mesa de trabalho (**Fonte**) com notas destacáveis (**Itens**) organizadas por prioridade ou data (**Ontologia**) — quanto a fluxos complexos de pesquisa acadêmica, envolvendo artigos científicos, teses e documentação técnica.
 
-Synesis não é apenas um sistema de organização, mas uma infraestrutura de tradução do conhecimento. Ela converte estruturas conceituais em formatos interoperáveis — de planilhas e documentos tradicionais (**Excel**, **MS-Word**) a notebooks analíticos (**Jupyter Labs**), formatos padronizados (**REFI-QDA**) e bancos de grafos **(Neo4j**, **Memgraph**) — tornando o conhecimento mensurável, consultável e semanticamente navegável, inclusive por Large Language Models (**LLMs**) via MCP.
+Synesis não é apenas um sistema de organização, mas uma infraestrutura de tradução do conhecimento. Ela converte estruturas conceituais em formatos interoperáveis — de planilhas (**CSV**, **Excel**) a notebooks analíticos (**Jupyter Lab**), vocabulários padronizados (**SKOS**) e bancos de grafos (**Neo4j**, **ArcadeDB**) — tornando o conhecimento mensurável, consultável e semanticamente navegável, inclusive por Large Language Models (**LLMs**) via MCP.
 
 ## O que você precisa hoje?
 
 ### Aprender Synesis
 **Você é novo aqui?** Comece com nossos tutoriais hands-on que te guiarão passo a passo.
 
+- [Getting Started](tutorials/getting-started.qmd) — Seu primeiro projeto, do zero à primeira compilação
 - [Synesis no Claude Desktop](tutorials/synesis_claude_desktop.qmd) — Comece com a ajuda do Claude, sem instalar nada à mão
 - [Guia para Pesquisadores](tutorials/guia_pesquisadores.qmd) — Introdução para pesquisa qualitativa
 - [Tutorial Synesis Explorer](tutorials/synesis_explorer_tutorial.qmd) — Configurar o ambiente VSCode
@@ -48,12 +49,14 @@ Synesis não é apenas um sistema de organização, mas uma infraestrutura de tr
 **Você sabe o que quer fazer?** Veja nossos guias práticos para tarefas comuns.
 
 - [Guia para Profissionais](howto/guia_profissionais.qmd) — Aplicar Synesis em contextos organizacionais
+- [Codificação com IA](howto/synesis_coder.qmd) — Anotar com o synesis-coder e revisar o resultado
 - [Exportar para Neo4j](howto/exportar_neo4j.qmd) — Criar knowledge graphs
 
 ### Consultar especificações técnicas
 **Você precisa de detalhes técnicos?** Acesse a referência completa da linguagem e API.
 
-- [Referência da Linguagem](reference/guia_referencia.qmd) — Sintaxe completa Synesis v1.1
+- [Referência da Linguagem](reference/guia_referencia.qmd) — Sintaxe completa e linha de comando
+- [Guia de Erros](reference/guia_erros.qmd) — Cada diagnóstico do compilador, com a correção
 - [API Synesis](reference/synesis_load.qmd) — Integração Python (`synesis.load()`)
 
 ### Entender conceitos
@@ -77,13 +80,13 @@ Todo o sistema é orquestrado por um arquivo de projeto (*.synp*), que atua como
 
 
 
-```synesis
-@Artile{doe2026
+```bibtex
+@article{doe2026,
     author  = {Doe, John},
     journal = {Knowledge Management},
-    title   = {Exploring knowledge annotation systems}
-    year    = {2026}
-    number  = {7}
+    title   = {Exploring knowledge annotation systems},
+    year    = {2026},
+    number  = {7},
     volume  = {1}
 }
 ```
@@ -111,12 +114,25 @@ FIELD note TYPE MEMO
     SCOPE ITEM
     DESCRIPTION Memo analítico explicando a interpretação e mecanismo causal identificado
 END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relação causal entre conceitos
+    RELATIONS
+        ENABLES: A permite que B ocorra
+        CONSTRAINS: A limita B
+    END RELATIONS
+END FIELD
 ```
 
 **Anotações** (*.syn*): Composto por registros analíticos estruturados conforme o template. Apresentam-se como textos organizados em blocos formais, seguindo as regras declaradas.
 
 
 ```synesis
+SOURCE @doe2026
+END SOURCE
+
 ITEM @doe2026
     text: This study aims to assess the impacts of these transition plans on social equity in a case study of the southern coast of Iran, where the community faces severe water scarcity and there is ready access to seawater for desalination.
 
@@ -140,8 +156,8 @@ END ITEM
 ```synesis
 ONTOLOGY Cost
     topic: Economics
-    aspect: 11 Economic Aspect
-    dimension: 2 Market Dimension
+    aspect: 11
+    dimension: 2
     confidence: HIGH
 
     reasoning: Aspect 11: Core economic factor representing financial expenditure. Mainly constrains deployment/technology development while enabling market penetration when reduced. Co-occurs with Deployment and Acceptance, indicating market-consumer relevance. Dimension 2: Directly affects investors, consumers, and market competitiveness. High frequency (96) across broad sources (66) confirms central role.
@@ -159,19 +175,19 @@ Enquanto os arquivos de anotação e ontologia se assemelham a textos estruturad
 
 ### O Poder da Integração
 
-O resultado da compilação Synesis vai muito além de documentos estruturados. O compilador converte seu corpo de conhecimento em formatos universais de intercâmbio — como JSON, Excel, DOCX, CSV e REFI-QDA — tornando-o interoperável com outras *stacks* tecnológicas.
+O resultado da compilação Synesis vai muito além de documentos estruturados. O compilador converte seu corpo de conhecimento em formatos de intercâmbio — como JSON, CSV, Excel, Alpaca e SKOS — tornando-o interoperável com outras *stacks* tecnológicas.
 
 Mais do que exportar dados, Synesis transforma conhecimento estruturado em infraestrutura computacional.
 
 #### Graph Databases
 
-Integração nativa com Neo4j e Memgraph, permitindo materializar a topologia conceitual do seu conhecimento em grafos navegáveis, consultáveis e visualmente exploráveis.
+O [synesis-graph](reference/synesis_graph.qmd) leva o projeto para o Neo4j ou o ArcadeDB, permitindo materializar a topologia conceitual do seu conhecimento em grafos navegáveis, consultáveis e visualmente exploráveis.
 
-![Neo4j Dektop with Synesis generated data.](../images/neo4jFactors.png)
+![Neo4j Desktop com dados gerados pelo Synesis.](../images/neo4jFactors.png)
 
 #### AI-Ready
 
-Por meio do protocolo MCP (Model Context Protocol), seus dados podem ser conectados a assistentes como Claude Desktop, viabilizando interações em linguagem natural com respostas rastreáveis e fundamentadas diretamente em bancos de grafos Neo4j/Memgraph — sua fonte formal de verdade.
+Por meio do protocolo MCP (Model Context Protocol), seus dados podem ser conectados a assistentes como Claude Desktop, viabilizando interações em linguagem natural com respostas rastreáveis e fundamentadas diretamente no banco de grafos (Neo4j ou ArcadeDB) — sua fonte formal de verdade.
 
 ![Acesso a dados compilados via chat com linguagem natural.](../images/claude_mcp_pt.png)
 
@@ -189,7 +205,7 @@ Através de um Language Server Protocol (LSP), o editor reconhece a sintaxe Syne
 
 #### Plugin para Zotero
 
-Permite exportar bibliografias e anotações destacadas diretamente para o formato Synesis, integrando pesquisa acadêmica ao fluxo de compilação.
+O [zotero-synesis-export](https://github.com/synesis-lang/zotero-synesis-export) exporta destaques, comentários e etiquetas de PDFs do Zotero para o formato Synesis, integrando a leitura acadêmica ao fluxo de compilação.
 
 ![Configuração para exportação no Zotero.](../images/zotero_preferences.png)
 

@@ -1,0 +1,397 @@
+---
+title: "How to Define an Ontology"
+subtitle: "A practical guide to creating structured conceptual vocabularies"
+---
+
+# How to Define an Ontology
+
+This guide shows **how to create and organize ontologies** (`.syno`) to structure your conceptual vocabulary in a systematic, auditable way.
+
+::: {.callout-note}
+## ONTOLOGY blocks are organizing principles
+
+`ONTOLOGY` blocks do not commit you to a formal ontology: they are the **organizing principles** of the project, and the compiler calls the whole the **organizing model**. The same mechanism serves a flat list of concepts, a vocabulary with synonyms, a taxonomy or a multi-relation taxonomy exported as SKOS — the degree is a research decision. The function of each field (label, definition, hierarchy, consolidation) is declared with `ROLE` in the template. See [The Organizing Model](../reference/organizing_model.qmd).
+:::
+
+**Use this guide if you:**
+
+- Need to define reusable concepts
+- Want to organize concepts into thematic groups
+- Want terminological consistency in the project
+
+---
+
+## First, the Template
+
+The fields of an `ONTOLOGY` block are declared in the template. The example below is used throughout this guide; the field names are yours.
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definition
+    OPTIONAL group, used_for, kind_of
+END ONTOLOGY FIELDS
+
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE NOTE DEFINITION
+    DESCRIPTION Definition of the concept and application criterion
+    GUIDELINES
+        Say what the concept is and when to apply it.
+        Correct: Barrier linked to purchase price; excludes maintenance cost.
+        Wrong: Things about money.
+    END GUIDELINES
+END FIELD
+
+FIELD group TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Theme that groups the concept (a term without spaces)
+END FIELD
+
+FIELD used_for TYPE TEXT
+    SCOPE ONTOLOGY
+    ROLE LABEL ALTERNATIVE
+    DESCRIPTION Synonyms used by the sources
+END FIELD
+
+FIELD kind_of TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE HIERARCHY KIND
+    DESCRIPTION Broader concept, when there is one
+END FIELD
+```
+
+The `ROLE` lines are optional. Without them the fields are just text; with them the compiler validates labels and hierarchy.
+
+---
+
+## Basic Structure
+
+Each block defines **one concept**:
+
+```synesis
+ONTOLOGY cost
+    definition: Factors related to price, budget and economic viability
+    group: adoption_barriers
+END ONTOLOGY
+```
+
+A concept name has no spaces. Use letters (accents are accepted), digits, `_` and `-`. Matching with the codes of the annotations ignores case.
+
+::: {.callout-tip}
+## Prefer plain names
+Accented characters are allowed, but plain names are easier to type, search and use in other tools.
+:::
+
+---
+
+## How to Add Concepts
+
+```synesis
+ONTOLOGY cost
+    definition: Factors related to price, budget and economic viability
+    group: adoption_barriers
+END ONTOLOGY
+
+ONTOLOGY technical_complexity
+    definition: Perceived difficulty of use or need for specialist knowledge
+    group: adoption_barriers
+END ONTOLOGY
+```
+
+### Terminological Variants
+
+When different sources use different terms for the same concept, keep **one** canonical name and record the variants as alternative labels:
+
+```synesis
+ONTOLOGY organizational_resistance
+    definition: Cultural or structural opposition to change
+    group: contextual_factors
+    used_for: institutional inertia, resistance to change
+END ONTOLOGY
+```
+
+A label belongs to a single concept ([E115](../reference/guia_erros.qmd#sec-e115)). When a code used in annotations is a registered label, the compiler suggests the right concept.
+
+### Hierarchy ("is a kind of")
+
+Declare the broader concept with a `ROLE HIERARCHY` field:
+
+```synesis
+ONTOLOGY infrastructure
+    definition: Technical resources available to operate the system
+    group: technology_factors
+END ONTOLOGY
+
+ONTOLOGY network_infrastructure
+    definition: Network and broadband capacity
+    group: technology_factors
+    kind_of: infrastructure
+END ONTOLOGY
+```
+
+The compiler requires the parent to have a block, accepts several parents and refuses cycles. There are three species of hierarchy: kind (`KIND`), part (`PART`) and instance (`INSTANCE`). Subtree counts appear in the JSON, the graph and the editor.
+
+::: {.callout-note}
+## Adopted hierarchy and stated relations
+What is in the `.syno` is what the **project adopts**. What **sources state** stays in the chains of the annotations, with evidence.
+:::
+
+---
+
+## How to Group Concepts
+
+A `TOPIC` field groups concepts with no predefined list: use the same value for what belongs together.
+
+### By Analytical Dimension
+
+```synesis
+ONTOLOGY upfront_cost
+    definition: Investment required to implement
+    group: economic_dimension
+END ONTOLOGY
+
+ONTOLOGY staff_acceptance
+    definition: Degree of staff buy-in to the change
+    group: social_dimension
+END ONTOLOGY
+```
+
+### With Several Classifications
+
+A template may ask for several classifications, including closed scales (`ORDERED`, where the index is stored):
+
+```synesis
+ONTOLOGY Public_Acceptance
+    topic: Social
+    aspect: 10
+    dimension: 1
+    confidence: HIGH
+    reasoning: Community and collective dynamics central to acceptance;
+        co-occurs with stakeholder engagement and trust.
+    description: The degree to which local communities support or oppose
+        energy transition projects.
+END ONTOLOGY
+```
+
+### By Process Stage or Actor
+
+```synesis
+ONTOLOGY awareness
+    definition: Knowledge that the technology exists
+    group: pre_adoption
+END ONTOLOGY
+
+ONTOLOGY satisfaction
+    definition: Perception of expectations met after adoption
+    group: post_adoption
+END ONTOLOGY
+
+ONTOLOGY usability
+    definition: Ease of everyday operation
+    group: user_perspective
+END ONTOLOGY
+```
+
+---
+
+## Causal Relations
+
+Chain relations are declared in the **template** (`.synt`), in the `CHAIN` field, not in the ontology. See [How to Create Chains](criar_chains.qmd).
+
+```synesis
+ITEM @source_01
+    chain: high_cost -> INHIBITS -> adoption
+END ITEM
+```
+
+---
+
+## Referencing Concepts in Annotations
+
+```synesis
+ITEM @source_01
+    quote: "The price is too high"
+    code: cost
+END ITEM
+```
+
+Every concept used in a `CODE` field or in a chain should exist in the ontology. A concept without a block raises a **warning** (summarized in one line, or detailed with `--check-codes`); with `--strict`, compilation fails.
+
+---
+
+## How to Validate Your Ontology
+
+```bash
+synesis check ontology.syno                        # only the syntax of the file
+synesis compile project.synp --check-codes         # consistency of the project
+```
+
+| Message | Cause | Fix |
+|------|-------|---------|
+| ``Concept `X` duplicated`` | two blocks for the same concept | merge the blocks |
+| ``Required field `definition` missing in ONTOLOGY block`` | a required field is missing | fill it in |
+| ``Identifier `X` contains the invalid character`` | name with a disallowed character | use letters, digits, `_`, `-` |
+| ``Code `X` is not defined in the organizing model`` | code without a block | create the block or fix the code |
+| ``Concepts `A` and `B` have identical descriptions`` | likely duplicate | differentiate or consolidate |
+
+At the end, the compiler describes the profile of the model (flat list, vocabulary, taxonomy…). With `ROLE`, it also warns about concepts with no evidence and no descendant with evidence ([E120](../reference/guia_erros.qmd#sec-e120)).
+
+---
+
+## Generating the Ontology with AI
+
+With the corpus annotated, `synesis-coder` proposes definitions grounded in the use of each concept:
+
+```bash
+synesis-coder ontology --project project.synp --output ontology.syno --update
+```
+
+Review the result: a definition is a proposal. To produce definitions, synonyms and taxonomy in stages, declare [`PHASE`](../reference/organizing_model.qmd) blocks.
+
+---
+
+## How to Evolve the Ontology
+
+### Add a Concept
+
+1. add the `ONTOLOGY` block to the `.syno`
+2. compile with `--check-codes`
+
+### Consolidate Two Concepts
+
+With a `ROLE USE` field in the template, the deprecated name counts as the other one **without editing the annotations**:
+
+```synesis
+FIELD use TYPE CODE
+    SCOPE ONTOLOGY
+    ROLE USE
+END FIELD
+```
+
+```synesis
+ONTOLOGY voice_phishing
+    use: vishing
+END ONTOLOGY
+```
+
+`synesis-coder consolidate project.synp voice_phishing --into vishing` moves labels and parents, with a manifest, and is undone with `--revert`.
+
+### Rename a Concept
+
+Rename the block and update the `.syn` files: in VS Code, `F2` on the code renames it across the project. If the vocabulary has been published (SKOS), prefer `USE`, so that the old address keeps resolving.
+
+### Split a Broad Concept
+
+```synesis
+ONTOLOGY acquisition_cost
+    definition: Initial purchase price
+    group: economic_factors
+END ONTOLOGY
+
+ONTOLOGY maintenance_cost
+    definition: Recurring operating expenses
+    group: economic_factors
+END ONTOLOGY
+```
+
+Then review each annotation that used the original concept and decide which one applies. To find the occurrences, use the **Codes** panel in VS Code or the `source_file` and `source_line` columns of the CSV tables.
+
+---
+
+## Examples by Field
+
+### Thematic Analysis
+
+```synesis
+ONTOLOGY lived_experience
+    definition: First-hand accounts of personal experience
+    group: descriptive_themes
+END ONTOLOGY
+
+ONTOLOGY apparent_contradiction
+    definition: Tension between perspectives on the same phenomenon
+    group: analytical_themes
+END ONTOLOGY
+```
+
+### Public Policy
+
+```synesis
+ONTOLOGY implementer
+    definition: Agent responsible for carrying out the policy
+    group: actors
+END ONTOLOGY
+
+ONTOLOGY equity
+    definition: Fair distribution of benefits across groups
+    group: evaluation_dimensions
+END ONTOLOGY
+```
+
+### Requirements Engineering
+
+```synesis
+ONTOLOGY integration
+    definition: Communication with external systems
+    group: functional_requirements
+END ONTOLOGY
+
+ONTOLOGY security
+    definition: Data protection and authentication
+    group: non_functional_requirements
+END ONTOLOGY
+```
+
+---
+
+## Documenting Decisions
+
+Use comments in the `.syno` files themselves:
+
+```synesis
+# DECISION 2026-02-04: we split "cost" into two concepts after
+# finding ambiguity in interviews 15 to 20
+
+ONTOLOGY operating_cost
+    # NOTE: includes training, support and recurring licences
+    definition: Recurring maintenance and operating expenses
+    group: economic_factors
+END ONTOLOGY
+```
+
+---
+
+## Several Ontology Files
+
+For large projects, split by domain; a whole folder can be included:
+
+```text
+ontology/
+├── actors.syno
+├── processes.syno
+└── outcomes.syno
+```
+
+```synesis
+PROJECT my_analysis
+    TEMPLATE "template.synt"
+    INCLUDE BIBLIOGRAPHY "references.bib"
+    INCLUDE ANNOTATIONS "annotations"
+    INCLUDE ONTOLOGY "ontology"
+END PROJECT
+```
+
+For a vocabulary shared by several projects, use [`INCLUDE SHARED ONTOLOGY`](ligar_projetos.qmd#sec-shared).
+
+---
+
+## References
+
+- [Language Reference](../reference/guia_referencia.qmd)
+- [The Organizing Model](../reference/organizing_model.qmd)
+- [How to create chains](criar_chains.qmd)
+- [Getting Started](../tutorials/getting-started.qmd)
+
+---
+
+**Questions?** Check [GitHub Discussions](https://github.com/synesis-lang/synesis/discussions) or open an issue.

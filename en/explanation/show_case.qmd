@@ -1,0 +1,584 @@
+---
+title: "What Synesis Can Express"
+subtitle: "A panoramic view of the annotation and structuring possibilities"
+---
+
+This document presents the features of the Synesis language one by one. Each example shows first the configuration in the **template** (`.synt`) and then an **example block** using the feature.
+
+All examples belong to one fictitious study: **barriers to telemedicine adoption in rural communities**.
+
+:::{.callout-tip}
+## How to read this page
+Each section is independent. You do not need to read everything at once --- jump to the field type you want to understand.
+:::
+
+---
+
+# SOURCE Block {#sec-source}
+
+The `SOURCE` block gives context on the origin of the data. It references an entry of the `.bib` file and may hold additional fields defined in the template.
+
+```synesis
+SOURCE @interview_mrs_maria2026
+    # optional fields here
+END SOURCE
+```
+
+Below are examples of field types that can be used in SOURCE.
+
+---
+
+## TEXT in SOURCE
+
+The `TEXT` type stores free text. Here we use it to record the context of the interview.
+
+**In the template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL context
+END SOURCE FIELDS
+
+FIELD context TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Context or circumstances of data collection
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+SOURCE @interview_mrs_maria2026
+    context: Interview at the participant's home, rural area, without internet access
+END SOURCE
+```
+
+---
+
+## DATE in SOURCE
+
+The `DATE` type records dates. Useful to keep track of when a source was accessed or collected.
+
+**In the template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    OPTIONAL collection_date
+END SOURCE FIELDS
+
+FIELD collection_date TYPE DATE
+    SCOPE SOURCE
+    DESCRIPTION Date the data were collected
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+SOURCE @interview_mrs_maria2026
+    collection_date: 2026-01-15
+END SOURCE
+```
+
+---
+
+## ENUMERATED in SOURCE
+
+The `ENUMERATED` type restricts a value to a predefined closed list. Here we classify the type of source.
+
+**In the template (.synt):**
+
+```synesis
+SOURCE FIELDS
+    REQUIRED source_type
+END SOURCE FIELDS
+
+FIELD source_type TYPE ENUMERATED
+    SCOPE SOURCE
+    DESCRIPTION Type of data source
+    VALUES
+        interview: Individual or group interview
+        document: Textual or audiovisual document
+        observation: Field observation
+    END VALUES
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+SOURCE @interview_mrs_maria2026
+    source_type: interview
+END SOURCE
+```
+
+:::{.callout-note}
+If the researcher writes a value outside the list (for instance `source_type: questionnaire`), the compiler rejects it with an error message pointing to the allowed values.
+:::
+
+---
+
+# ITEM Block {#sec-item}
+
+The `ITEM` block is the fundamental analytical unit. It holds excerpts, interpretations, codes and relations. Each `ITEM` belongs to a `SOURCE`.
+
+```synesis
+ITEM @interview_mrs_maria2026
+    # analysis fields here
+END ITEM
+```
+
+---
+
+## QUOTATION in ITEM
+
+The `QUOTATION` type stores the textual excerpt from the source. It is typically the most basic required field.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quotation_text
+END ITEM FIELDS
+
+FIELD quotation_text TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Textual excerpt from the source
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+END ITEM
+```
+
+---
+
+## MEMO in ITEM
+
+The `MEMO` type records the researcher's interpretation or analytical note on the excerpt.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED note
+END ITEM FIELDS
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Analytical interpretation by the researcher
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    note: The participant expresses technological distrust linked to the lack of in-person contact
+END ITEM
+```
+
+---
+
+## CODE in ITEM
+
+The `CODE` type assigns conceptual labels to the excerpt. Each code must exist as a concept in the project ontology. One item may receive several codes.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL code
+END ITEM FIELDS
+
+FIELD code TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Conceptual label for categorization
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    code: Technological_Distrust, In_Person_Preference
+END ITEM
+```
+
+:::{.callout-tip}
+## Multiple codes
+Separate codes with commas on one line, or repeat the field on separate lines:
+
+```synesis
+ITEM @interview_mrs_maria2026
+    code: Technological_Distrust
+    code: In_Person_Preference
+END ITEM
+```
+
+Both forms are equivalent.
+:::
+
+---
+
+## Simple CHAIN in ITEM
+
+The `CHAIN` type expresses relations between concepts. When the template does **not** define `RELATIONS`, the chain uses implicit relations --- just concepts separated by `->`.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL chain
+END ITEM FIELDS
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relation between concepts
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    chain: Technological_Distrust -> Telemedicine_Resistance
+END ITEM
+```
+
+Here the relation between the concepts is implicit: the researcher knows there is a connection but does not need to name it.
+
+---
+
+## Qualified CHAIN with BUNDLE in ITEM
+
+When the template **defines** `RELATIONS`, every relation in the chain must be named. The `BUNDLE` modifier guarantees that note and chain always appear together, in positional pairs.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    REQUIRED quotation_text
+    REQUIRED BUNDLE note, chain
+END ITEM FIELDS
+
+FIELD note TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Analytical interpretation by the researcher
+END FIELD
+
+FIELD chain TYPE CHAIN
+    SCOPE ITEM
+    DESCRIPTION Causal chain between ontology concepts
+    ARITY >= 2
+    RELATIONS
+        INFLUENCES: Direct causal effect
+        INHIBITS: Limits or prevents
+        ENABLES: Makes possible or eases
+    END RELATIONS
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+
+    note: Distrust of technology produces direct resistance
+    chain: Technological_Distrust -> INHIBITS -> Telemedicine_Uptake
+
+    note: Low digital literacy reinforces the distrust
+    chain: Low_Digital_Literacy -> INFLUENCES -> Technological_Distrust -> INHIBITS -> Telemedicine_Uptake
+END ITEM
+```
+
+:::{.callout-note}
+## What BUNDLE guarantees
+
+- **note** and **chain** must appear in equal numbers (here, 2 of each)
+- The first **note** pairs with the first **chain**, the second with the second
+- With 2 notes and 1 chain, the compiler reports an error
+:::
+
+:::{.callout-tip}
+## ARITY
+The `ARITY >= 2` property requires each chain to contain at least 2 concepts. A chain with only 1 concept would be rejected.
+:::
+
+---
+
+## SCALE in ITEM
+
+The `SCALE` type records a numeric value within a range defined by `FORMAT`.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL confidence
+END ITEM FIELDS
+
+FIELD confidence TYPE SCALE
+    SCOPE ITEM
+    DESCRIPTION Researcher's confidence in the interpretation
+    FORMAT [1..5]
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    note: Distrust of technology produces direct resistance
+    confidence: 5
+END ITEM
+```
+
+If the researcher writes `confidence: 7`, the compiler rejects it because the value is outside `[1..5]`.
+
+---
+
+## ENUMERATED in ITEM
+
+`ENUMERATED` can also be used in ITEM blocks --- for instance, to classify the sentiment expressed in each excerpt.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL sentiment
+END ITEM FIELDS
+
+FIELD sentiment TYPE ENUMERATED
+    SCOPE ITEM
+    DESCRIPTION Predominant sentiment of the excerpt
+    VALUES
+        positive: Favorable sentiment
+        negative: Unfavorable sentiment
+        neutral: No evident emotional charge
+        ambivalent: Mixed or contradictory sentiments
+    END VALUES
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    sentiment: negative
+END ITEM
+```
+
+---
+
+## ORDERED in ITEM
+
+The `ORDERED` type works as a list with an explicit hierarchy. Each value has a numeric index that defines the order.
+
+**In the template (.synt):**
+
+```synesis
+ITEM FIELDS
+    OPTIONAL relevance
+END ITEM FIELDS
+
+FIELD relevance TYPE ORDERED
+    SCOPE ITEM
+    DESCRIPTION Relevance of the excerpt to the research question
+    VALUES
+        [1] low: Tangentially related
+        [2] medium: Contributes to understanding
+        [3] high: Central to the research question
+    END VALUES
+END FIELD
+```
+
+**In the annotation file (.syn):**
+
+```synesis
+ITEM @interview_mrs_maria2026
+    quotation_text: "I don't trust this computer business for talking to a doctor"
+    relevance: 3
+END ITEM
+```
+
+In an `ORDERED` field you write the **index** (`3`), not the label; writing `high` produces an error whose message gives the right index. The editor shows the label next to the number.
+
+:::{.callout-tip}
+## ORDERED vs. ENUMERATED
+The difference is **hierarchy**: in ORDERED, `high > medium > low` has ordinal meaning. In ENUMERATED, values are unranked categories (such as `positive`, `negative`, `neutral`).
+:::
+
+---
+
+# ONTOLOGY Block {#sec-ontology}
+
+The `ONTOLOGY` block defines the concepts of the project's controlled vocabulary. Every code used in `CODE` or `CHAIN` should exist as a concept in the ontology.
+
+```synesis
+ONTOLOGY Concept_Name
+    # definition fields here
+END ONTOLOGY
+```
+
+---
+
+## TEXT in ONTOLOGY
+
+The `TEXT` type in the ontology stores the concept definition.
+
+**In the template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definition
+END ONTOLOGY FIELDS
+
+FIELD definition TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Textual definition of the concept
+END FIELD
+```
+
+**In the ontology file (.syno):**
+
+```synesis
+ONTOLOGY Technological_Distrust
+    definition: Resistance or scepticism towards digital technologies mediating essential services
+END ONTOLOGY
+```
+
+---
+
+## TOPIC in ONTOLOGY
+
+The `TOPIC` type creates dynamic grouping categories. Unlike `ENUMERATED` there is no closed list --- the researcher creates categories freely while defining concepts.
+
+**In the template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definition
+    OPTIONAL theme
+END ONTOLOGY FIELDS
+
+FIELD theme TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Thematic domain of the concept
+END FIELD
+```
+
+**In the ontology file (.syno):**
+
+```synesis
+ONTOLOGY Technological_Distrust
+    definition: Resistance to digital technologies
+    theme: Cultural_Factors
+END ONTOLOGY
+
+ONTOLOGY Low_Digital_Literacy
+    definition: Insufficient digital skills to use health platforms
+    theme: Cultural_Factors
+END ONTOLOGY
+
+ONTOLOGY Poor_Infrastructure
+    definition: Absent or insufficient connectivity and equipment
+    theme: Structural_Factors
+END ONTOLOGY
+```
+
+The themes `Cultural_Factors` and `Structural_Factors` emerge from the analysis --- they need not be predefined in the template.
+
+---
+
+## ORDERED in ONTOLOGY
+
+`ORDERED` in the ontology classifies concepts in an explicit hierarchy.
+
+**In the template (.synt):**
+
+```synesis
+ONTOLOGY FIELDS
+    REQUIRED definition
+    OPTIONAL priority
+END ONTOLOGY FIELDS
+
+FIELD priority TYPE ORDERED
+    SCOPE ONTOLOGY
+    DESCRIPTION Priority of the concept for intervention
+    VALUES
+        [1] low: Secondary factor
+        [2] medium: Relevant factor
+        [3] high: Critical factor for intervention
+    END VALUES
+END FIELD
+```
+
+**In the ontology file (.syno):**
+
+```synesis
+ONTOLOGY Technological_Distrust
+    definition: Resistance to digital technologies
+    priority: 3
+END ONTOLOGY
+
+ONTOLOGY In_Person_Preference
+    definition: Preference for face-to-face medical care
+    priority: 2
+END ONTOLOGY
+```
+
+---
+
+# Summary {#sec-resumo}
+
+The three scopes accept the same types; the column shows the most common use. The `ITEM` and `ONTOLOGY` of one study usually combine several of them.
+
+| Type | Common scopes | Special properties | What it stores |
+|------|----------------|----------------------|----------------|
+| **TEXT** | SOURCE, ONTOLOGY | — | Generic free text |
+| **QUOTATION** | ITEM | — | Textual excerpt from the source |
+| **MEMO** | ITEM | — | Researcher's analytical note |
+| **CODE** | ITEM | — | Conceptual label (should exist in the ontology) |
+| **CHAIN** | ITEM | ARITY (required), RELATIONS | Relation between concepts (simple or qualified) |
+| **DATE** | SOURCE | — | Date (ISO recommended; the format is not checked) |
+| **SCALE** | ITEM | FORMAT [min..max] | Number within a range |
+| **ENUMERATED** | SOURCE, ITEM | VALUES (without index) | Value from a closed list |
+| **ORDERED** | ITEM, ONTOLOGY | VALUES (with index) | Value with ordinal hierarchy |
+| **TOPIC** | ONTOLOGY | — | Dynamic category (open values) |
+
+: Synesis field types and their features {.striped .hover}
+
+### Modifiers
+
+| Modifier | Meaning |
+|-------------|-------------|
+| **REQUIRED** | Required field --- the compiler rejects its absence |
+| **OPTIONAL** | Optional field --- may be left out without error |
+| **REQUIRED BUNDLE** | Group of fields that must appear together, in equal numbers |
+| **OPTIONAL BUNDLE** | The group may be absent as a whole; when present, complete |
+| **FORBIDDEN** | The field cannot hold a value in that block |
+| **ON BIBLIOGRAPHY** / **ON DATASET** | The value comes from the `.bib` or from a TOML record |
+
+: Field modifiers {.striped .hover}
+
+## Beyond Fields
+
+| Feature | Purpose |
+|---|---|
+| `ROLE` | gives an ontology field a function (label, definition, hierarchy, consolidation) — see [The Organizing Model](../reference/organizing_model.qmd) |
+| `IDENTIFIES` / `REFERS TO` | link independent projects — see [How to Link Projects](../howto/ligar_projetos.qmd) |
+| `QUESTIONS`, `PHASE`, `EXPORT` | in the `.synp`: research questions, production plan and artifacts — see the [Reference](../reference/guia_referencia.qmd) |
+
+: Other features {.striped .hover}
