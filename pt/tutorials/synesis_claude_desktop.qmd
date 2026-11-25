@@ -14,15 +14,13 @@ A divisão de papéis é a mesma do resto do Synesis: **a IA propõe, o compilad
 
 ::: {.callout-note}
 ## Situação
-A Skill foi testada de ponta a ponta com um projeto de prova e está em **fase de testes com pesquisadores**. O seu retorno ajuda a melhorá-la (veja [Se algo der errado](#se-algo-der-errado)).
+A versão atual é a **0.3.0**. A Skill foi testada de ponta a ponta com projetos de prova e está em **fase de testes com pesquisadores**. O seu retorno ajuda a melhorá-la (veja [Se algo der errado](#se-algo-der-errado)).
 :::
 
 ## O que você precisa
 
 - **Claude Desktop** (Windows ou macOS), numa conta com acesso à aba **Code**.
-- **Uma pasta** no seu computador para o projeto, com as fontes:
-  - entrevistas e documentos em `.txt` ou `.md`;
-  - artigos numa bibliografia `.bib` com os resumos.
+- **Uma pasta** no seu computador para o projeto, e as suas fontes. Não é preciso organizá-las antes: a Skill mostra onde colocá-las e em que formato (veja [Colocar as suas fontes](#colocar-as-suas-fontes)).
 - **Internet** na primeira vez, para instalar as ferramentas.
 - **Cerca de uma hora** para a primeira sessão.
 
@@ -41,6 +39,11 @@ A Skill precisa de um terminal e do seu disco. Ela funciona na aba **Code** do C
 
 Se a sua organização não permite enviar plugins, peça ao administrador.
 
+::: {.callout-tip}
+## Já instalou uma versão anterior?
+Remova o plugin Synesis em **Customize → Plugins** e envie o arquivo novo. Os seus projetos não mudam.
+:::
+
 ## 2. Abrir a primeira sessão
 
 1. Abra a aba **Code** e escolha a **pasta do projeto**.
@@ -57,12 +60,53 @@ Em ordem:
 
 1. **Pergunta sobre sigilo** antes de abrir qualquer arquivo (veja [Sigilo dos dados](#sigilo-dos-dados)).
 2. **Instala as ferramentas** do Synesis e mostra um relatório. Isso acontece uma vez por computador.
-3. **Conversa sobre o estudo:** as suas perguntas de pesquisa, o que extrair das fontes, se você quer categorias livres ou fechadas, relações de causa ou escalas.
-4. **Escreve o template** (a descrição do que será codificado) e mostra um exemplo. **Você aprova o template.**
-5. **Codifica cada fonte**, uma por vez, e monta a ontologia dos conceitos.
-6. **Valida, confere as citações no texto original** e monta o painel.
+3. **Recebe as suas fontes:** cria uma pasta, diz o que é cada arquivo e recomenda um formato. Você decide.
+4. **Conversa sobre o estudo:** as suas perguntas de pesquisa, o que extrair das fontes, se você quer categorias livres ou fechadas, relações de causa ou escalas.
+5. **Escreve o template** (a descrição do que será codificado) e mostra um exemplo. **Você aprova o template.**
+6. **Codifica cada fonte**, uma por vez, e monta a ontologia dos conceitos.
+7. **Valida, confere as citações no texto original** e monta o painel.
+
+Durante todo o trabalho, você acompanha o projeto numa página que abre no navegador: a [visão do projeto](#visao-do-projeto).
 
 No fim, o Claude resume o resultado: erros e avisos do compilador, quantas citações foram encontradas nas fontes, quantos conceitos a ontologia tem, e uma lista de **pontos que valem a sua conferência na auditoria**.
+
+## Colocar as suas fontes {#colocar-as-suas-fontes}
+
+Na primeira sessão, o Claude cria a pasta `entrada/` e abre a página **Suas fontes**. Copie os arquivos para lá, do jeito que estão, e avise o Claude.
+
+![A página Suas fontes](../../images/skill_suas_fontes.png){fig-alt="Página Suas fontes da Skill do Synesis, com os passos e o inventário da pasta de entrada"}
+
+Um programa examina os arquivos **no seu computador** e diz o que fazer com cada um. Os originais nunca são alterados.
+
+| O que você tem | Formato | O que é codificado |
+|---|---|---|
+| artigos, numa revisão de literatura | `.bib` com resumos (Zotero, Mendeley, Scopus, Web of Science) | só o resumo de cada referência |
+| entrevistas, diários de campo, documentos, artigos completos | `.txt`, `.md` ou `.docx` | o texto inteiro |
+| formulários, respostas abertas, posts, notícias, currículos | `.toml`, um registro por arquivo | as seções que o template indica |
+
+::: {.callout-important}
+## PDF
+Converta os PDFs em `.txt` (UTF-8) antes de colocá-los na pasta. A página mostra como, e o que conferir: colunas, cabeçalhos, palavras partidas, páginas digitalizadas. Sem dados sigilosos, um conector de PDF do Claude pode ajudar; pergunte ao Claude.
+:::
+
+::: {.callout-warning}
+## Dados pessoais
+Antes de copiar entrevistas, retire nomes e outros dados que identifiquem pessoas, no texto **e nos nomes dos arquivos**. Se preferir, peça ao Claude chaves neutras (`ent01`, `ent02`…).
+:::
+
+## Acompanhar o trabalho: a visão do projeto {#visao-do-projeto}
+
+A Skill mantém a página `view/index.html`, que abre com dois cliques, sem internet. Ela é só de leitura e se atualiza a cada etapa. [Abra a visão do projeto de exemplo](../../downloads/exemplo-telemedicina/resultado/view/index.html).
+
+![O Painel da visão do projeto](../../images/skill_visao_projeto.png){fig-alt="Painel da visão do projeto, com questões de pesquisa, números do corpus e matriz de conceitos por fonte"}
+
+- **Painel:** as questões de pesquisa, o tamanho do corpus, o que precisa de atenção e a matriz de conceitos por fonte. Clique numa célula para ler os trechos.
+- **Por onde começar:** os próximos passos do seu projeto.
+- **Os arquivos:** cada bloco é um cartão, com a sua origem e os seus problemas em linguagem simples. Passe o mouse sobre as palavras em azul para entender a linguagem.
+- **Pedir ao Claude:** copia um pedido pronto sobre aquele bloco, para você colar na conversa. O Claude explica e propõe, e espera a sua aprovação.
+- **Possibilidades:** parte do que você quer investigar (comparar, conectar, organizar, sustentar uma interpretação) e mostra o recurso do Synesis que faz isso.
+
+A página fala a língua do seu projeto: português, inglês, espanhol, francês, alemão, italiano ou chinês.
 
 ## O que a Skill gera
 
@@ -188,7 +232,7 @@ Quer ver a Skill funcionando sem usar as suas fontes? Baixe a [pasta de exemplo]
 
   > `/synesis` Quero codificar minhas três entrevistas sobre telemedicina. As transcrições estão em fontes.
 
-- **`resultado/`**: o que a Skill gerou numa sessão real com essas entrevistas, para você comparar com o seu: projeto, template, anotações, ontologia e o painel. Para ver o painel agora, [abra o painel de exemplo](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html).
+- **`resultado/`**: o que a Skill gerou numa sessão real com essas entrevistas, para você comparar com o seu: projeto, template, anotações, ontologia e o painel. Para ver o painel agora, [abra o painel de exemplo](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html) ou a [visão do projeto](../../downloads/exemplo-telemedicina/resultado/view/index.html).
 
 ::: {.callout-note}
 A codificação é feita por um modelo de IA. O seu resultado será parecido com o de `resultado/`, não idêntico: compare a estrutura e os critérios, não cada palavra.
@@ -223,12 +267,13 @@ Tudo o que o Claude lê sai do seu computador e vai para a Anthropic (e, no modo
 | `*.synp` | o projeto |
 | `template.synt` | o método |
 | `*.bib` | as fontes bibliográficas |
-| `fontes/` | os textos |
+| `entrada/` | os seus arquivos originais; não a compartilhe se houver dados pessoais |
+| `fontes/` | os textos preparados |
 | `anotacoes/`, `ontologia/` | o resultado da codificação |
 | `runs/` | o registro de cada execução: o que foi pedido ao modelo, o que ele respondeu e as decisões que você tomou |
-| `dashboard/`, `saida/` | arquivos gerados, que podem ser refeitos a qualquer momento |
+| `view/`, `dashboard/`, `saida/` | arquivos gerados, que podem ser refeitos a qualquer momento |
 
-Guarde a pasta inteira, exceto o `.env`. Com ela, qualquer pessoa reconstrói os seus resultados e o seu painel. Os arquivos são os mesmos do Synesis: você pode abri-los no [VS Code](synesis_explorer_tutorial.qmd) quando quiser.
+Guarde a pasta inteira; ao compartilhar, deixe de fora o `.env` e a `entrada/`. Com ela, qualquer pessoa reconstrói os seus resultados e o seu painel. Os arquivos são os mesmos do Synesis: você pode abri-los no [VS Code](synesis_explorer_tutorial.qmd) quando quiser.
 
 ## Se algo der errado {#se-algo-der-errado}
 

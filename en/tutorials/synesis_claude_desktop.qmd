@@ -14,15 +14,13 @@ The division of roles is the same as everywhere in Synesis: **the AI proposes, t
 
 ::: {.callout-note}
 ## Status
-The Skill was tested end to end on a proof project and is **in testing with researchers**. Your feedback helps improve it (see [If something goes wrong](#if-something-goes-wrong)).
+The current version is **0.3.0**. The Skill was tested end to end on proof projects and is **in testing with researchers**. Your feedback helps improve it (see [If something goes wrong](#if-something-goes-wrong)).
 :::
 
 ## What you need
 
 - **Claude Desktop** (Windows or macOS), on an account with access to the **Code** tab.
-- **A folder** on your computer for the project, holding your sources:
-  - interviews and documents as `.txt` or `.md`;
-  - articles in a `.bib` bibliography with abstracts.
+- **A folder** on your computer for the project, and your sources. No need to organize them first: the Skill shows where to put them and in which format (see [Add your sources](#add-your-sources)).
 - **An internet connection** the first time, to install the tools.
 - **About an hour** for the first session.
 
@@ -41,6 +39,11 @@ The Skill needs a terminal and your disk. It works in the **Code** tab of Claude
 
 If your organization does not allow uploading plugins, ask your administrator.
 
+::: {.callout-tip}
+## Already have an earlier version?
+Remove the Synesis plugin in **Customize → Plugins** and upload the new file. Your projects do not change.
+:::
+
 ## 2. Open the first session
 
 1. Open the **Code** tab and choose the **project folder**.
@@ -57,12 +60,53 @@ In order:
 
 1. **Asks about confidentiality** before opening any file (see [Data confidentiality](#data-confidentiality)).
 2. **Installs the Synesis tools** and shows a report. This happens once per computer.
-3. **Talks through the study:** your research questions, what to extract from the sources, whether you want free or closed categories, causal relations or scales.
-4. **Writes the template** (the description of what will be coded) and shows an example. **You approve the template.**
-5. **Codes each source**, one at a time, and builds the ontology of concepts.
-6. **Validates, checks each quotation against the original text** and builds the dashboard.
+3. **Receives your sources:** creates a folder, says what each file is and recommends a format. You decide.
+4. **Talks through the study:** your research questions, what to extract from the sources, whether you want free or closed categories, causal relations or scales.
+5. **Writes the template** (the description of what will be coded) and shows an example. **You approve the template.**
+6. **Codes each source**, one at a time, and builds the ontology of concepts.
+7. **Validates, checks each quotation against the original text** and builds the dashboard.
+
+Throughout the work you follow the project in a page that opens in your browser: the [project view](#project-view).
 
 At the end Claude summarizes the result: compiler errors and warnings, how many quotations were found in the sources, how many concepts the ontology has, and a list of **points worth checking in your audit**.
+
+## Add your sources {#add-your-sources}
+
+In the first session Claude creates the `inbox/` folder and opens the **Your sources** page. Copy your files there, as they are, and tell Claude.
+
+![The Your sources page](../../images/skill_your_sources.png){fig-alt="The Your sources page of the Synesis Skill, with the steps and the inventory of the inbox"}
+
+A program looks at the files **on your computer** and says what to do with each one. Your originals are never changed.
+
+| What you have | Format | What is coded |
+|---|---|---|
+| articles, in a literature review | `.bib` with abstracts (Zotero, Mendeley, Scopus, Web of Science) | only the abstract of each reference |
+| interviews, field notes, documents, full articles | `.txt`, `.md` or `.docx` | the whole text |
+| forms, open answers, posts, news, curricula | `.toml`, one record per file | the sections the template points to |
+
+::: {.callout-important}
+## PDF
+Convert PDF files to `.txt` (UTF-8) before adding them. The page shows how, and what to check: columns, headers, broken words, scanned pages. With no confidential data, a PDF connector for Claude can help; ask Claude.
+:::
+
+::: {.callout-warning}
+## Personal data
+Before copying interviews, remove names and other data that identify people, in the text **and in the file names**. You can also ask Claude for neutral keys (`ent01`, `ent02`…).
+:::
+
+## Follow the work: the project view {#project-view}
+
+The Skill keeps the page `view/index.html`, which opens with a double click, with no internet. It is read-only and updates at every step. [Open the project view of the example](../../downloads/exemplo-telemedicina/resultado/view_en/index.html).
+
+![The Overview of the project view](../../images/skill_project_view.png){fig-alt="Overview of the project view, with research questions, corpus size and the concepts-by-source matrix"}
+
+- **Overview:** the research questions, the size of the corpus, what needs attention and the concepts-by-source matrix. Click a cell to read the excerpts.
+- **Where to start:** the next steps of your project.
+- **The files:** every block is a card, with its origin and its problems in plain words. Hover over the words in blue to understand the language.
+- **Ask Claude:** copies a ready request about that block, for you to paste in the conversation. Claude explains and proposes, and waits for your approval.
+- **Possibilities:** starts from what you want to investigate (compare, connect, organize, support an interpretation) and shows the Synesis feature that does it.
+
+The page speaks the language of your project: English, Portuguese, Spanish, French, German, Italian or Chinese.
 
 ## What the Skill produces
 
@@ -190,7 +234,7 @@ Want to see the Skill at work without using your own sources? Download the [exam
 
   > `/synesis` I want to code my three interviews about telemedicine. The transcripts are in fontes.
 
-- **`resultado/`**: what the Skill produced in a real session with those interviews, so you can compare with yours: project, template, annotations, ontology and the dashboard. To see the dashboard right now, [open the example dashboard](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html).
+- **`resultado/`**: what the Skill produced in a real session with those interviews, so you can compare with yours: project, template, annotations, ontology and the dashboard. To see the dashboard right now, [open the example dashboard](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html) or the [project view](../../downloads/exemplo-telemedicina/resultado/view_en/index.html).
 
 ::: {.callout-note}
 The coding is done by an AI model. Your result will be similar to the one in `resultado/`, not identical: compare structure and criteria, not every word.
@@ -225,12 +269,13 @@ Everything Claude reads leaves your computer and goes to Anthropic (and, in API 
 | `*.synp` | the project |
 | `template.synt` | the method |
 | `*.bib` | the bibliographic sources |
-| `fontes/` | the texts |
+| `inbox/` | your original files; do not share it if it has personal data |
+| `fontes/` | the prepared texts |
 | `anotacoes/`, `ontologia/` | the result of the coding |
 | `runs/` | the record of every run: what was asked of the model, what it answered and the decisions you made |
-| `dashboard/`, `saida/` | generated files, which can be rebuilt at any time |
+| `view/`, `dashboard/`, `saida/` | generated files, which can be rebuilt at any time |
 
-Keep the whole folder, except the `.env`. With it, anyone can rebuild your results and your dashboard. The files are plain Synesis files: you can open them in [VS Code](synesis_explorer_tutorial.qmd) whenever you like.
+Keep the whole folder; when you share it, leave out the `.env` and the `inbox/`. With it, anyone can rebuild your results and your dashboard. The files are plain Synesis files: you can open them in [VS Code](synesis_explorer_tutorial.qmd) whenever you like.
 
 ## If something goes wrong {#if-something-goes-wrong}
 
