@@ -69,7 +69,7 @@ No fim, o Claude resume o resultado: erros e avisos do compilador, quantas cita�
 Os exemplos abaixo vêm de uma sessão real com as três entrevistas fictícias da [pasta de exemplo](#testar-com-o-nosso-exemplo). São arquivos de texto comuns do Synesis; você pode abri-los em qualquer editor.
 
 ::: {.grid}
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Projeto (`telemedicina.synp`)**
@@ -95,7 +95,7 @@ END PROJECT
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Template (`template.synt`)**
@@ -119,7 +119,7 @@ END FIELD
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Anotações (`anotacoes/`)**
@@ -142,7 +142,7 @@ END ITEM
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Ontologia (`ontologia/`)**

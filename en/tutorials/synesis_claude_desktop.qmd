@@ -71,7 +71,7 @@ The examples below come from a real session with the three fictitious interviews
 The example project is in Portuguese, so its field names and concepts are too.
 
 ::: {.grid}
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Project (`telemedicina.synp`)**
@@ -97,7 +97,7 @@ END PROJECT
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Template (`template.synt`)**
@@ -121,7 +121,7 @@ END FIELD
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Annotations (`anotacoes/`)**
@@ -144,7 +144,7 @@ END ITEM
 :::
 :::
 :::
-::: {.g-col-12 .g-col-lg-6}
+::: {.g-col-12}
 ::: {.card .h-100}
 ::: {.card-header}
 **Ontology (`ontologia/`)**
