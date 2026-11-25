@@ -1,0 +1,111 @@
+# =================================================================
+# TELEMEDICINA RURAL: entrevistas
+# Todo campo tem GUIDELINES. Os exemplos das GUIDELINES vêm de outro
+# tema (ciclovias), nunca das fontes que serão codificadas.
+# =================================================================
+
+SOURCE FIELDS
+    REQUIRED descricao
+END SOURCE FIELDS
+
+FIELD descricao TYPE TEXT
+    SCOPE SOURCE
+    DESCRIPTION Contexto da fonte: quem fala e em que situação
+    GUIDELINES
+        Descreva a fonte em uma ou duas frases: tipo de fonte e papel social de quem fala.
+        Não inclua nomes próprios de pessoas; use o papel social.
+        Não interprete nem resuma os argumentos da fonte.
+        Correto: "Entrevista com moradora que usa a ciclovia para ir ao trabalho."
+        Errado: "Entrevista que mostra como a ciclovia melhorou a vida do bairro."
+    END GUIDELINES
+END FIELD
+
+ITEM FIELDS
+    REQUIRED trecho, nota, codigos
+    OPTIONAL cadeia
+END ITEM FIELDS
+
+FIELD trecho TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Trecho copiado literalmente da fala do entrevistado
+    GUIDELINES
+        Copie de uma a três frases contínuas, exatamente como aparecem na fonte.
+        Copie apenas falas do entrevistado, nunca as perguntas do entrevistador.
+        Não corrija, não resuma, não junte frases distantes.
+        O trecho precisa ser compreensível sozinho.
+        Correto: "Depois que pintaram a faixa, comecei a ir de bicicleta todo dia."
+        Errado: "A moradora passou a usar a bicicleta diariamente após a faixa."
+    END GUIDELINES
+END FIELD
+
+FIELD nota TYPE MEMO
+    SCOPE ITEM
+    DESCRIPTION Memo analítico sobre o trecho
+    GUIDELINES
+        Explique em uma ou duas frases por que o trecho importa para as questões do projeto (barreiras, benefícios, relações causais).
+        Separe o que a fonte diz da sua interpretação.
+        Não repita o trecho com outras palavras.
+        Correto: "A fonte associa a infraestrutura à mudança de hábito; sugere efeito de convite."
+        Errado: "A moradora fala que começou a pedalar."
+    END GUIDELINES
+END FIELD
+
+FIELD codigos TYPE CODE
+    SCOPE ITEM
+    DESCRIPTION Conceitos aplicados ao trecho
+    GUIDELINES
+        Aplique de um a três conceitos sustentados pelo trecho.
+        Reutilize conceitos já existentes antes de criar um novo.
+        Prefira nomear o fator em si, sem juízo de valor (o que falta ou o que ocorre), para que barreiras e benefícios possam ser distinguidos depois.
+        Nomes de conceito em minúsculas, sem acentos, com sublinhado entre palavras.
+        Correto: mudanca_de_habito, infraestrutura_cicloviaria
+        Errado: Mudança de Hábito, ciclovia_boa
+    END GUIDELINES
+END FIELD
+
+FIELD cadeia TYPE CHAIN
+    SCOPE ITEM
+    ARITY >= 2
+    DESCRIPTION Relação entre conceitos afirmada pelo entrevistado
+    RELATIONS
+        CAUSA: Um fator produz diretamente outro
+        HABILITA: Um fator cria condições para outro
+        RESTRINGE: Um fator bloqueia ou dificulta outro
+    END RELATIONS
+    GUIDELINES
+        Registre uma cadeia só quando a fonte afirma a relação, não quando você a deduz.
+        A origem é a causa ou condição; o destino é o efeito.
+        Use os mesmos nomes de conceito do campo codigos.
+        Correto: infraestrutura_cicloviaria -> HABILITA -> mudanca_de_habito
+        Errado: mudanca_de_habito -> CAUSA -> infraestrutura_cicloviaria
+        Sem relação afirmada na fonte, deixe o campo vazio.
+    END GUIDELINES
+END FIELD
+
+ONTOLOGY FIELDS
+    REQUIRED definicao
+    OPTIONAL grupo
+END ONTOLOGY FIELDS
+
+FIELD definicao TYPE TEXT
+    SCOPE ONTOLOGY
+    DESCRIPTION Definição do conceito com critério de aplicação
+    GUIDELINES
+        Defina o conceito em uma ou duas frases.
+        Diga quando aplicar e, se ajudar, quando não aplicar.
+        Não use o nome do próprio conceito na definição.
+        Correto: "Alteração duradoura na forma habitual de deslocamento. Não se aplica a uso eventual."
+        Errado: "Mudança de hábito é quando o hábito muda."
+    END GUIDELINES
+END FIELD
+
+FIELD grupo TYPE TOPIC
+    SCOPE ONTOLOGY
+    DESCRIPTION Tema amplo que reúne conceitos
+    GUIDELINES
+        Atribua um tema amplo que reúna vários conceitos.
+        Reutilize um tema existente sempre que possível.
+        Correto: comportamento
+        Errado: comportamento_de_quem_pedala_de_manha
+    END GUIDELINES
+END FIELD

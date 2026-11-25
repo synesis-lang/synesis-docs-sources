@@ -129,6 +129,16 @@ synesis validate-template template.synt         # confere o template enquanto vo
 
 A conferência completa é sempre a do `synesis compile`.
 
+## E06 · Synesis no Claude Desktop {#sec-m2-e06}
+
+Um caminho de entrada para quem está começando: a Skill do Synesis para o Claude Desktop. O vídeo mostra como instalá-la, o que acontece na primeira sessão e o que ela deixa pronto: o template, as anotações, a ontologia, o projeto e um painel de auditoria. A divisão de papéis é a do resto do curso: a IA propõe, o compilador confere e você decide. Para quem prefere o editor, o caminho do VS Code continua valendo.
+
+{{< video https://www.youtube.com/embed/i19RR7xNXfA title="Synesis 101 · Módulo 2 · E06 · Synesis no Claude Desktop" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">Duração: 2 min 28 s</span>
+
+O guia completo, o arquivo da Skill e uma pasta de exemplo para testar estão em [Synesis no Claude Desktop](../tutorials/synesis_claude_desktop.qmd).
+
 :::{.callout-note}
 ## Próximos episódios
 Os demais episódios do Módulo 2 estão em produção e serão adicionados a esta página.

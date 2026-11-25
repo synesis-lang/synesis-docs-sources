@@ -1,0 +1,37 @@
+SOURCE @entrevista_dra_ana
+    descricao: Entrevista com médica de família que atua em unidade de saúde rural e realiza teleconsultas com pacientes da comunidade.
+END SOURCE
+
+ITEM @entrevista_dra_ana
+    trecho: Muitas vezes a internet da unidade cai no meio da teleconsulta e eu preciso remarcar. A infraestrutura é o nosso maior obstáculo hoje.
+    nota: A fonte relata quedas de conexão que interrompem a teleconsulta e a classifica como principal obstáculo. Interpretação: a instabilidade da conexão funciona como barreira central ao uso da consulta por vídeo na unidade.
+    codigos: instabilidade_da_conexao, consulta_por_video
+    cadeia: instabilidade_da_conexao -> RESTRINGE -> consulta_por_video
+END ITEM
+
+ITEM @entrevista_dra_ana
+    trecho: Os mais velhos preferem a consulta presencial. Eles dizem que confiam mais quando eu examino.
+    nota: A fonte atribui a preferência dos pacientes mais velhos pelo atendimento presencial à confiança associada ao exame. Interpretação: a confiança ligada ao exame físico pode dificultar a adesão à consulta remota entre idosos.
+    codigos: atendimento_presencial, confianca_no_atendimento, exame_fisico
+END ITEM
+
+ITEM @entrevista_dra_ana
+    trecho: Alguns têm dificuldade de entender a plataforma, e a gente gasta a consulta ensinando a ligar a câmera.
+    nota: A fonte descreve dificuldade dos pacientes com a plataforma e tempo de consulta gasto em orientação. Interpretação: o baixo letramento digital é uma barreira que consome o tempo clínico.
+    codigos: letramento_digital, consulta_por_video
+    cadeia: letramento_digital -> RESTRINGE -> consulta_por_video
+END ITEM
+
+ITEM @entrevista_dra_ana
+    trecho: Para acompanhar pressão e diabetes, o retorno por vídeo economiza uma viagem de horas para o paciente e libera agenda para quem precisa de exame físico.
+    nota: A fonte afirma que o retorno por vídeo poupa deslocamento e libera agenda para casos que exigem exame físico. Interpretação: benefício duplo, para o paciente e para a organização do serviço.
+    codigos: consulta_por_video, deslocamento_ate_a_cidade, exame_fisico
+    cadeia: consulta_por_video -> CAUSA -> deslocamento_ate_a_cidade
+END ITEM
+
+ITEM @entrevista_dra_ana
+    trecho: O atendimento fica mais rápido, desde que a base técnica esteja pronta.
+    nota: A fonte condiciona a rapidez do atendimento remoto à existência de base técnica. Interpretação: a infraestrutura de conexão habilita o benefício da consulta por vídeo.
+    codigos: acesso_a_internet, consulta_por_video
+    cadeia: acesso_a_internet -> HABILITA -> consulta_por_video
+END ITEM

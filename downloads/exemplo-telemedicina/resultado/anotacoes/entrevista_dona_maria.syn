@@ -1,0 +1,23 @@
+SOURCE @entrevista_dona_maria
+    descricao: Entrevista fictícia com agricultora de 62 anos, moradora de comunidade rural, sobre o uso de consulta por vídeo.
+END SOURCE
+
+ITEM @entrevista_dona_maria
+    trecho: Na minha roça, o celular só funciona quando a gente sobe no morro. Então eu nunca consegui fazer uma consulta em casa. A tela congelava e a moça do posto desistia.
+    nota: A fonte relata falta de sinal em casa e ausência de consulta remota domiciliar; a interpretação é que a conectividade funciona como pré-condição para o uso, sendo uma barreira central.
+    codigos: sinal_de_celular, instabilidade_da_conexao
+    cadeia: sinal_de_celular -> RESTRINGE -> consulta_por_video
+END ITEM
+
+ITEM @entrevista_dona_maria
+    trecho: O doutor não me tocou, não olhou a minha perna de perto. Para mim, médico bom é aquele que põe a mão na gente. Se não pode examinar, eu fico achando que ele não viu direito.
+    nota: A fonte afirma que a ausência de toque e exame físico gera desconfiança sobre a qualidade do atendimento; sugere barreira de natureza cultural e de confiança, distinta da técnica.
+    codigos: exame_fisico, confianca_no_atendimento
+    cadeia: exame_fisico -> HABILITA -> confianca_no_atendimento
+END ITEM
+
+ITEM @entrevista_dona_maria
+    trecho: Se não precisasse pegar a estrada, eu usaria para renovar a receita. Para isso, sim. Eu perco um dia inteiro indo à cidade só para pegar um papel.
+    nota: A fonte indica disposição de uso para renovação de receita, motivada pelo custo de deslocamento; interpreta-se a telemedicina como benefício em demandas que dispensam exame físico.
+    codigos: deslocamento_ate_a_cidade, renovacao_de_receita
+END ITEM

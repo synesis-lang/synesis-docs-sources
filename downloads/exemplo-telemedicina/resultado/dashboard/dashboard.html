@@ -1,0 +1,1463 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synesis audit</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1d1b;--muted:#6b6a65;--line:#dedbd2;--card:#ffffff;--accent:#2f5d8a;
+--ok:#2e7d4f;--warn:#a26a00;--bad:#b3261e;--chip:#eef2f6}
+@media (prefers-color-scheme:dark){:root{--bg:#161614;--fg:#ecebe6;--muted:#a3a19a;--line:#33322e;
+--card:#1f1f1c;--accent:#8db6e0;--ok:#7fc79a;--warn:#e0b45c;--bad:#f08b83;--chip:#2a2f35}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:12px;align-items:baseline}
+header h1{font-size:18px;margin:0}
+.state{font:12px ui-monospace,monospace;color:var(--muted)}
+.banner{margin:12px 16px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card)}
+.banner.bad{border-color:var(--bad)}.banner.ok{border-color:var(--ok)}.banner.warn{border-color:var(--warn)}
+nav{display:flex;gap:4px;padding:0 16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 8px;color:var(--fg);cursor:pointer;font:inherit}
+nav button.on{border-bottom-color:var(--accent);font-weight:600}
+main{padding:16px;max-width:1100px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin:0 0 12px}
+.card h3{margin:0 0 6px;font-size:15px}
+.kv{color:var(--muted);font-size:13px}
+.q{border-left:3px solid var(--accent);padding:2px 10px;margin:6px 0;white-space:pre-wrap}
+.chip{display:inline-block;background:var(--chip);border-radius:10px;padding:0 8px;margin:2px 4px 2px 0;font-size:13px}
+.st-found{color:var(--ok)}.st-not_found{color:var(--bad)}.st-unverifiable{color:var(--warn)}
+.sev-error{color:var(--bad)}.sev-warning{color:var(--warn)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+td,th{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}
+.marks button{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;padding:2px 8px;cursor:pointer;margin-right:4px}
+.marks button.sel{border-color:var(--accent);outline:2px solid var(--accent)}
+.marks input{font:inherit;width:min(420px,100%);margin-top:4px;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--fg)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tools button,.tools label{font:inherit;border:1px solid var(--line);background:var(--card);color:var(--fg);border-radius:6px;padding:4px 10px;cursor:pointer}
+input[type=search]{font:inherit;padding:4px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg);width:min(320px,100%)}
+pre{white-space:pre-wrap;font:12px ui-monospace,monospace}
+</style>
+</head>
+<body>
+<header><h1 id="title"></h1><span class="state" id="state"></span></header>
+<div id="banners"></div>
+<nav id="tabs"></nav>
+<main id="view"></main>
+<script id="synesis-data" type="application/json">{
+  "analytic": {
+    "bibliography": {
+      "entrevista_dona_maria": {
+        "ENTRYTYPE": "misc",
+        "ID": "entrevista_dona_maria",
+        "author": "Participante 01",
+        "descricao": "Entrevista fictícia com agricultora de 62 anos, moradora de comunidade rural, sobre o uso de consulta por vídeo.",
+        "note": "Entrevista fictícia sobre telemedicina",
+        "title": "Entrevista com agricultora de comunidade rural",
+        "year": "2026"
+      },
+      "entrevista_dra_ana": {
+        "ENTRYTYPE": "misc",
+        "ID": "entrevista_dra_ana",
+        "author": "Participante 03",
+        "descricao": "Entrevista com médica de família que atua em unidade de saúde rural e realiza teleconsultas com pacientes da comunidade.",
+        "note": "Entrevista fictícia sobre telemedicina",
+        "title": "Entrevista com médica de família em unidade rural",
+        "year": "2026"
+      },
+      "entrevista_sr_joao": {
+        "ENTRYTYPE": "misc",
+        "ID": "entrevista_sr_joao",
+        "author": "Participante 02",
+        "descricao": "Entrevista fictícia com comerciante de 55 anos, morador de comunidade rural, sobre o atendimento por telemedicina.",
+        "note": "Entrevista fictícia sobre telemedicina",
+        "title": "Entrevista com comerciante de comunidade rural",
+        "year": "2026"
+      }
+    },
+    "corpus": [
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "sinal_de_celular",
+              "relation": "RESTRINGE",
+              "to": "consulta_por_video"
+            }
+          ],
+          "codigos": [
+            "sinal_de_celular",
+            "instabilidade_da_conexao"
+          ],
+          "definicao": [
+            "Disponibilidade e qualidade da cobertura de rede móvel no local onde a pessoa vive, que condiciona a possibilidade de estabelecer comunicação remota. Aplica-se quando o relato aponta ausência ou fraqueza de sinal como pré-condição que impede ou limita o uso; não se aplica a falhas de equipamento ou de habilidade digital.",
+            "Falta de continuidade ou de qualidade do sinal de celular ou da internet, que causa travamentos, quedas e interrupções durante o atendimento remoto. Aplicar quando a fonte relatar sinal ausente, intermitente ou que cai e impede ou interrompe a consulta; não aplicar a dificuldades de uso do aparelho ou do aplicativo sem relação com a conexão.",
+            "Disponibilidade e qualidade da cobertura de rede móvel no local onde a pessoa vive, que condiciona a possibilidade de estabelecer comunicação remota. Aplica-se quando o relato aponta ausência ou fraqueza de sinal como pré-condição que impede ou limita o uso; não se aplica a falhas de equipamento ou de habilidade digital.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal."
+          ],
+          "grupo": [
+            "conectividade",
+            "infraestrutura",
+            "conectividade",
+            "telemedicina"
+          ],
+          "nota": "A fonte relata falta de sinal em casa e ausência de consulta remota domiciliar; a interpretação é que a conectividade funciona como pré-condição para o uso, sendo uma barreira central.",
+          "trecho": "Na minha roça, o celular só funciona quando a gente sobe no morro. Então eu nunca consegui fazer uma consulta em casa. A tela congelava e a moça do posto desistia."
+        },
+        "id": "entrevista_dona_maria_item0001",
+        "source_ref": "@entrevista_dona_maria",
+        "traceability": {
+          "file": "anotacoes/entrevista_dona_maria.syn",
+          "line": 5
+        }
+      },
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "exame_fisico",
+              "relation": "HABILITA",
+              "to": "confianca_no_atendimento"
+            }
+          ],
+          "codigos": [
+            "exame_fisico",
+            "confianca_no_atendimento"
+          ],
+          "definicao": [
+            "Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.",
+            "Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade.",
+            "Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.",
+            "Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade."
+          ],
+          "grupo": [
+            "pratica_clinica",
+            "cultura_e_vinculo",
+            "pratica_clinica",
+            "cultura_e_vinculo"
+          ],
+          "nota": "A fonte afirma que a ausência de toque e exame físico gera desconfiança sobre a qualidade do atendimento; sugere barreira de natureza cultural e de confiança, distinta da técnica.",
+          "trecho": "O doutor não me tocou, não olhou a minha perna de perto. Para mim, médico bom é aquele que põe a mão na gente. Se não pode examinar, eu fico achando que ele não viu direito."
+        },
+        "id": "entrevista_dona_maria_item0002",
+        "source_ref": "@entrevista_dona_maria",
+        "traceability": {
+          "file": "anotacoes/entrevista_dona_maria.syn",
+          "line": 12
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "deslocamento_ate_a_cidade",
+            "renovacao_de_receita"
+          ],
+          "definicao": [
+            "Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde.",
+            "Pedido de nova prescrição de medicamento de uso já estabelecido, que não exige exame físico e pode ser resolvido à distância. Aplica-se quando o entrevistado cita a consulta remota para obter receita sem precisar se deslocar; não se aplica a consultas que demandam avaliação presencial.",
+            null
+          ],
+          "grupo": [
+            "custo_de_acesso",
+            "beneficio_percebido",
+            null
+          ],
+          "nota": "A fonte indica disposição de uso para renovação de receita, motivada pelo custo de deslocamento; interpreta-se a telemedicina como benefício em demandas que dispensam exame físico.",
+          "trecho": "Se não precisasse pegar a estrada, eu usaria para renovar a receita. Para isso, sim. Eu perco um dia inteiro indo à cidade só para pegar um papel."
+        },
+        "id": "entrevista_dona_maria_item0003",
+        "source_ref": "@entrevista_dona_maria",
+        "traceability": {
+          "file": "anotacoes/entrevista_dona_maria.syn",
+          "line": 19
+        }
+      },
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "instabilidade_da_conexao",
+              "relation": "RESTRINGE",
+              "to": "consulta_por_video"
+            }
+          ],
+          "codigos": [
+            "instabilidade_da_conexao",
+            "consulta_por_video"
+          ],
+          "definicao": [
+            "Falta de continuidade ou de qualidade do sinal de celular ou da internet, que causa travamentos, quedas e interrupções durante o atendimento remoto. Aplicar quando a fonte relatar sinal ausente, intermitente ou que cai e impede ou interrompe a consulta; não aplicar a dificuldades de uso do aparelho ou do aplicativo sem relação com a conexão.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            "Falta de continuidade ou de qualidade do sinal de celular ou da internet, que causa travamentos, quedas e interrupções durante o atendimento remoto. Aplicar quando a fonte relatar sinal ausente, intermitente ou que cai e impede ou interrompe a consulta; não aplicar a dificuldades de uso do aparelho ou do aplicativo sem relação com a conexão.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal."
+          ],
+          "grupo": [
+            "infraestrutura",
+            "telemedicina",
+            "infraestrutura",
+            "telemedicina"
+          ],
+          "nota": "A fonte relata quedas de conexão que interrompem a teleconsulta e a classifica como principal obstáculo. Interpretação: a instabilidade da conexão funciona como barreira central ao uso da consulta por vídeo na unidade.",
+          "trecho": "Muitas vezes a internet da unidade cai no meio da teleconsulta e eu preciso remarcar. A infraestrutura é o nosso maior obstáculo hoje."
+        },
+        "id": "entrevista_dra_ana_item0001",
+        "source_ref": "@entrevista_dra_ana",
+        "traceability": {
+          "file": "anotacoes/entrevista_dra_ana.syn",
+          "line": 5
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "atendimento_presencial",
+            "confianca_no_atendimento",
+            "exame_fisico"
+          ],
+          "definicao": [
+            "Preferência por consultas realizadas com o profissional e o paciente no mesmo espaço físico, em que há contato direto, exame e convívio com a equipe. Aplica-se quando o entrevistado valoriza ou prefere o contato face a face em vez da consulta à distância; não se aplica a menções neutras ao deslocamento até a unidade.",
+            "Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade.",
+            "Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.",
+            null
+          ],
+          "grupo": [
+            "preferencia_de_atendimento",
+            "cultura_e_vinculo",
+            "pratica_clinica",
+            null
+          ],
+          "nota": "A fonte atribui a preferência dos pacientes mais velhos pelo atendimento presencial à confiança associada ao exame. Interpretação: a confiança ligada ao exame físico pode dificultar a adesão à consulta remota entre idosos.",
+          "trecho": "Os mais velhos preferem a consulta presencial. Eles dizem que confiam mais quando eu examino."
+        },
+        "id": "entrevista_dra_ana_item0002",
+        "source_ref": "@entrevista_dra_ana",
+        "traceability": {
+          "file": "anotacoes/entrevista_dra_ana.syn",
+          "line": 12
+        }
+      },
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "letramento_digital",
+              "relation": "RESTRINGE",
+              "to": "consulta_por_video"
+            }
+          ],
+          "codigos": [
+            "letramento_digital",
+            "consulta_por_video"
+          ],
+          "definicao": [
+            "Capacidade de uma pessoa de operar ferramentas digitais, como instalar aplicativos, fazer cadastro, usar senhas e acionar câmera e plataformas, de modo a realizar tarefas online. Aplicar quando a fonte relatar dificuldade ou facilidade concreta com essas etapas; não aplicar para falta de acesso a equipamento ou à internet.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            "Capacidade de uma pessoa de operar ferramentas digitais, como instalar aplicativos, fazer cadastro, usar senhas e acionar câmera e plataformas, de modo a realizar tarefas online. Aplicar quando a fonte relatar dificuldade ou facilidade concreta com essas etapas; não aplicar para falta de acesso a equipamento ou à internet.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal."
+          ],
+          "grupo": [
+            "habilidades_do_usuario",
+            "telemedicina",
+            "habilidades_do_usuario",
+            "telemedicina"
+          ],
+          "nota": "A fonte descreve dificuldade dos pacientes com a plataforma e tempo de consulta gasto em orientação. Interpretação: o baixo letramento digital é uma barreira que consome o tempo clínico.",
+          "trecho": "Alguns têm dificuldade de entender a plataforma, e a gente gasta a consulta ensinando a ligar a câmera."
+        },
+        "id": "entrevista_dra_ana_item0003",
+        "source_ref": "@entrevista_dra_ana",
+        "traceability": {
+          "file": "anotacoes/entrevista_dra_ana.syn",
+          "line": 18
+        }
+      },
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "consulta_por_video",
+              "relation": "CAUSA",
+              "to": "deslocamento_ate_a_cidade"
+            }
+          ],
+          "codigos": [
+            "consulta_por_video",
+            "deslocamento_ate_a_cidade",
+            "exame_fisico"
+          ],
+          "definicao": [
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            "Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde.",
+            "Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            "Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde."
+          ],
+          "grupo": [
+            "telemedicina",
+            "custo_de_acesso",
+            "pratica_clinica",
+            "telemedicina",
+            "custo_de_acesso"
+          ],
+          "nota": "A fonte afirma que o retorno por vídeo poupa deslocamento e libera agenda para casos que exigem exame físico. Interpretação: benefício duplo, para o paciente e para a organização do serviço.",
+          "trecho": "Para acompanhar pressão e diabetes, o retorno por vídeo economiza uma viagem de horas para o paciente e libera agenda para quem precisa de exame físico."
+        },
+        "id": "entrevista_dra_ana_item0004",
+        "source_ref": "@entrevista_dra_ana",
+        "traceability": {
+          "file": "anotacoes/entrevista_dra_ana.syn",
+          "line": 25
+        }
+      },
+      {
+        "data": {
+          "cadeia": [
+            {
+              "from": "acesso_a_internet",
+              "relation": "HABILITA",
+              "to": "consulta_por_video"
+            }
+          ],
+          "codigos": [
+            "acesso_a_internet",
+            "consulta_por_video"
+          ],
+          "definicao": [
+            "Disponibilidade de conexão de internet utilizável, em casa ou em ponto de atendimento, como condição de infraestrutura para realizar atendimento remoto. Aplicar a menções à existência, qualidade ou falta de conexão; não se aplica a dificuldades de habilidade no uso de tecnologia.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            "Disponibilidade de conexão de internet utilizável, em casa ou em ponto de atendimento, como condição de infraestrutura para realizar atendimento remoto. Aplicar a menções à existência, qualidade ou falta de conexão; não se aplica a dificuldades de habilidade no uso de tecnologia.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal."
+          ],
+          "grupo": [
+            "infraestrutura",
+            "telemedicina",
+            "infraestrutura",
+            "telemedicina"
+          ],
+          "nota": "A fonte condiciona a rapidez do atendimento remoto à existência de base técnica. Interpretação: a infraestrutura de conexão habilita o benefício da consulta por vídeo.",
+          "trecho": "O atendimento fica mais rápido, desde que a base técnica esteja pronta."
+        },
+        "id": "entrevista_dra_ana_item0005",
+        "source_ref": "@entrevista_dra_ana",
+        "traceability": {
+          "file": "anotacoes/entrevista_dra_ana.syn",
+          "line": 32
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "letramento_digital"
+          ],
+          "definicao": [
+            "Capacidade de uma pessoa de operar ferramentas digitais, como instalar aplicativos, fazer cadastro, usar senhas e acionar câmera e plataformas, de modo a realizar tarefas online. Aplicar quando a fonte relatar dificuldade ou facilidade concreta com essas etapas; não aplicar para falta de acesso a equipamento ou à internet.",
+            null
+          ],
+          "grupo": [
+            "habilidades_do_usuario",
+            null
+          ],
+          "nota": "A fonte relata dificuldade concreta com as etapas de uso dos aplicativos. Interpretação: a habilidade digital aparece como possível barreira de entrada à consulta remota.",
+          "trecho": "Mas eu não sei mexer nesses aplicativos. Tem que baixar, fazer cadastro, senha."
+        },
+        "id": "entrevista_sr_joao_item0001",
+        "source_ref": "@entrevista_sr_joao",
+        "traceability": {
+          "file": "anotacoes/entrevista_sr_joao.syn",
+          "line": 5
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "confianca_no_atendimento",
+            "atendimento_presencial"
+          ],
+          "definicao": [
+            "Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade.",
+            "Preferência por consultas realizadas com o profissional e o paciente no mesmo espaço físico, em que há contato direto, exame e convívio com a equipe. Aplica-se quando o entrevistado valoriza ou prefere o contato face a face em vez da consulta à distância; não se aplica a menções neutras ao deslocamento até a unidade.",
+            null
+          ],
+          "grupo": [
+            "cultura_e_vinculo",
+            "preferencia_de_atendimento",
+            null
+          ],
+          "nota": "A fonte descreve a preferência da comunidade pelo contato presencial. Interpretação: o vínculo com a equipe do posto pode funcionar como resistência cultural à consulta remota.",
+          "trecho": "Aqui o povo gosta de ir ao posto, conversar com a enfermeira, ver o rosto de quem atende."
+        },
+        "id": "entrevista_sr_joao_item0002",
+        "source_ref": "@entrevista_sr_joao",
+        "traceability": {
+          "file": "anotacoes/entrevista_sr_joao.syn",
+          "line": 11
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "deslocamento_ate_a_cidade",
+            "consulta_por_video"
+          ],
+          "definicao": [
+            "Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde.",
+            "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+            null
+          ],
+          "grupo": [
+            "custo_de_acesso",
+            "telemedicina",
+            null
+          ],
+          "nota": "A fonte contrapõe o custo do deslocamento à brevidade da consulta e supõe que o atendimento remoto o evitaria. Interpretação: indica benefício percebido da telemedicina na redução do deslocamento.",
+          "trecho": "Mas eu reconheço: quando meu pai ficou doente, perdemos três horas de estrada para uma consulta de dez minutos. Se desse para resolver pelo telefone, teria poupado muito sofrimento."
+        },
+        "id": "entrevista_sr_joao_item0003",
+        "source_ref": "@entrevista_sr_joao",
+        "traceability": {
+          "file": "anotacoes/entrevista_sr_joao.syn",
+          "line": 17
+        }
+      },
+      {
+        "data": {
+          "cadeia": null,
+          "codigos": [
+            "apoio_no_posto",
+            "acesso_a_internet"
+          ],
+          "definicao": [
+            "Presença de uma pessoa em unidade de saúde local que orienta e ensina os usuários a realizar a consulta remota, em espaço com a estrutura necessária. Aplica-se quando o entrevistado propõe ou relata suporte presencial para o uso; não se aplica à conectividade em si nem a ajuda de familiares em casa.",
+            "Disponibilidade de conexão de internet utilizável, em casa ou em ponto de atendimento, como condição de infraestrutura para realizar atendimento remoto. Aplicar a menções à existência, qualidade ou falta de conexão; não se aplica a dificuldades de habilidade no uso de tecnologia.",
+            null
+          ],
+          "grupo": [
+            "facilitadores",
+            "infraestrutura",
+            null
+          ],
+          "nota": "A fonte propõe apoio presencial e acesso a internet como facilitadores, e relata a falta de internet em casa. Interpretação: aponta infraestrutura e suporte como condições para o uso.",
+          "trecho": "Alguém no posto para ensinar a usar. E uma sala com internet boa, porque na minha casa não tem."
+        },
+        "id": "entrevista_sr_joao_item0004",
+        "source_ref": "@entrevista_sr_joao",
+        "traceability": {
+          "file": "anotacoes/entrevista_sr_joao.syn",
+          "line": 23
+        }
+      }
+    ],
+    "dataset": {},
+    "export_metadata": {
+      "chain_count": 6,
+      "compiler_version": "1.1",
+      "concept_count": 11,
+      "export_mode": "universal",
+      "item_count": 12,
+      "paths_relative_to": "project_folder",
+      "source_count": 3,
+      "timestamp": "1970-01-01T00:00:00+00:00"
+    },
+    "indices": {
+      "code_frequency": {
+        "acesso_a_internet": 2,
+        "apoio_no_posto": 1,
+        "atendimento_presencial": 2,
+        "confianca_no_atendimento": 3,
+        "consulta_por_video": 6,
+        "deslocamento_ate_a_cidade": 3,
+        "exame_fisico": 3,
+        "instabilidade_da_conexao": 2,
+        "letramento_digital": 2,
+        "renovacao_de_receita": 1,
+        "sinal_de_celular": 1
+      },
+      "hierarchy": {},
+      "topics": {
+        "beneficio_percebido": [
+          "renovacao_de_receita"
+        ],
+        "conectividade": [
+          "sinal_de_celular"
+        ],
+        "cultura_e_vinculo": [
+          "confianca_no_atendimento"
+        ],
+        "custo_de_acesso": [
+          "deslocamento_ate_a_cidade"
+        ],
+        "facilitadores": [
+          "apoio_no_posto"
+        ],
+        "habilidades_do_usuario": [
+          "letramento_digital"
+        ],
+        "infraestrutura": [
+          "acesso_a_internet",
+          "instabilidade_da_conexao"
+        ],
+        "pratica_clinica": [
+          "exame_fisico"
+        ],
+        "preferencia_de_atendimento": [
+          "atendimento_presencial"
+        ],
+        "telemedicina": [
+          "consulta_por_video"
+        ]
+      },
+      "triples": [
+        {
+          "from": "sinal_de_celular",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dona_maria.syn",
+            "line": 9
+          },
+          "relation": "RESTRINGE",
+          "source_item": "entrevista_dona_maria_item0001",
+          "to": "consulta_por_video"
+        },
+        {
+          "from": "exame_fisico",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dona_maria.syn",
+            "line": 16
+          },
+          "relation": "HABILITA",
+          "source_item": "entrevista_dona_maria_item0002",
+          "to": "confianca_no_atendimento"
+        },
+        {
+          "from": "instabilidade_da_conexao",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dra_ana.syn",
+            "line": 9
+          },
+          "relation": "RESTRINGE",
+          "source_item": "entrevista_dra_ana_item0001",
+          "to": "consulta_por_video"
+        },
+        {
+          "from": "letramento_digital",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dra_ana.syn",
+            "line": 22
+          },
+          "relation": "RESTRINGE",
+          "source_item": "entrevista_dra_ana_item0003",
+          "to": "consulta_por_video"
+        },
+        {
+          "from": "consulta_por_video",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dra_ana.syn",
+            "line": 29
+          },
+          "relation": "CAUSA",
+          "source_item": "entrevista_dra_ana_item0004",
+          "to": "deslocamento_ate_a_cidade"
+        },
+        {
+          "from": "acesso_a_internet",
+          "location": {
+            "column": 5,
+            "file": "anotacoes/entrevista_dra_ana.syn",
+            "line": 36
+          },
+          "relation": "HABILITA",
+          "source_item": "entrevista_dra_ana_item0005",
+          "to": "consulta_por_video"
+        }
+      ]
+    },
+    "ontology": {
+      "acesso_a_internet": {
+        "concept": "acesso_a_internet",
+        "definicao": "Disponibilidade de conexão de internet utilizável, em casa ou em ponto de atendimento, como condição de infraestrutura para realizar atendimento remoto. Aplicar a menções à existência, qualidade ou falta de conexão; não se aplica a dificuldades de habilidade no uso de tecnologia.",
+        "frequency": 2,
+        "grupo": "infraestrutura",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 1
+        },
+        "source_count": 2
+      },
+      "apoio_no_posto": {
+        "concept": "apoio_no_posto",
+        "definicao": "Presença de uma pessoa em unidade de saúde local que orienta e ensina os usuários a realizar a consulta remota, em espaço com a estrutura necessária. Aplica-se quando o entrevistado propõe ou relata suporte presencial para o uso; não se aplica à conectividade em si nem a ajuda de familiares em casa.",
+        "frequency": 1,
+        "grupo": "facilitadores",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 6
+        },
+        "source_count": 1
+      },
+      "atendimento_presencial": {
+        "concept": "atendimento_presencial",
+        "definicao": "Preferência por consultas realizadas com o profissional e o paciente no mesmo espaço físico, em que há contato direto, exame e convívio com a equipe. Aplica-se quando o entrevistado valoriza ou prefere o contato face a face em vez da consulta à distância; não se aplica a menções neutras ao deslocamento até a unidade.",
+        "frequency": 2,
+        "grupo": "preferencia_de_atendimento",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 11
+        },
+        "source_count": 2
+      },
+      "confianca_no_atendimento": {
+        "concept": "confianca_no_atendimento",
+        "definicao": "Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade.",
+        "frequency": 3,
+        "grupo": "cultura_e_vinculo",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 16
+        },
+        "source_count": 3
+      },
+      "consulta_por_video": {
+        "concept": "consulta_por_video",
+        "definicao": "Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.",
+        "frequency": 6,
+        "grupo": "telemedicina",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 21
+        },
+        "source_count": 3
+      },
+      "deslocamento_ate_a_cidade": {
+        "concept": "deslocamento_ate_a_cidade",
+        "definicao": "Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde.",
+        "frequency": 3,
+        "grupo": "custo_de_acesso",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 26
+        },
+        "source_count": 3
+      },
+      "exame_fisico": {
+        "concept": "exame_fisico",
+        "definicao": "Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.",
+        "frequency": 3,
+        "grupo": "pratica_clinica",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 31
+        },
+        "source_count": 2
+      },
+      "instabilidade_da_conexao": {
+        "concept": "instabilidade_da_conexao",
+        "definicao": "Falta de continuidade ou de qualidade do sinal de celular ou da internet, que causa travamentos, quedas e interrupções durante o atendimento remoto. Aplicar quando a fonte relatar sinal ausente, intermitente ou que cai e impede ou interrompe a consulta; não aplicar a dificuldades de uso do aparelho ou do aplicativo sem relação com a conexão.",
+        "frequency": 2,
+        "grupo": "infraestrutura",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 36
+        },
+        "source_count": 2
+      },
+      "letramento_digital": {
+        "concept": "letramento_digital",
+        "definicao": "Capacidade de uma pessoa de operar ferramentas digitais, como instalar aplicativos, fazer cadastro, usar senhas e acionar câmera e plataformas, de modo a realizar tarefas online. Aplicar quando a fonte relatar dificuldade ou facilidade concreta com essas etapas; não aplicar para falta de acesso a equipamento ou à internet.",
+        "frequency": 2,
+        "grupo": "habilidades_do_usuario",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 41
+        },
+        "source_count": 2
+      },
+      "renovacao_de_receita": {
+        "concept": "renovacao_de_receita",
+        "definicao": "Pedido de nova prescrição de medicamento de uso já estabelecido, que não exige exame físico e pode ser resolvido à distância. Aplica-se quando o entrevistado cita a consulta remota para obter receita sem precisar se deslocar; não se aplica a consultas que demandam avaliação presencial.",
+        "frequency": 1,
+        "grupo": "beneficio_percebido",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 46
+        },
+        "source_count": 1
+      },
+      "sinal_de_celular": {
+        "concept": "sinal_de_celular",
+        "definicao": "Disponibilidade e qualidade da cobertura de rede móvel no local onde a pessoa vive, que condiciona a possibilidade de estabelecer comunicação remota. Aplica-se quando o relato aponta ausência ou fraqueza de sinal como pré-condição que impede ou limita o uso; não se aplica a falhas de equipamento ou de habilidade digital.",
+        "frequency": 1,
+        "grupo": "conectividade",
+        "location": {
+          "column": 1,
+          "file": "ontologia/004-ontology-ontology.syno",
+          "line": 51
+        },
+        "source_count": 1
+      }
+    },
+    "project": {
+      "description": "Três entrevistas fictícias sobre telemedicina em contexto rural: duas com moradores de comunidade rural (agricultora e comerciante) e uma com médica de família de unidade rural. O foco é o que dificulta e o que beneficia o uso da consulta remota, e como os entrevistados relacionam esses fatores.",
+      "includes": [
+        {
+          "include_type": "BIBLIOGRAPHY",
+          "location": {
+            "column": 1,
+            "file": "telemedicina.synp",
+            "line": 3
+          },
+          "path": "referencias.bib",
+          "shared": false
+        },
+        {
+          "include_type": "ANNOTATIONS",
+          "location": {
+            "column": 1,
+            "file": "telemedicina.synp",
+            "line": 4
+          },
+          "path": "anotacoes",
+          "shared": false
+        },
+        {
+          "include_type": "ONTOLOGY",
+          "location": {
+            "column": 1,
+            "file": "telemedicina.synp",
+            "line": 5
+          },
+          "path": "ontologia",
+          "shared": false
+        }
+      ],
+      "location": {
+        "column": 1,
+        "file": "telemedicina.synp",
+        "line": 1
+      },
+      "metadata": {},
+      "name": "telemedicina_rural",
+      "questions": [
+        {
+          "id": "Q1",
+          "text": "Que barreiras ao uso da telemedicina os entrevistados relatam?"
+        },
+        {
+          "id": "Q2",
+          "text": "Que benefícios da telemedicina os entrevistados percebem?"
+        },
+        {
+          "id": "Q3",
+          "text": "Que relações causais entre fatores os entrevistados afirmam?"
+        }
+      ],
+      "template_path": "template.synt"
+    },
+    "template": {
+      "bundled_fields": {
+        "ITEM": [],
+        "ONTOLOGY": [],
+        "SOURCE": []
+      },
+      "field_specs": {
+        "cadeia": {
+          "arity": ">= 2",
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Relação entre conceitos afirmada pelo entrevistado",
+          "format": null,
+          "guidelines": "Registre uma cadeia só quando a fonte afirma a relação, não quando você a deduz.\nA origem é a causa ou condição; o destino é o efeito.\nUse os mesmos nomes de conceito do campo codigos.\nCorreto: infraestrutura_cicloviaria -> HABILITA -> mudanca_de_habito\nErrado: mudanca_de_habito -> CAUSA -> infraestrutura_cicloviaria\nSem relação afirmada na fonte, deixe o campo vazio.",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 66
+          },
+          "name": "cadeia",
+          "refers_to": null,
+          "relations": {
+            "CAUSA": "Um fator produz diretamente outro",
+            "HABILITA": "Um fator cria condições para outro",
+            "RESTRINGE": "Um fator bloqueia ou dificulta outro"
+          },
+          "scope": "ITEM",
+          "type": "CHAIN",
+          "value_origin": "document",
+          "values": null
+        },
+        "codigos": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Conceitos aplicados ao trecho",
+          "format": null,
+          "guidelines": "Aplique de um a três conceitos sustentados pelo trecho.\nReutilize conceitos já existentes antes de criar um novo.\nPrefira nomear o fator em si, sem juízo de valor (o que falta ou o que ocorre), para que barreiras e benefícios possam ser distinguidos depois.\nNomes de conceito em minúsculas, sem acentos, com sublinhado entre palavras.\nCorreto: mudanca_de_habito, infraestrutura_cicloviaria\nErrado: Mudança de Hábito, ciclovia_boa",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 53
+          },
+          "name": "codigos",
+          "refers_to": null,
+          "relations": null,
+          "scope": "ITEM",
+          "type": "CODE",
+          "value_origin": "document",
+          "values": null
+        },
+        "definicao": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Definição do conceito com critério de aplicação",
+          "format": null,
+          "guidelines": "Defina o conceito em uma ou duas frases.\nDiga quando aplicar e, se ajudar, quando não aplicar.\nNão use o nome do próprio conceito na definição.\nCorreto: \"Alteração duradoura na forma habitual de deslocamento. Não se aplica a uso eventual.\"\nErrado: \"Mudança de hábito é quando o hábito muda.\"",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 90
+          },
+          "name": "definicao",
+          "refers_to": null,
+          "relations": null,
+          "scope": "ONTOLOGY",
+          "type": "TEXT",
+          "value_origin": "document",
+          "values": null
+        },
+        "descricao": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Contexto da fonte: quem fala e em que situação",
+          "format": null,
+          "guidelines": "Descreva a fonte em uma ou duas frases: tipo de fonte e papel social de quem fala.\nNão inclua nomes próprios de pessoas; use o papel social.\nNão interprete nem resuma os argumentos da fonte.\nCorreto: \"Entrevista com moradora que usa a ciclovia para ir ao trabalho.\"\nErrado: \"Entrevista que mostra como a ciclovia melhorou a vida do bairro.\"",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 11
+          },
+          "name": "descricao",
+          "refers_to": null,
+          "relations": null,
+          "scope": "SOURCE",
+          "type": "TEXT",
+          "value_origin": "document",
+          "values": null
+        },
+        "grupo": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Tema amplo que reúne conceitos",
+          "format": null,
+          "guidelines": "Atribua um tema amplo que reúna vários conceitos.\nReutilize um tema existente sempre que possível.\nCorreto: comportamento\nErrado: comportamento_de_quem_pedala_de_manha",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 102
+          },
+          "name": "grupo",
+          "refers_to": null,
+          "relations": null,
+          "scope": "ONTOLOGY",
+          "type": "TOPIC",
+          "value_origin": "document",
+          "values": null
+        },
+        "nota": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Memo analítico sobre o trecho",
+          "format": null,
+          "guidelines": "Explique em uma ou duas frases por que o trecho importa para as questões do projeto (barreiras, benefícios, relações causais).\nSepare o que a fonte diz da sua interpretação.\nNão repita o trecho com outras palavras.\nCorreto: \"A fonte associa a infraestrutura à mudança de hábito; sugere efeito de convite.\"\nErrado: \"A moradora fala que começou a pedalar.\"",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 41
+          },
+          "name": "nota",
+          "refers_to": null,
+          "relations": null,
+          "scope": "ITEM",
+          "type": "MEMO",
+          "value_origin": "document",
+          "values": null
+        },
+        "trecho": {
+          "arity": null,
+          "context_from_dataset": null,
+          "dataset_path": null,
+          "description": "Trecho copiado literalmente da fala do entrevistado",
+          "format": null,
+          "guidelines": "Copie de uma a três frases contínuas, exatamente como aparecem na fonte.\nCopie apenas falas do entrevistado, nunca as perguntas do entrevistador.\nNão corrija, não resuma, não junte frases distantes.\nO trecho precisa ser compreensível sozinho.\nCorreto: \"Depois que pintaram a faixa, comecei a ir de bicicleta todo dia.\"\nErrado: \"A moradora passou a usar a bicicleta diariamente após a faixa.\"",
+          "identifies": null,
+          "location": {
+            "column": 1,
+            "file": "template.synt",
+            "line": 28
+          },
+          "name": "trecho",
+          "refers_to": null,
+          "relations": null,
+          "scope": "ITEM",
+          "type": "QUOTATION",
+          "value_origin": "document",
+          "values": null
+        }
+      },
+      "forbidden_fields": {
+        "ITEM": [],
+        "ONTOLOGY": [],
+        "SOURCE": []
+      },
+      "location": {
+        "column": 1,
+        "file": "template.synt",
+        "line": 1
+      },
+      "metadata": {},
+      "name": "",
+      "optional_bundles": {
+        "ITEM": [],
+        "ONTOLOGY": [],
+        "SOURCE": []
+      },
+      "optional_fields": {
+        "ITEM": [
+          "cadeia"
+        ],
+        "ONTOLOGY": [
+          "grupo"
+        ],
+        "SOURCE": []
+      },
+      "required_fields": {
+        "ITEM": [
+          "trecho",
+          "nota",
+          "codigos"
+        ],
+        "ONTOLOGY": [
+          "definicao"
+        ],
+        "SOURCE": [
+          "descricao"
+        ]
+      }
+    },
+    "version": "3.1"
+  },
+  "anchoring": {
+    "items_without_quotation": 0,
+    "kind": "synesis-skill/anchoring",
+    "mode": "normalized",
+    "normalization": [
+      "Unicode NFKC",
+      "typographic quotes -> ASCII quotes",
+      "en/em dashes and minus -> hyphen",
+      "ellipsis character -> three dots",
+      "soft hyphen removed; hyphen at line break joined",
+      "any whitespace run -> one space",
+      "leading/trailing quote marks of the excerpt ignored"
+    ],
+    "quotation_fields": [
+      "trecho"
+    ],
+    "results": [
+      {
+        "excerpt": "Na minha roça, o celular só funciona quando a gente sobe no morro. Então eu nunca consegui fazer uma consulta em casa. A tela congelava e a moça do posto desistia.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dona_maria.syn",
+        "item": "entrevista_dona_maria_item0001",
+        "line": 5,
+        "occurrence": 0,
+        "origin": "runs/001-document-entrevista_dona_maria/inputs/entrevista_dona_maria.text.txt",
+        "source_ref": "entrevista_dona_maria",
+        "status": "found"
+      },
+      {
+        "excerpt": "O doutor não me tocou, não olhou a minha perna de perto. Para mim, médico bom é aquele que põe a mão na gente. Se não pode examinar, eu fico achando que ele não viu direito.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dona_maria.syn",
+        "item": "entrevista_dona_maria_item0002",
+        "line": 12,
+        "occurrence": 0,
+        "origin": "runs/001-document-entrevista_dona_maria/inputs/entrevista_dona_maria.text.txt",
+        "source_ref": "entrevista_dona_maria",
+        "status": "found"
+      },
+      {
+        "excerpt": "Se não precisasse pegar a estrada, eu usaria para renovar a receita. Para isso, sim. Eu perco um dia inteiro indo à cidade só para pegar um papel.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dona_maria.syn",
+        "item": "entrevista_dona_maria_item0003",
+        "line": 19,
+        "occurrence": 0,
+        "origin": "runs/001-document-entrevista_dona_maria/inputs/entrevista_dona_maria.text.txt",
+        "source_ref": "entrevista_dona_maria",
+        "status": "found"
+      },
+      {
+        "excerpt": "Muitas vezes a internet da unidade cai no meio da teleconsulta e eu preciso remarcar. A infraestrutura é o nosso maior obstáculo hoje.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dra_ana.syn",
+        "item": "entrevista_dra_ana_item0001",
+        "line": 5,
+        "occurrence": 0,
+        "origin": "runs/003-document-entrevista_dra_ana/inputs/entrevista_dra_ana.text.txt",
+        "source_ref": "entrevista_dra_ana",
+        "status": "found"
+      },
+      {
+        "excerpt": "Os mais velhos preferem a consulta presencial. Eles dizem que confiam mais quando eu examino.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dra_ana.syn",
+        "item": "entrevista_dra_ana_item0002",
+        "line": 12,
+        "occurrence": 0,
+        "origin": "runs/003-document-entrevista_dra_ana/inputs/entrevista_dra_ana.text.txt",
+        "source_ref": "entrevista_dra_ana",
+        "status": "found"
+      },
+      {
+        "excerpt": "Alguns têm dificuldade de entender a plataforma, e a gente gasta a consulta ensinando a ligar a câmera.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dra_ana.syn",
+        "item": "entrevista_dra_ana_item0003",
+        "line": 18,
+        "occurrence": 0,
+        "origin": "runs/003-document-entrevista_dra_ana/inputs/entrevista_dra_ana.text.txt",
+        "source_ref": "entrevista_dra_ana",
+        "status": "found"
+      },
+      {
+        "excerpt": "Para acompanhar pressão e diabetes, o retorno por vídeo economiza uma viagem de horas para o paciente e libera agenda para quem precisa de exame físico.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dra_ana.syn",
+        "item": "entrevista_dra_ana_item0004",
+        "line": 25,
+        "occurrence": 0,
+        "origin": "runs/003-document-entrevista_dra_ana/inputs/entrevista_dra_ana.text.txt",
+        "source_ref": "entrevista_dra_ana",
+        "status": "found"
+      },
+      {
+        "excerpt": "O atendimento fica mais rápido, desde que a base técnica esteja pronta.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_dra_ana.syn",
+        "item": "entrevista_dra_ana_item0005",
+        "line": 32,
+        "occurrence": 0,
+        "origin": "runs/003-document-entrevista_dra_ana/inputs/entrevista_dra_ana.text.txt",
+        "source_ref": "entrevista_dra_ana",
+        "status": "found"
+      },
+      {
+        "excerpt": "Mas eu não sei mexer nesses aplicativos. Tem que baixar, fazer cadastro, senha.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_sr_joao.syn",
+        "item": "entrevista_sr_joao_item0001",
+        "line": 5,
+        "occurrence": 0,
+        "origin": "runs/002-document-entrevista_sr_joao/inputs/entrevista_sr_joao.text.txt",
+        "source_ref": "entrevista_sr_joao",
+        "status": "found"
+      },
+      {
+        "excerpt": "Aqui o povo gosta de ir ao posto, conversar com a enfermeira, ver o rosto de quem atende.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_sr_joao.syn",
+        "item": "entrevista_sr_joao_item0002",
+        "line": 11,
+        "occurrence": 0,
+        "origin": "runs/002-document-entrevista_sr_joao/inputs/entrevista_sr_joao.text.txt",
+        "source_ref": "entrevista_sr_joao",
+        "status": "found"
+      },
+      {
+        "excerpt": "Mas eu reconheço: quando meu pai ficou doente, perdemos três horas de estrada para uma consulta de dez minutos. Se desse para resolver pelo telefone, teria poupado muito sofrimento.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_sr_joao.syn",
+        "item": "entrevista_sr_joao_item0003",
+        "line": 17,
+        "occurrence": 0,
+        "origin": "runs/002-document-entrevista_sr_joao/inputs/entrevista_sr_joao.text.txt",
+        "source_ref": "entrevista_sr_joao",
+        "status": "found"
+      },
+      {
+        "excerpt": "Alguém no posto para ensinar a usar. E uma sala com internet boa, porque na minha casa não tem.",
+        "field": "trecho",
+        "file": "anotacoes/entrevista_sr_joao.syn",
+        "item": "entrevista_sr_joao_item0004",
+        "line": 23,
+        "occurrence": 0,
+        "origin": "runs/002-document-entrevista_sr_joao/inputs/entrevista_sr_joao.text.txt",
+        "source_ref": "entrevista_sr_joao",
+        "status": "found"
+      }
+    ],
+    "state": "897b8ec49be0a62d59741a8f0a8ba02bce5fb396cf8c2f849c574d7a551e16a0",
+    "summary": {
+      "found": 12,
+      "not_found": 0,
+      "unverifiable": 0
+    },
+    "verified": true
+  },
+  "continuation_lines": [],
+  "decisions": [
+    {
+      "date": "2026-11-24",
+      "note": "Brazilian Portuguese; prose, guidelines and coder output in it",
+      "project_state": "71682cd7ca5488b2dfa0063c43696befa353f5b4f5e0b2d1f5475797684eca19",
+      "type": "project_language"
+    },
+    {
+      "date": "2026-11-24",
+      "note": "Pesquisador aprovou template v1 no chat (barreiras, beneficios, cadeias causais)",
+      "project_state": "71682cd7ca5488b2dfa0063c43696befa353f5b4f5e0b2d1f5475797684eca19",
+      "type": "template_approved"
+    },
+    {
+      "date": "2026-11-24",
+      "files": {
+        "anotacoes/entrevista_dona_maria.syn": "fd5499201255618f6f9a2633617353f8b88da18a36d5e2d761359fd07b97d724"
+      },
+      "note": "accepted run 001-document-entrevista_dona_maria",
+      "project_state": "490cf4737f9af6080719486bac5ec0f1bc57fd7be318f712e9e1472ab515cd03",
+      "run": "001-document-entrevista_dona_maria",
+      "type": "accept_run"
+    },
+    {
+      "date": "2026-11-24",
+      "files": {
+        "anotacoes/entrevista_sr_joao.syn": "fdb415cc64c34104c94e14de3f8fe049575c5ad9fa053a4e2db3004b307e953d"
+      },
+      "note": "accepted run 002-document-entrevista_sr_joao",
+      "project_state": "8197e4e5ffc05bc0ab1c2b569bf209934d39e183a99db6772a69d53bcfed41b1",
+      "run": "002-document-entrevista_sr_joao",
+      "type": "accept_run"
+    },
+    {
+      "date": "2026-11-24",
+      "files": {
+        "anotacoes/entrevista_dra_ana.syn": "ee00dd5c5f97f0bae2733d276be9bfb0b393aa12d214659baaad862fc4c5dd4e"
+      },
+      "note": "accepted run 003-document-entrevista_dra_ana",
+      "project_state": "0267c611eed02402b4137fc8c3062bfe9ef329739c2860cd6d4ec6ade76e1038",
+      "run": "003-document-entrevista_dra_ana",
+      "type": "accept_run"
+    },
+    {
+      "date": "2026-11-24",
+      "files": {
+        "ontologia/004-ontology-ontology.syno": "09c0e24a16ef878e11004c5342799dc6e212e79b02518c3bc6ea2d3c34a951c8"
+      },
+      "note": "accepted run 004-ontology-ontology",
+      "project_state": "897b8ec49be0a62d59741a8f0a8ba02bce5fb396cf8c2f849c574d7a551e16a0",
+      "run": "004-ontology-ontology",
+      "type": "accept_run"
+    }
+  ],
+  "kind": "synesis-skill/dashboard",
+  "marks": [],
+  "project": {
+    "name": "telemedicina",
+    "state": "897b8ec49be0a62d59741a8f0a8ba02bce5fb396cf8c2f849c574d7a551e16a0"
+  },
+  "runs": [
+    {
+      "accepted_files": {
+        "anotacoes/entrevista_dona_maria.syn": "fd5499201255618f6f9a2633617353f8b88da18a36d5e2d761359fd07b97d724"
+      },
+      "accepted_on": "2026-11-24",
+      "backend": "handoff",
+      "created_on": "2026-11-24",
+      "id": "001-document-entrevista_dona_maria",
+      "inputs": {
+        "entrevista_dona_maria": {
+          "kind": "document_text",
+          "path": "inputs/entrevista_dona_maria.text.txt",
+          "raw": "inputs/entrevista_dona_maria.txt",
+          "sha256": "7c71d10a1ea5241a2ad5057dd2e7f0edd7c26d1dfe17d6c9a435d3c304d985c2",
+          "source": "fontes/entrevista_dona_maria.txt"
+        }
+      },
+      "mode": "document",
+      "model": "claude-sonnet-5-5 (Claude Code session)",
+      "outputs": {
+        "output/entrevista_dona_maria.syn": "fd5499201255618f6f9a2633617353f8b88da18a36d5e2d761359fd07b97d724"
+      },
+      "passes": 3,
+      "project_state_before": "71682cd7ca5488b2dfa0063c43696befa353f5b4f5e0b2d1f5475797684eca19",
+      "requests_answered": 2,
+      "status": "accepted",
+      "target": "entrevista_dona_maria",
+      "unused_responses": [],
+      "versions": {
+        "synesis": "0.16.0",
+        "synesis-coder": "0.15.1"
+      }
+    },
+    {
+      "accepted_files": {
+        "anotacoes/entrevista_sr_joao.syn": "fdb415cc64c34104c94e14de3f8fe049575c5ad9fa053a4e2db3004b307e953d"
+      },
+      "accepted_on": "2026-11-24",
+      "backend": "handoff",
+      "created_on": "2026-11-24",
+      "id": "002-document-entrevista_sr_joao",
+      "inputs": {
+        "entrevista_sr_joao": {
+          "kind": "document_text",
+          "path": "inputs/entrevista_sr_joao.text.txt",
+          "raw": "inputs/entrevista_sr_joao.txt",
+          "sha256": "b1c7fbe7ad215a71ab5a7976b655e0a4cb86ebbbff90b839a7dcf62406e6dffa",
+          "source": "fontes/entrevista_sr_joao.txt"
+        }
+      },
+      "mode": "document",
+      "model": "claude-sonnet-5-5 (Claude Code session)",
+      "outputs": {
+        "output/entrevista_sr_joao.syn": "fdb415cc64c34104c94e14de3f8fe049575c5ad9fa053a4e2db3004b307e953d"
+      },
+      "passes": 3,
+      "project_state_before": "490cf4737f9af6080719486bac5ec0f1bc57fd7be318f712e9e1472ab515cd03",
+      "requests_answered": 2,
+      "status": "accepted",
+      "target": "entrevista_sr_joao",
+      "unused_responses": [],
+      "versions": {
+        "synesis": "0.16.0",
+        "synesis-coder": "0.15.1"
+      }
+    },
+    {
+      "accepted_files": {
+        "anotacoes/entrevista_dra_ana.syn": "ee00dd5c5f97f0bae2733d276be9bfb0b393aa12d214659baaad862fc4c5dd4e"
+      },
+      "accepted_on": "2026-11-24",
+      "backend": "handoff",
+      "created_on": "2026-11-24",
+      "id": "003-document-entrevista_dra_ana",
+      "inputs": {
+        "entrevista_dra_ana": {
+          "kind": "document_text",
+          "path": "inputs/entrevista_dra_ana.text.txt",
+          "raw": "inputs/entrevista_dra_ana.txt",
+          "sha256": "19f716d823956c0cde0b0b03636a1b6df0a7bb334e8a630b4123e506b4713426",
+          "source": "fontes/entrevista_dra_ana.txt"
+        }
+      },
+      "mode": "document",
+      "model": "claude-sonnet-5-5 (Claude Code session)",
+      "outputs": {
+        "output/entrevista_dra_ana.syn": "ee00dd5c5f97f0bae2733d276be9bfb0b393aa12d214659baaad862fc4c5dd4e"
+      },
+      "passes": 3,
+      "project_state_before": "8197e4e5ffc05bc0ab1c2b569bf209934d39e183a99db6772a69d53bcfed41b1",
+      "requests_answered": 2,
+      "status": "accepted",
+      "target": "entrevista_dra_ana",
+      "unused_responses": [],
+      "versions": {
+        "synesis": "0.16.0",
+        "synesis-coder": "0.15.1"
+      }
+    },
+    {
+      "accepted_files": {
+        "ontologia/004-ontology-ontology.syno": "09c0e24a16ef878e11004c5342799dc6e212e79b02518c3bc6ea2d3c34a951c8"
+      },
+      "accepted_on": "2026-11-24",
+      "backend": "handoff",
+      "created_on": "2026-11-24",
+      "id": "004-ontology-ontology",
+      "inputs": {},
+      "mode": "ontology",
+      "model": "claude-sonnet-5-5 (Claude Code session)",
+      "outputs": {
+        "output/ontology.syno": "09c0e24a16ef878e11004c5342799dc6e212e79b02518c3bc6ea2d3c34a951c8"
+      },
+      "passes": 2,
+      "project_state_before": "0267c611eed02402b4137fc8c3062bfe9ef329739c2860cd6d4ec6ade76e1038",
+      "requests_answered": 11,
+      "status": "accepted",
+      "target": "ontology",
+      "unused_responses": [],
+      "versions": {
+        "synesis": "0.16.0",
+        "synesis-coder": "0.15.1"
+      }
+    }
+  ],
+  "stale": [],
+  "template_check": {
+    "altered": [],
+    "fields": 7,
+    "missing": [],
+    "ok": true
+  },
+  "validation": {
+    "diagnostics": [],
+    "errors": 0,
+    "kind": "synesis-skill/validation",
+    "project": "telemedicina.synp",
+    "ready": true,
+    "state": "897b8ec49be0a62d59741a8f0a8ba02bce5fb396cf8c2f849c574d7a551e16a0",
+    "warnings": 0
+  }
+}</script>
+<script>
+"use strict";
+const D = JSON.parse(document.getElementById("synesis-data").textContent);
+const PT = (navigator.language || "").toLowerCase().startsWith("pt");
+const T = PT ? {
+ sources:"Fontes",codes:"Códigos",relations:"Relações",questions:"Questões",quality:"Qualidade",method:"Método",
+ ready:"Pronto: sem erros, sem avisos, citações ancoradas, nada desatualizado.",
+ notready:"Com pendências — veja a aba Qualidade.",errors:"erros",warnings:"avisos",
+ found:"encontrada",not_found:"não encontrada",unverifiable:"não verificável",
+ correct:"correto",wrong:"incorreto",doubt:"dúvida",note:"nota",exportm:"Exportar marcações",importm:"Importar marcações",
+ unsaved:"marcações com alterações não exportadas — exporte para registrá-las no projeto",search:"Buscar",
+ evidence:"evidências",nodef:"sem definição no organizador",noq:"O projeto não declara QUESTIONS.",
+ diag:"Diagnósticos do compilador",anch:"Ancoragem das citações",stale:"Desatualizado",runs:"Execuções",
+ decisions:"Decisões",template:"Template",noguide:"SEM GUIDELINES",mline:"Valores em várias linhas (o compilador descarta a continuação)",
+ normalized:"comparação após normalização",literal:"comparação literal",none:"nada",model:"modelo",backend:"backend"
+} : {
+ sources:"Sources",codes:"Codes",relations:"Relations",questions:"Questions",quality:"Quality",method:"Method",
+ ready:"Ready: no errors, no warnings, quotations anchored, nothing stale.",
+ notready:"Open issues — see the Quality tab.",errors:"errors",warnings:"warnings",
+ found:"found",not_found:"not found",unverifiable:"unverifiable",
+ correct:"correct",wrong:"wrong",doubt:"doubt",note:"note",exportm:"Export marks",importm:"Import marks",
+ unsaved:"marks with unexported changes — export them to record them in the project",search:"Search",
+ evidence:"evidence",nodef:"no definition in the organizing model",noq:"The project declares no QUESTIONS.",
+ diag:"Compiler diagnostics",anch:"Quotation anchoring",stale:"Out of date",runs:"Runs",
+ decisions:"Decisions",template:"Template",noguide:"NO GUIDELINES",mline:"Multi-line values (the compiler drops the continuation)",
+ normalized:"compared after normalization",literal:"literal comparison",none:"none",model:"model",backend:"backend"
+};
+document.documentElement.lang = PT ? "pt" : "en";
+
+function el(tag, attrs, ...kids){const e=document.createElement(tag);
+ for(const [k,v] of Object.entries(attrs||{})){if(k==="class")e.className=v;else if(k.startsWith("on"))e.addEventListener(k.slice(2),v);else e.setAttribute(k,v);}
+ for(const k of kids.flat()){if(k==null)continue;e.append(k instanceof Node?k:document.createTextNode(String(k)));}return e;}
+const A = D.analytic || {};
+const specs = (A.template && A.template.field_specs) || {};
+const fieldsOf = t => Object.keys(specs).filter(n => specs[n].scope === "ITEM" && specs[n].type === t);
+const QF = fieldsOf("QUOTATION"), CF = fieldsOf("CODE"), HF = fieldsOf("CHAIN"), MF = fieldsOf("MEMO");
+const asList = v => v == null ? [] : (Array.isArray(v) ? v : [v]);
+const anchorBy = {}; for(const r of (D.anchoring.results||[])) (anchorBy[r.item] = anchorBy[r.item] || []).push(r);
+
+/* ---- marks: localStorage is only a draft; the exported file is the record ---- */
+const KEY = "synesis-marks:" + D.project.name;
+let marks = {}; for(const m of (D.marks||[])) marks[m.kind+":"+m.target] = m;
+let dirty = false;
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if(s && s.marks){ for(const m of s.marks) marks[m.kind+":"+m.target]=m; dirty = !!s.dirty; } } catch(e) {}
+function saveDraft(){ try{ localStorage.setItem(KEY, JSON.stringify({dirty, marks:Object.values(marks)})); }catch(e){} banners(); }
+function setMark(kind, target, patch){ const k=kind+":"+target; marks[k]=Object.assign({kind,target,verdict:null,note:"",state:D.project.state}, marks[k]||{}, patch, {state:D.project.state}); dirty=true; saveDraft(); }
+function exportMarks(){ const blob = new Blob([JSON.stringify({kind:"synesis-skill/marks",project:D.project.name,marks:Object.values(marks)},null,2)],{type:"application/json"});
+ const a = el("a",{href:URL.createObjectURL(blob),download:D.project.name+"-marks.json"}); document.body.append(a); a.click(); a.remove(); dirty=false; saveDraft(); }
+function importMarks(file){ const r = new FileReader(); r.onload = () => { try{ const d = JSON.parse(r.result); for(const m of (d.marks||[])) marks[m.kind+":"+m.target]=m; dirty=true; saveDraft(); show(current); }catch(e){ alert(e); } }; r.readAsText(file); }
+function markBox(kind, target){ const m = marks[kind+":"+target] || {};
+ const btn = (v,label) => el("button",{class: m.verdict===v?"sel":"", onclick:()=>{setMark(kind,target,{verdict:v}); show(current);}}, label);
+ const inp = el("input",{type:"text",placeholder:T.note,value:m.note||""}); inp.addEventListener("change",()=>setMark(kind,target,{note:inp.value}));
+ return el("div",{class:"marks"}, btn("correct","✓ "+T.correct), btn("wrong","✗ "+T.wrong), btn("doubt","? "+T.doubt), el("br"), inp); }
+
+function banners(){ const b = document.getElementById("banners"); b.replaceChildren();
+ const v = D.validation, an = D.anchoring.summary;
+ const ready = v.ready && D.anchoring.verified && !D.stale.length;
+ b.append(el("div",{class:"banner "+(ready?"ok":"bad")}, ready?T.ready:T.notready, " — ",
+   `${v.errors} ${T.errors}, ${v.warnings} ${T.warnings}; ${T.anch}: ${an.found} ${T.found}, ${an.not_found} ${T.not_found}, ${an.unverifiable} ${T.unverifiable}`));
+ if(D.stale.length) b.append(el("div",{class:"banner warn"}, T.stale+": ", D.stale.map(s=>s.what+" ("+s.why+")").join("; ")));
+ if(dirty) b.append(el("div",{class:"banner warn"}, Object.keys(marks).length+" "+T.unsaved)); }
+
+const views = {
+ sources(){ const out=[]; const q = el("input",{type:"search",placeholder:T.search});
+  const box = el("div"); const tools = el("div",{class:"tools"}, q,
+    el("button",{onclick:exportMarks},T.exportm),
+    el("label",{}, T.importm, el("input",{type:"file",accept:".json",style:"display:none",onchange:e=>importMarks(e.target.files[0])})));
+  const bib = A.bibliography || {};
+  function draw(){ box.replaceChildren(); const term=(q.value||"").toLowerCase();
+   const bySrc = {}; for(const it of (A.corpus||[])) (bySrc[it.source_ref]=bySrc[it.source_ref]||[]).push(it);
+   for(const ref of Object.keys(bySrc).sort()){ const key=ref.replace(/^@/,""); const e=bib[key]||{};
+    const items = bySrc[ref].filter(it => !term || JSON.stringify(it.data).toLowerCase().includes(term)); if(!items.length) continue;
+    const card = el("div",{class:"card"}, el("h3",{}, ref+" — "+(e.title||"")), el("div",{class:"kv"}, e.description||""));
+    for(const it of items){ const d = it.data||{};
+     card.append(el("div",{class:"kv"}, it.id+" · "+(it.traceability.file||"")+":"+(it.traceability.line||"")));
+     for(const r of (anchorBy[it.id]||[])) card.append(el("div",{class:"q"}, r.excerpt, " ", el("span",{class:"st-"+r.status}, "["+T[r.status]+"]")));
+     for(const f of MF) for(const v of asList(d[f])) card.append(el("div",{}, el("b",{}, f+": "), v));
+     const chips = el("div"); for(const f of CF) for(const c of asList(d[f])) chips.append(el("span",{class:"chip"}, c)); card.append(chips);
+     for(const f of HF) for(const t of asList(d[f])) card.append(el("div",{class:"kv"}, (t.from||"")+" → "+(t.relation||"")+" → "+(t.to||"")));
+     card.append(markBox("item", it.id)); }
+    box.append(card); } }
+  q.addEventListener("input", draw); draw(); return [tools, box]; },
+ codes(){ const onto = A.ontology || {}; const ev = {};
+  for(const it of (A.corpus||[])) for(const f of CF) for(const c of asList((it.data||{})[f])) (ev[c]=ev[c]||[]).push(it);
+  const names = [...new Set([...Object.keys(ev), ...Object.keys(onto)])].sort();
+  return names.map(n => { const o = onto[n]; const items = ev[n]||[];
+   return el("div",{class:"card"}, el("h3",{}, n+" ("+items.length+" "+T.evidence+")"),
+    el("div",{class: o?"":"sev-warning"}, o ? (o.description || "") : T.nodef),
+    items.map(it => el("div",{class:"q"}, asList((it.data||{})[QF[0]])[0] || it.id, " — ", it.id)),
+    markBox("code", n)); }); },
+ relations(){ const rows = [];
+  for(const it of (A.corpus||[])) for(const f of HF) for(const t of asList((it.data||{})[f])) rows.push([t.from,t.relation,t.to,it.source_ref,it.id]);
+  rows.sort((a,b)=>String(a).localeCompare(String(b)));
+  if(!rows.length) return [el("p",{},T.none)];
+  return [el("table",{}, el("tr",{}, ["from","relation","to","source","item"].map(h=>el("th",{},h))), rows.map(r=>el("tr",{}, r.map(c=>el("td",{},c||"")))))]; },
+ questions(){ const qs = (A.project && A.project.questions) || [];
+  if(!qs.length) return [el("p",{},T.noq)];
+  return qs.map(q => el("div",{class:"card"}, el("h3",{}, (q.id||q.key||"")+": "+(q.text||q.question||JSON.stringify(q))))); },
+ quality(){ const out=[];
+  out.push(el("div",{class:"card"}, el("h3",{},T.diag+` (${D.validation.errors} ${T.errors}, ${D.validation.warnings} ${T.warnings})`),
+   D.validation.diagnostics.length ? D.validation.diagnostics.map(d=>el("pre",{class:"sev-"+d.severity}, `${d.file}:${d.line}:${d.column} [${d.severity}] ${d.code}\n${d.message}`)) : el("p",{},T.none)));
+  const bad = (D.anchoring.results||[]).filter(r=>r.status!=="found");
+  out.push(el("div",{class:"card"}, el("h3",{},T.anch+" — "+(D.anchoring.mode==="literal"?T.literal:T.normalized)),
+   el("div",{class:"kv"}, (D.anchoring.normalization||[]).join(" · ")),
+   bad.length ? bad.map(r=>el("div",{class:"q"}, el("span",{class:"st-"+r.status},"["+T[r.status]+"] "), r.item+" ["+r.field+"] ", r.excerpt, r.reason?(" — "+r.reason):"")) : el("p",{},T.none)));
+  const tc = D.template_check || {missing:[]};
+  out.push(el("div",{class:"card"}, el("h3",{},T.template), tc.missing.length ? tc.missing.map(m=>el("div",{class:"sev-error"}, T.noguide+": "+m.field+" ("+m.type+", "+m.scope+")")) : el("p",{},"GUIDELINES: "+tc.fields+"/"+tc.fields)));
+  if((D.continuation_lines||[]).length) out.push(el("div",{class:"card"}, el("h3",{class:"sev-error"},T.mline), D.continuation_lines.map(c=>el("div",{}, c.file+":"+c.line+"  "+c.text))));
+  if(D.stale.length) out.push(el("div",{class:"card"}, el("h3",{},T.stale), D.stale.map(s=>el("div",{}, s.what+" — "+s.why))));
+  return out; },
+ method(){ const out=[];
+  out.push(el("div",{class:"card"}, el("h3",{},T.template), Object.keys(specs).sort().map(n => { const s=specs[n];
+   return el("div",{}, el("b",{}, n), ` (${s.type}, ${s.scope}) — ${s.description||""}`, s.guidelines?el("pre",{}, s.guidelines):el("div",{class:"sev-error"},T.noguide)); })));
+  out.push(el("div",{class:"card"}, el("h3",{},T.runs), (D.runs||[]).length ? D.runs.map(r=>el("div",{}, `${r.id} — ${r.status} — ${T.backend}: ${r.backend} — ${T.model}: ${r.model||"?"} — synesis ${(r.versions||{})["synesis"]||"?"}, synesis-coder ${(r.versions||{})["synesis-coder"]||"?"}`)) : el("p",{},T.none)));
+  out.push(el("div",{class:"card"}, el("h3",{},T.decisions), (D.decisions||[]).length ? D.decisions.map(d=>el("div",{}, `${d.date} — ${d.type}${d.triage_class?" ("+d.triage_class+")":""} — ${d.note||""}`)) : el("p",{},T.none)));
+  return out; }
+};
+let current = "sources";
+function show(name){ current = name; for(const b of document.querySelectorAll("nav button")) b.classList.toggle("on", b.dataset.v===name);
+ document.getElementById("view").replaceChildren(...[].concat(views[name]())); }
+document.getElementById("title").textContent = D.project.name;
+document.getElementById("state").textContent = "state " + D.project.state.slice(0,12);
+const nav = document.getElementById("tabs");
+for(const v of Object.keys(views)){ const b = el("button",{onclick:()=>show(v)}, T[v]); b.dataset.v=v; nav.append(b); }
+banners(); show("sources");
+</script>
+</body>
+</html>

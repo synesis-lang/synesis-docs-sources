@@ -1,11 +1,16 @@
 ---
 title: "Synesis no Claude Desktop"
 subtitle: "A Skill para os primeiros passos: instalar e codificar suas fontes com a ajuda do Claude"
+number-sections: false
 ---
 
 Esta Skill ensina o Claude a conduzir um projeto Synesis com você. Ela instala as ferramentas, conversa sobre o seu estudo, escreve o template, roda a codificação, confere as citações e monta um painel de auditoria que abre no seu computador.
 
 A divisão de papéis é a mesma do resto do Synesis: **a IA propõe, o compilador confere, o pesquisador decide**. O Claude conduz a conversa e prepara os arquivos. As perguntas de pesquisa, as categorias e a aprovação do template continuam sendo suas.
+
+{{< video https://www.youtube.com/embed/i19RR7xNXfA title="Synesis no Claude Desktop (vídeo de 2 min 28 s)" aspect-ratio="16x9" >}}
+
+<span class="text-muted small">O vídeo é o episódio E06 do [Curso Synesis 101](../explanation/curso_synesis_101.qmd#sec-m2-e06).</span>
 
 ::: {.callout-note}
 ## Situação
@@ -44,7 +49,7 @@ Se a sua organização não permite enviar plugins, peça ao administrador.
 
    > `/synesis` Quero codificar minhas três entrevistas sobre telemedicina com o Synesis. As transcrições estão na pasta `fontes`.
 
-Se quiser só experimentar, a Skill traz um projeto de exemplo, com fontes fictícias, em `skills/synesis/examples/prova`.
+Se quiser só experimentar, use a [pasta de exemplo](#testar-com-o-nosso-exemplo).
 
 ## 3. O que o Claude faz
 
@@ -58,6 +63,103 @@ Em ordem:
 6. **Valida, confere as citações no texto original** e monta o painel.
 
 No fim, o Claude resume o resultado: erros e avisos do compilador, quantas citações foram encontradas nas fontes, quantos conceitos a ontologia tem, e uma lista de **pontos que valem a sua conferência na auditoria**.
+
+## O que a Skill gera
+
+Os exemplos abaixo vêm de uma sessão real com as três entrevistas fictícias da [pasta de exemplo](#testar-com-o-nosso-exemplo). São arquivos de texto comuns do Synesis; você pode abri-los em qualquer editor.
+
+::: {.grid}
+::: {.g-col-12 .g-col-lg-6}
+::: {.card .h-100}
+::: {.card-header}
+**Projeto (`telemedicina.synp`)**
+:::
+::: {.card-body}
+O projeto reúne os arquivos e registra as perguntas de pesquisa.
+
+```synesis
+PROJECT telemedicina_rural
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "referencias.bib"
+INCLUDE ANNOTATIONS "anotacoes"
+INCLUDE ONTOLOGY "ontologia"
+
+QUESTIONS
+    Q1: Que barreiras ao uso da telemedicina os entrevistados relatam?
+    Q2: Que benefícios da telemedicina os entrevistados percebem?
+    Q3: Que relações causais entre fatores os entrevistados afirmam?
+END QUESTIONS
+...
+END PROJECT
+```
+:::
+:::
+:::
+::: {.g-col-12 .g-col-lg-6}
+::: {.card .h-100}
+::: {.card-header}
+**Template (`template.synt`)**
+:::
+::: {.card-body}
+Cada campo tem instruções (GUIDELINES) com exemplos de outro tema, para o modelo não copiar das suas fontes.
+
+```synesis
+FIELD trecho TYPE QUOTATION
+    SCOPE ITEM
+    DESCRIPTION Trecho copiado literalmente da fala do entrevistado
+    GUIDELINES
+        Copie de uma a três frases contínuas, exatamente como aparecem na fonte.
+        Copie apenas falas do entrevistado, nunca as perguntas do entrevistador.
+        Não corrija, não resuma, não junte frases distantes.
+        Correto: "Depois que pintaram a faixa, comecei a ir de bicicleta todo dia."
+        Errado: "A moradora passou a usar a bicicleta diariamente após a faixa."
+    END GUIDELINES
+END FIELD
+```
+:::
+:::
+:::
+::: {.g-col-12 .g-col-lg-6}
+::: {.card .h-100}
+::: {.card-header}
+**Anotações (`anotacoes/`)**
+:::
+::: {.card-body}
+Cada trecho vira um ITEM: a citação literal, a nota, os códigos e, quando a fonte afirma, uma cadeia.
+
+```synesis
+SOURCE @entrevista_dona_maria
+    descricao: Entrevista fictícia com agricultora de 62 anos, moradora de comunidade rural, sobre o uso de consulta por vídeo.
+END SOURCE
+
+ITEM @entrevista_dona_maria
+    trecho: O doutor não me tocou, não olhou a minha perna de perto. Para mim, médico bom é aquele que põe a mão na gente. Se não pode examinar, eu fico achando que ele não viu direito.
+    nota: A fonte afirma que a ausência de toque e exame físico gera desconfiança sobre a qualidade do atendimento; sugere barreira de natureza cultural e de confiança, distinta da técnica.
+    codigos: exame_fisico, confianca_no_atendimento
+    cadeia: exame_fisico -> HABILITA -> confianca_no_atendimento
+END ITEM
+```
+:::
+:::
+:::
+::: {.g-col-12 .g-col-lg-6}
+::: {.card .h-100}
+::: {.card-header}
+**Ontologia (`ontologia/`)**
+:::
+::: {.card-body}
+Cada conceito ganha uma definição com critério de aplicação e um tema.
+
+```synesis
+ONTOLOGY exame_fisico
+    definicao: Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.
+    grupo: pratica_clinica
+END ONTOLOGY
+```
+:::
+:::
+:::
+:::
 
 ## 4. Auditar o resultado
 
@@ -77,6 +179,20 @@ Para registrar a sua auditoria:
 2. Use **Exportar marcações** e entregue o arquivo ao Claude na conversa, para que ele o registre no projeto. As marcações não exportadas ficam só no navegador e podem se perder.
 
 Quando algo estiver errado, o Claude não corrige o trecho à mão. Ele classifica o problema com você antes de agir: instrução ambígua no template, falha pontual, texto-fonte mal convertido ou divergência legítima de interpretação.
+
+## Testar com o nosso exemplo {#testar-com-o-nosso-exemplo}
+
+Quer ver a Skill funcionando sem usar as suas fontes? Baixe a [pasta de exemplo](../../downloads/exemplo-telemedicina.zip). Ela traz:
+
+- **`fontes/`**: três entrevistas fictícias sobre telemedicina em comunidades rurais, prontas para a Skill codificar. Copie a pasta para um lugar novo, abra-a na aba **Code** e digite:
+
+  > `/synesis` Quero codificar minhas três entrevistas sobre telemedicina. As transcrições estão em fontes.
+
+- **`resultado/`**: o que a Skill gerou numa sessão real com essas entrevistas, para você comparar com o seu: projeto, template, anotações, ontologia e o painel. Para ver o painel agora, [abra o painel de exemplo](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html).
+
+::: {.callout-note}
+A codificação é feita por um modelo de IA. O seu resultado será parecido com o de `resultado/`, não idêntico: compare a estrutura e os critérios, não cada palavra.
+:::
 
 ## Custos
 

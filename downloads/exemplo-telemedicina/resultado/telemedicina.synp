@@ -1,0 +1,21 @@
+PROJECT telemedicina_rural
+TEMPLATE "template.synt"
+INCLUDE BIBLIOGRAPHY "referencias.bib"
+INCLUDE ANNOTATIONS "anotacoes"
+INCLUDE ONTOLOGY "ontologia"
+
+DESCRIPTION
+Três entrevistas fictícias sobre telemedicina em contexto rural: duas com moradores de comunidade rural (agricultora e comerciante) e uma com médica de família de unidade rural. O foco é o que dificulta e o que beneficia o uso da consulta remota, e como os entrevistados relacionam esses fatores.
+END DESCRIPTION
+
+QUESTIONS
+    Q1: Que barreiras ao uso da telemedicina os entrevistados relatam?
+    Q2: Que benefícios da telemedicina os entrevistados percebem?
+    Q3: Que relações causais entre fatores os entrevistados afirmam?
+END QUESTIONS
+
+EXPORT JSON
+    OUTPUT "saida/telemedicina.json"
+    GENERATED_AT "2026-11-24T00:00:00Z"
+END EXPORT
+END PROJECT

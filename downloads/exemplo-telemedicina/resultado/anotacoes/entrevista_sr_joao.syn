@@ -1,0 +1,27 @@
+SOURCE @entrevista_sr_joao
+    descricao: Entrevista fictícia com comerciante de 55 anos, morador de comunidade rural, sobre o atendimento por telemedicina.
+END SOURCE
+
+ITEM @entrevista_sr_joao
+    trecho: Mas eu não sei mexer nesses aplicativos. Tem que baixar, fazer cadastro, senha.
+    nota: A fonte relata dificuldade concreta com as etapas de uso dos aplicativos. Interpretação: a habilidade digital aparece como possível barreira de entrada à consulta remota.
+    codigos: letramento_digital
+END ITEM
+
+ITEM @entrevista_sr_joao
+    trecho: Aqui o povo gosta de ir ao posto, conversar com a enfermeira, ver o rosto de quem atende.
+    nota: A fonte descreve a preferência da comunidade pelo contato presencial. Interpretação: o vínculo com a equipe do posto pode funcionar como resistência cultural à consulta remota.
+    codigos: confianca_no_atendimento, atendimento_presencial
+END ITEM
+
+ITEM @entrevista_sr_joao
+    trecho: Mas eu reconheço: quando meu pai ficou doente, perdemos três horas de estrada para uma consulta de dez minutos. Se desse para resolver pelo telefone, teria poupado muito sofrimento.
+    nota: A fonte contrapõe o custo do deslocamento à brevidade da consulta e supõe que o atendimento remoto o evitaria. Interpretação: indica benefício percebido da telemedicina na redução do deslocamento.
+    codigos: deslocamento_ate_a_cidade, consulta_por_video
+END ITEM
+
+ITEM @entrevista_sr_joao
+    trecho: Alguém no posto para ensinar a usar. E uma sala com internet boa, porque na minha casa não tem.
+    nota: A fonte propõe apoio presencial e acesso a internet como facilitadores, e relata a falta de internet em casa. Interpretação: aponta infraestrutura e suporte como condições para o uso.
+    codigos: apoio_no_posto, acesso_a_internet
+END ITEM

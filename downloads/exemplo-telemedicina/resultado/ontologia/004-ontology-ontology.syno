@@ -1,0 +1,54 @@
+ONTOLOGY acesso_a_internet
+    definicao: Disponibilidade de conexão de internet utilizável, em casa ou em ponto de atendimento, como condição de infraestrutura para realizar atendimento remoto. Aplicar a menções à existência, qualidade ou falta de conexão; não se aplica a dificuldades de habilidade no uso de tecnologia.
+    grupo: infraestrutura
+END ONTOLOGY
+
+ONTOLOGY apoio_no_posto
+    definicao: Presença de uma pessoa em unidade de saúde local que orienta e ensina os usuários a realizar a consulta remota, em espaço com a estrutura necessária. Aplica-se quando o entrevistado propõe ou relata suporte presencial para o uso; não se aplica à conectividade em si nem a ajuda de familiares em casa.
+    grupo: facilitadores
+END ONTOLOGY
+
+ONTOLOGY atendimento_presencial
+    definicao: Preferência por consultas realizadas com o profissional e o paciente no mesmo espaço físico, em que há contato direto, exame e convívio com a equipe. Aplica-se quando o entrevistado valoriza ou prefere o contato face a face em vez da consulta à distância; não se aplica a menções neutras ao deslocamento até a unidade.
+    grupo: preferencia_de_atendimento
+END ONTOLOGY
+
+ONTOLOGY confianca_no_atendimento
+    definicao: Segurança e credibilidade que o paciente atribui à qualidade do cuidado recebido, ligada ao contato direto, ao exame físico e ao vínculo com quem atende. Aplicar quando a fonte associar a sensação de ser bem avaliado, ou a desconfiança por não ser examinado, à forma de atendimento; não aplicar a preferências por conveniência ou custo sem relação com credibilidade.
+    grupo: cultura_e_vinculo
+END ONTOLOGY
+
+ONTOLOGY consulta_por_video
+    definicao: Atendimento médico à distância realizado por chamada de vídeo entre profissional de saúde e paciente, que depende de conectividade, equipamento e familiaridade com o uso digital. Aplica-se a menções de teleconsultas ou consultas remotas por vídeo, tentadas ou imaginadas; não se aplica a consultas presenciais nem a contatos que dispensam imagem, como simples orientação por telefone sem consulta formal.
+    grupo: telemedicina
+END ONTOLOGY
+
+ONTOLOGY deslocamento_ate_a_cidade
+    definicao: Percurso físico, com tempo, custo e esforço, que o paciente rural precisa fazer até o serviço de saúde na cidade para ser atendido. Aplicar quando a fonte mencionar viagem, estrada ou horas perdidas para consulta, receita ou retorno; não se aplica a deslocamentos sem relação com atendimento em saúde.
+    grupo: custo_de_acesso
+END ONTOLOGY
+
+ONTOLOGY exame_fisico
+    definicao: Avaliação clínica direta do corpo do paciente por meio de toque, inspeção e palpação durante o atendimento, percebida pelos entrevistados como sinal de que o médico examinou de fato. Aplica-se quando a fonte menciona a presença, a ausência ou a necessidade desse contato físico no atendimento; não se aplica a conversa ou observação apenas por vídeo sem referência ao exame.
+    grupo: pratica_clinica
+END ONTOLOGY
+
+ONTOLOGY instabilidade_da_conexao
+    definicao: Falta de continuidade ou de qualidade do sinal de celular ou da internet, que causa travamentos, quedas e interrupções durante o atendimento remoto. Aplicar quando a fonte relatar sinal ausente, intermitente ou que cai e impede ou interrompe a consulta; não aplicar a dificuldades de uso do aparelho ou do aplicativo sem relação com a conexão.
+    grupo: infraestrutura
+END ONTOLOGY
+
+ONTOLOGY letramento_digital
+    definicao: Capacidade de uma pessoa de operar ferramentas digitais, como instalar aplicativos, fazer cadastro, usar senhas e acionar câmera e plataformas, de modo a realizar tarefas online. Aplicar quando a fonte relatar dificuldade ou facilidade concreta com essas etapas; não aplicar para falta de acesso a equipamento ou à internet.
+    grupo: habilidades_do_usuario
+END ONTOLOGY
+
+ONTOLOGY renovacao_de_receita
+    definicao: Pedido de nova prescrição de medicamento de uso já estabelecido, que não exige exame físico e pode ser resolvido à distância. Aplica-se quando o entrevistado cita a consulta remota para obter receita sem precisar se deslocar; não se aplica a consultas que demandam avaliação presencial.
+    grupo: beneficio_percebido
+END ONTOLOGY
+
+ONTOLOGY sinal_de_celular
+    definicao: Disponibilidade e qualidade da cobertura de rede móvel no local onde a pessoa vive, que condiciona a possibilidade de estabelecer comunicação remota. Aplica-se quando o relato aponta ausência ou fraqueza de sinal como pré-condição que impede ou limita o uso; não se aplica a falhas de equipamento ou de habilidade digital.
+    grupo: conectividade
+END ONTOLOGY
