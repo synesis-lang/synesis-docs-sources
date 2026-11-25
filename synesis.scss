@@ -345,6 +345,25 @@ pre code {
   border-radius: 0;
 }
 
+// Cartões de resultado (código Synesis): fonte um pouco menor e linhas longas que quebram
+// voltam recuadas, para que só as linhas que abrem os blocos fiquem na coluna 0.
+.card-body pre {
+  font-size: 0.76rem;
+  padding: 0.9rem 1.1rem;
+}
+.card-body pre > code.sourceCode {
+  white-space: normal;
+}
+.card-body pre > code.sourceCode > span {
+  display: block;
+  white-space: pre-wrap;
+  min-height: 1.5em;
+  line-height: 1.5;
+  padding-left: var(--hang, 8ch);
+  text-indent: calc(-1 * var(--hang, 8ch));
+}
+.card.hang-12 { --hang: 12ch; }
+
 // Botão de copiar código
 .code-copy-button {
   color: rgba($syn-white-paper, 0.5);

@@ -96,7 +96,7 @@ END PROJECT
 :::
 :::
 ::: {.g-col-12}
-::: {.card .h-100}
+::: {.card .h-100 .hang-12}
 ::: {.card-header}
 **Template (`template.synt`)**
 :::
