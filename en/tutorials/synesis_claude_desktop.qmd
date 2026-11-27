@@ -4,9 +4,11 @@ subtitle: "The Skill for first steps: install it and code your sources with Clau
 number-sections: false
 ---
 
-This Skill teaches Claude to run a Synesis project with you. It installs the tools, talks through your study, writes the template, runs the coding, checks every quotation against your sources and builds an audit dashboard that opens on your own computer.
+This Skill teaches Claude to run a Synesis project with you. It installs the tools, talks through your study, writes the template, runs the coding, checks every quotation against your sources, draws a sample for you to review and shows the results in pages that open on your own computer.
 
 The division of roles is the same as everywhere in Synesis: **the AI proposes, the compiler checks, the researcher decides**. Claude leads the conversation and prepares the files. Your research questions, your categories and the approval of the template stay yours.
+
+The Skill has a **teaching and reviewing** role: it teaches the language and the method and helps you check your data. It does not replace working directly with the Synesis tools (the compiler, the exports, the [VS Code extension](synesis_explorer_tutorial.qmd)); when a task is heavy, Claude shows you how to do it with them.
 
 {{< video https://www.youtube.com/embed/i19RR7xNXfA title="Synesis in Claude Desktop (video, 2 min 28 s)" aspect-ratio="16x9" >}}
 
@@ -14,7 +16,7 @@ The division of roles is the same as everywhere in Synesis: **the AI proposes, t
 
 ::: {.callout-note}
 ## Status
-The current version is **0.3.0**. The Skill was tested end to end on proof projects and is **in testing with researchers**. Your feedback helps improve it (see [If something goes wrong](#if-something-goes-wrong)).
+The current version is **0.4.0**: large projects, team review and results through the Synesis tools. The Skill was tested end to end on proof projects and is **in testing with researchers**. Your feedback helps improve it (see [If something goes wrong](#if-something-goes-wrong)).
 :::
 
 ## What you need
@@ -64,11 +66,14 @@ In order:
 4. **Talks through the study:** your research questions, what to extract from the sources, whether you want free or closed categories, causal relations or scales.
 5. **Writes the template** (the description of what will be coded) and shows an example. **You approve the template.**
 6. **Codes each source**, one at a time, and builds the ontology of concepts.
-7. **Validates, checks each quotation against the original text** and builds the dashboard.
+7. **Validates and checks each quotation against the original text.**
+8. **Draws a sample of the annotations for you to review** (see [Review a sample](#review-a-sample)) and shows the [results](#see-the-results).
+
+When you come back to a project that already exists, Claude first measures its size, in a second and without reading your files, and offers a numbered list of what you can do: know the project, read it more deeply, review a sample, see the results, find out what the project can answer, fix problems, continue, export.
 
 Throughout the work you follow the project in a page that opens in your browser: the [project view](#project-view).
 
-At the end Claude summarizes the result: compiler errors and warnings, how many quotations were found in the sources, how many concepts the ontology has, and a list of **points worth checking in your audit**.
+At the end Claude summarizes the result: compiler errors and warnings, how many quotations were found in the sources, how many concepts the ontology has, and a list of **points worth checking in your review**.
 
 ## Add your sources {#add-your-sources}
 
@@ -107,6 +112,18 @@ The Skill keeps the page `view/index.html`, which opens with a double click, wit
 - **Possibilities:** starts from what you want to investigate (compare, connect, organize, support an interpretation) and shows the Synesis feature that does it.
 
 The page speaks the language of your project: English, Portuguese, Spanish, French, German, Italian or Chinese.
+
+### Large projects
+
+A project with thousands of annotations does not fit in a page a browser opens quickly. The view then works in *breadth and depth*, as in Big Qual (Weller et al., 2023): the numbers, the matrix (by group: the folders of the annotations or a category of the sources) and the problems always cover the whole project, but the cards shown are a selection.
+
+| View | What it shows |
+|---|---|
+| **Panoramic** (default for large projects) | the whole template, one source from each of the largest groups (eight at most), the most used and a few rare concepts |
+| **Sampled** | about 30 sources drawn in every group, in proportion to its size |
+| **Complete** | everything, or one group, source or concept read whole |
+
+A banner at the top says what the page shows and has buttons to ask Claude for more, with the time a complete view takes. Blocks with a problem appear even outside the selection (up to 40). On the largest test project (958 sources, 3,943 annotations) the page went from 47 MB to 2.3 MB.
 
 ## What the Skill produces
 
@@ -207,22 +224,48 @@ END ONTOLOGY
 :::
 :::
 
-## 4. Audit the result
+## 4. Review a sample {#review-a-sample}
 
-The dashboard is in `dashboard/dashboard.html`. It opens with a double click, with no internet and no server.
+Claude draws a sample of the annotations (30 by default, spread over the groups of the project) and builds the **review** page at `review/index.html`. [Open the example review](../../downloads/exemplo-telemedicina/resultado/review_en/index.html).
+
+![The review page](../../images/skill_review.png){fig-alt="Review page of the Synesis Skill: one annotation with the excerpt in its source, the codes and the Approved, Rejected and Doubt buttons"}
+
+1. Write your name or initials.
+2. Read the excerpt (the computer already checked that it is in the source; open *The excerpt in its source* to read around it) and what was coded.
+3. Choose **Approved**, **Rejected** or **Doubt** (keys 1, 2, 3). If you reject or doubt, choose a reason and, if you like, write a note or **propose a correction**: the block as you think it should be.
+4. Click **Export for the coordinator**. You get one `.md` file with your answers, your corrections and instructions for the AI that will read it.
+
+The sample is fixed when it is drawn: you judge the annotations as they were then. The page does not show which model produced each annotation, so it does not sway you, and it shows the rejection **observed in the sample**; since the sample gives more weight to small groups, Claude reports a separate estimate for the whole project.
+
+::: {.callout-tip}
+## As a team
+The coordinator sends the review page to each researcher (it contains excerpts of the sources: send it only to people allowed to read them). Everyone judges on their own computer, with their own name, and sends the exported file to the coordinator, who gives them all to Claude. Claude reports how much you agree (Cohen's kappa, Krippendorff's alpha) and puts the proposed corrections side by side. A correction enters the project only when the coordinator approves it.
+:::
+
+## 5. See the results {#see-the-results}
+
+The results page is in `dashboard/dashboard.html`. It opens with a double click, with no internet and no server.
 
 | Tab | What it shows |
 |---|---|
 | **Fontes** (Sources) | each coded excerpt, with its quotation, note and codes. The quotation appears as *found*, *not found* or *unverifiable* in the original text |
 | **Códigos** (Codes) | each code, with its definition and all its evidence |
 | **Relações** and **Questões** (Relations, Questions) | the relations between concepts and where the evidence for each research question is |
+| **Conferência** (Review) | the result of each review: approved, rejected, doubt, reasons, proposed corrections, agreement |
 | **Qualidade** (Quality) | what still needs attention |
 | **Método** (Method) | the full template and how the result was produced |
 
-To record your audit:
+::: {.callout-note}
+## Large projects
+In a large project Claude does not build this page: it would be slow to make and heavy to open. It shows you how to read the results with the Synesis tools, which also teaches you to use them:
 
-1. Mark excerpts and codes as *correct*, *incorrect* or *doubt*, with a note.
-2. Use **Exportar marcações** (export marks) and hand the file to Claude in the conversation, so it records it in the project. Marks you do not export stay only in the browser and can be lost.
+```bash
+synesis compile project.synp --xls results.xlsx   # a spreadsheet, in seconds (also --csv or --json)
+synesis export project.synp                       # the exports the project declares
+```
+
+Or use the [Synesis extension for VS Code](synesis_explorer_tutorial.qmd). The project view and the review work at any size.
+:::
 
 When something is wrong, Claude does not fix the excerpt by hand. It classifies the problem with you first: an ambiguous instruction in the template, a one-off failure, a badly converted source text, or a legitimate difference of interpretation.
 
@@ -234,7 +277,7 @@ Want to see the Skill at work without using your own sources? Download the [exam
 
   > `/synesis` I want to code my three interviews about telemedicine. The transcripts are in fontes.
 
-- **`resultado/`**: what the Skill produced in a real session with those interviews, so you can compare with yours: project, template, annotations, ontology and the dashboard. To see the dashboard right now, [open the example dashboard](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html) or the [project view](../../downloads/exemplo-telemedicina/resultado/view_en/index.html).
+- **`resultado/`**: what the Skill produced in a real session with those interviews, so you can compare with yours: project, template, annotations, ontology and the three pages. To see them now: the [project view](../../downloads/exemplo-telemedicina/resultado/view_en/index.html), the [review](../../downloads/exemplo-telemedicina/resultado/review_en/index.html) and the [results](../../downloads/exemplo-telemedicina/resultado/dashboard/dashboard.html).
 
 ::: {.callout-note}
 The coding is done by an AI model. Your result will be similar to the one in `resultado/`, not identical: compare structure and criteria, not every word.
@@ -273,9 +316,9 @@ Everything Claude reads leaves your computer and goes to Anthropic (and, in API 
 | `fontes/` | the prepared texts |
 | `anotacoes/`, `ontologia/` | the result of the coding |
 | `runs/` | the record of every run: what was asked of the model, what it answered and the decisions you made |
-| `view/`, `dashboard/`, `saida/` | generated files, which can be rebuilt at any time |
+| `view/`, `review/`, `dashboard/`, `saida/` | generated files, which can be rebuilt at any time (review answers are kept in `runs/` once imported) |
 
-Keep the whole folder; when you share it, leave out the `.env` and the `inbox/`. With it, anyone can rebuild your results and your dashboard. The files are plain Synesis files: you can open them in [VS Code](synesis_explorer_tutorial.qmd) whenever you like.
+Keep the whole folder; when you share it, leave out the `.env` and the `inbox/`. With it, anyone can rebuild your results and your pages. The files are plain Synesis files: you can open them in [VS Code](synesis_explorer_tutorial.qmd) whenever you like.
 
 ## If something goes wrong {#if-something-goes-wrong}
 
